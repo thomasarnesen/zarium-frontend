@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Zarium AI - Automated Excel Generation Platform" />
+    <meta name="theme-color" content="#059669" />
+    <meta name="msapplication-navbutton-color" content="#059669" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="#059669" />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network;
+      connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network;
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: https:;
+      frame-src https://js.stripe.com https://m.stripe.network https://hooks.stripe.com;
+      form-action 'self';
+      worker-src 'self' blob:;
+      font-src 'self' data:;
+    " /> 
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preconnect" href="https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net" />
+    <link rel="preconnect" href="https://js.stripe.com" crossorigin />
+    
+    <!-- Stripe Integration -->
+    <script src="https://js.stripe.com/v3/" defer></script>
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Zarium AI" />
+    <meta property="og:description" content="Create professional Excel spreadsheets with AI" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://zarium-frontend-h3f6duewacdqeecb.westeurope-01.azurewebsites.net" />
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <title>Zarium</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div style="padding: 20px; text-align: center;">
+        Please enable JavaScript to use Zarium AI.
+      </div>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
