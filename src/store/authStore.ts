@@ -52,44 +52,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       console.log("Refreshing user data...");
       
-      const tokenResponse = await api.fetch('/verify-token', {
-        credentials: 'include' 
-      });
-      
-      if (!tokenResponse.ok) {
-        // Hvis token er ugyldig, behold brukerdata men prøv å fornye token
-        try {
-          const refreshResponse = await api.fetch('/refresh-token', {
-            method: 'POST',
-            credentials: 'include'
-          });
-          
-          if (!refreshResponse.ok) {
-            throw new Error('Could not refresh session');
-          }
-          
-          // Fortsett med oppdatering av brukerdata med ny token
-          const userData = await refreshResponse.json();
-          set({ user: userData });
-        } catch (error) {
-          console.error('Session refresh failed:', error);
-          return false;
-        }
-      }
-      
+      const tokenResponse = await api.fetch('/verify-token');
       const userData = await tokenResponse.json();
       
-      // Oppdater brukerdata men behold token
-      set(state => ({ 
-        user: { 
-          ...userData,
-          token: state.user?.token // Behold eksisterende token
-        }, 
-        isAuthenticated: true,
-        tokens: userData.tokens || 0,
-        planType: userData.planType,
-        isDemoUser: userData.planType === 'Demo',
-      }));
+      // Hent token-info separat
+      try {
+        const tokenInfoResponse = await api.fetch('/user/tokens');
+        if (tokenInfoResponse.ok) {
+          const tokenData = await tokenInfoResponse.json();
+          set({ 
+            user: { 
+              ...userData,
+            }, 
+            isAuthenticated: true,
+            tokens: tokenData.current_tokens,
+            planType: userData.planType,
+            isDemoUser: userData.planType === 'Demo',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch token info:', error);
+      }
       
       return true;
     } catch (error) {

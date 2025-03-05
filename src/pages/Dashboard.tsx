@@ -309,7 +309,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleGenerationResult = (result: any) => {
+  const handleGenerationResult = async (result: any) => {
     if (result.error) {
       throw new Error(result.error);
     }
@@ -318,16 +318,22 @@ export default function Dashboard() {
     
     if (result.previewImage) {
       setPreviewImage(result.previewImage);
-      setIsGenerating(false);
-      setGenerationStatus('');
-      setSessionId(null);
     }
     
     if (result.formatting) {
       setFormatting(result.formatting);
     }
 
-    refreshUserData().catch(console.error);
+    try {
+      await refreshUserData();
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+      // Fortsett uten å kaste error siden genereringen var vellykket
+    }
+
+    setIsGenerating(false);
+    setGenerationStatus('');
+    setSessionId(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

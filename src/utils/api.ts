@@ -11,58 +11,57 @@ const api = {
       console.log(`Fetching ${url}...`);
       const startTime = Date.now();
       
-      // Get CSRF headers
-      const csrfHeaders = await csrfService.getHeaders();
+      let retryCount = 0;
+      const maxRetries = 3;
       
-      // Don't set Content-Type for FormData
-      const isFormData = options.body instanceof FormData;
-      const defaultHeaders = isFormData ? {
-        ...csrfHeaders
-      } : {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...csrfHeaders
-      };
-      
-      const fetchOptions: RequestInit = {
-        ...options,
-        headers: {
-          ...defaultHeaders,
-          ...options.headers,
-        },
-        credentials: 'include',
-        mode: 'cors'
-      };
-      
-      const response = await fetch(url, fetchOptions);
-      console.log(`Request took ${Date.now() - startTime}ms`);
-      
-      // Håndter 401/403 bedre
-      if (response.status === 401 || response.status === 403) {
-        // Prøv å fornye token først
-        try {
-          const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
-            method: 'POST',
-            credentials: 'include'
-          });
-          
-          if (refreshResponse.ok) {
-            // Prøv original forespørsel på nytt med ny token
-            const retryResponse = await fetch(url, fetchOptions);
-            if (retryResponse.ok) {
-              return retryResponse;
+      const executeRequest = async (): Promise<Response> => {
+        const csrfHeaders = await csrfService.getHeaders();
+        const isFormData = options.body instanceof FormData;
+        
+        const fetchOptions: RequestInit = {
+          ...options,
+          headers: {
+            ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+            'Accept': 'application/json',
+            ...csrfHeaders,
+            ...options.headers,
+          },
+          credentials: 'include',
+          mode: 'cors'
+        };
+
+        const response = await fetch(url, fetchOptions);
+        
+        if (response.status === 401 || response.status === 403) {
+          if (retryCount < maxRetries) {
+            retryCount++;
+            // Prøv å fornye token
+            try {
+              const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
+                method: 'POST',
+                credentials: 'include',
+                mode: 'cors'
+              });
+              
+              if (refreshResponse.ok) {
+                // Prøv originalforespørselen på nytt
+                return await fetch(url, fetchOptions);
+              }
+            } catch (error) {
+              console.error('Token refresh failed:', error);
             }
           }
-        } catch (error) {
-          console.error('Token refresh failed:', error);
+          // Hvis vi fortsatt har problemer etter retry, redirect til login
+          if (window.location.pathname === '/dashboard') {
+            window.location.href = '/login';
+          }
         }
         
-        // Hvis refresh feilet og vi er på dashboard, omdiriger til login
-        if (window.location.pathname === '/dashboard') {
-          window.location.href = '/login';
-        }
-        throw new Error('Session expired');
-      }
+        return response;
+      };
+
+      const response = await executeRequest();
+      console.log(`Request took ${Date.now() - startTime}ms`);
 
       if (!response.ok) {
         let errorMessage = response.statusText;
@@ -70,11 +69,11 @@ const api = {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } catch {
-          // If JSON parsing fails, use status text
+          // Hvis JSON parsing feiler, bruk status text
         }
         throw new Error(errorMessage);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Network Error:', {
