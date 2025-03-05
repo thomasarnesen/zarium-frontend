@@ -110,50 +110,48 @@ function App() {
   }
 
   return (
-    <div className={`app ${isDark ? 'dark' : 'light'}`}>
-      <BrowserRouter>
-        <Navbar />
-        <Toaster 
-          position="top-center" 
-          toastOptions={{
-            style: {
-              background: isDark ? '#1f2937' : '#ffffff',
-              color: isDark ? '#ffffff' : '#000000',
-            },
-          }}
-        />
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<HomePage />} />
-            <Route path="login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
-            <Route path="reset-password" element={<ResetPasswordForm />} />
-            <Route path="pricing" element={<PricingPage />} />
-            <Route path="terms" element={<TermsOfService />} />
-            
-            {/* Protected routes */}
-            <Route path="dashboard" element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            } />
-            <Route path="generations" element={
-              <ProtectedRoute>
-                <GenerationsHistory />
-              </ProtectedRoute>
-            } />
-            <Route path="account" element={
-              <ProtectedRoute>
-                <AccountSettings />
-              </ProtectedRoute>
-            } />
-            
-            {/* Catch all route */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <BrowserRouter>
+      <Navbar />
+      <Toaster 
+        position="top-center" 
+        toastOptions={{
+          style: {
+            background: isDark ? '#1f2937' : '#ffffff',
+            color: isDark ? '#ffffff' : '#000000',
+          },
+        }}
+      />
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<HomePage />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
+          <Route path="reset-password" element={<ResetPasswordForm />} />
+          <Route path="pricing" element={<PricingPage />} />
+          <Route path="terms" element={<TermsOfService />} />
+          
+          {/* Protected routes */}
+          <Route path="dashboard" element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          } />
+          <Route path="generations" element={
+            <ProtectedRoute>
+              <GenerationsHistory />
+            </ProtectedRoute>
+          } />
+          <Route path="account" element={
+            <ProtectedRoute>
+              <AccountSettings />
+            </ProtectedRoute>
+          } />
+          
+          {/* Catch all route */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
