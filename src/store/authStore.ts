@@ -52,31 +52,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       console.log("Refreshing user data...");
       
-      const tokenResponse = await api.fetch('/verify-token');
-      const userData = await tokenResponse.json();
-      
-      // Hent token-info separat
-      try {
-        const tokenInfoResponse = await api.fetch('/user/tokens');
-        if (tokenInfoResponse.ok) {
-          const tokenData = await tokenInfoResponse.json();
-          set({ 
-            user: { 
-              ...userData,
-            }, 
-            isAuthenticated: true,
-            tokens: tokenData.current_tokens,
-            planType: userData.planType,
-            isDemoUser: userData.planType === 'Demo',
-          });
-        }
-      } catch (error) {
-        console.error('Failed to fetch token info:', error);
+      const [tokenResponse, tokenInfoResponse] = await Promise.all([
+        api.fetch('/verify-token'),
+        api.fetch('/user/tokens')
+      ]);
+
+      if (!tokenResponse.ok || !tokenInfoResponse.ok) {
+        throw new Error('Failed to refresh user data');
       }
+
+      const userData = await tokenResponse.json();
+      const tokenData = await tokenInfoResponse.json();
+
+      set({ 
+        user: { ...userData },
+        isAuthenticated: true,
+        tokens: tokenData.current_tokens || userData.tokens || 0,
+        planType: userData.planType,
+        isDemoUser: userData.planType === 'Demo'
+      });
       
       return true;
     } catch (error) {
       console.error('Error refreshing user data:', error);
+      // Ikke nullstill bruker umiddelbart ved feil
       return false;
     }
   },

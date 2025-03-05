@@ -262,6 +262,9 @@ export default function Dashboard() {
     setFormatting(null);
   
     try {
+      // Oppdater tokens før generering
+      await refreshUserData();
+
       const endpoint = selectedFiles.length > 0 ? '/generate-macro-with-file' : '/generate-macro';
       
       if (selectedFiles.length > 0) {
@@ -300,9 +303,24 @@ export default function Dashboard() {
         handleGenerationResult(result);
       }
 
+      // Oppdater tokens etter vellykket generering
+      try {
+        await refreshUserData();
+      } catch (error) {
+        console.error('Failed to refresh tokens after generation:', error);
+        // Ikke avbryt prosessen hvis token-oppdatering feiler
+      }
+
     } catch (error: any) {
-      console.error('Error details:', error);
-      setError(error.message || 'Failed to generate document. Please try again.');
+      if (error.message === 'Session expired') {
+        // Håndter utløpt sesjon spesifikt
+        setError('Your session has expired. Please log in again.');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else {
+        setError(error.message || 'Failed to generate document. Please try again.');
+      }
       setIsGenerating(false);
       setGenerationStatus('');
       setSessionId(null);

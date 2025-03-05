@@ -7,14 +7,18 @@ const api = {
     const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
     const url = `${config.apiUrl}${apiEndpoint}`;
     
+    let retryCount = 0;
     try {
       console.log(`Fetching ${url}...`);
       const startTime = Date.now();
       
-      let retryCount = 0;
       const maxRetries = 3;
       
-      const executeRequest = async (): Promise<Response> => {
+      const executeRequest = async (shouldRetry = true): Promise<Response> => {
+        if (retryCount >= maxRetries) {
+          throw new Error(`Maximum retries (${maxRetries}) exceeded`);
+        }
+
         const csrfHeaders = await csrfService.getHeaders();
         const isFormData = options.body instanceof FormData;
         
@@ -30,13 +34,12 @@ const api = {
           mode: 'cors'
         };
 
-        const response = await fetch(url, fetchOptions);
-        
-        if (response.status === 401 || response.status === 403) {
-          if (retryCount < maxRetries) {
-            retryCount++;
-            // Prøv å fornye token
-            try {
+        try {
+          const response = await fetch(url, fetchOptions);
+          
+          if (response.status === 401 || response.status === 403) {
+            if (shouldRetry) {
+              console.log(`Attempt ${retryCount + 1}: Token expired, attempting refresh...`);
               const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
                 method: 'POST',
                 credentials: 'include',
@@ -44,24 +47,41 @@ const api = {
               });
               
               if (refreshResponse.ok) {
-                // Prøv originalforespørselen på nytt
-                return await fetch(url, fetchOptions);
+                console.log('Token refreshed successfully, retrying original request');
+                retryCount++;
+                return executeRequest(true);
+              } else {
+                console.log('Token refresh failed');
+                if (window.location.pathname === '/dashboard') {
+                  window.location.href = '/login';
+                }
+                throw new Error('Session expired');
               }
-            } catch (error) {
-              console.error('Token refresh failed:', error);
+            } else {
+              throw new Error('Authentication failed after token refresh');
             }
           }
-          // Hvis vi fortsatt har problemer etter retry, redirect til login
-          if (window.location.pathname === '/dashboard') {
-            window.location.href = '/login';
+          
+          return response;
+        } catch (error) {
+          if (error instanceof Error) {
+            if (error.message === 'Session expired') {
+              throw error;
+            }
+            if (shouldRetry && retryCount < maxRetries) {
+              console.log(`Request failed, attempt ${retryCount + 1} of ${maxRetries}`);
+              retryCount++;
+              // Eksponensiell backoff: 1s, 2s, 4s...
+              await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+              return executeRequest(true);
+            }
           }
+          throw error;
         }
-        
-        return response;
       };
 
       const response = await executeRequest();
-      console.log(`Request took ${Date.now() - startTime}ms`);
+      console.log(`Request completed in ${Date.now() - startTime}ms after ${retryCount} retries`);
 
       if (!response.ok) {
         let errorMessage = response.statusText;
@@ -69,7 +89,7 @@ const api = {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } catch {
-          // Hvis JSON parsing feiler, bruk status text
+          // If JSON parsing fails, use status text
         }
         throw new Error(errorMessage);
       }
@@ -78,7 +98,8 @@ const api = {
     } catch (error) {
       console.error('Network Error:', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        url: url
+        url: url,
+        retries: retryCount
       });
       throw error;
     }
