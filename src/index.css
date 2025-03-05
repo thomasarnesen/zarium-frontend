@@ -66,14 +66,13 @@
   }
 }
  
-@layer base {
-  body {
-    @apply bg-background text-foreground;
-  }
+html {
+  transition: background-color 0.3s ease;
+}
 
-  html {
-    transition: background-color 0.3s ease;
-  }
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 .excel-like-grid .handsontable {

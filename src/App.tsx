@@ -31,15 +31,12 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Apply the dark/light theme class based on themeStore's isDark state
+  // Apply dark mode class on initial load and when theme changes
   useEffect(() => {
-    const root = window.document.documentElement;
     if (isDark) {
-      root.classList.add('dark');
-      root.classList.remove('light');
+      document.documentElement.classList.add('dark');
     } else {
-      root.classList.add('light');
-      root.classList.remove('dark');
+      document.documentElement.classList.remove('dark');
     }
   }, [isDark]);
 
