@@ -4,71 +4,65 @@ import csrfService from '../store/csrfService';
 
 const api = {
   fetch: async (endpoint: string, options: RequestInit = {}) => {
-    // Add /api prefix to all endpoints
-    const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
-    const url = `${config.apiUrl}${apiEndpoint}`;
-    
     try {
-      console.log(`Fetching ${url}...`);
-      const startTime = Date.now();
+      const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
+      const url = `${config.apiUrl}${apiEndpoint}`;
       
-      // Get CSRF headers
-      const csrfHeaders = await csrfService.getHeaders();
+      // Retry CSRF token fetch if it fails
+      let csrfHeaders = {};
+      try {
+        csrfHeaders = await csrfService.getHeaders();
+      } catch (error) {
+        console.warn('Failed to get CSRF token on first try, retrying...');
+        try {
+          await csrfService.resetToken();
+          csrfHeaders = await csrfService.getHeaders();
+        } catch (retryError) {
+          console.error('Failed to get CSRF token after retry:', retryError);
+        }
+      }
       
-      // Create default headers
-      const defaultHeaders = {
+      const defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
         ...csrfHeaders
       };
-      
-      // Use HTTP-only cookies for auth
-      const fetchOptions: RequestInit = {
+
+      // Don't include Content-Type for FormData
+      if (options.body instanceof FormData) {
+        delete defaultHeaders['Content-Type'];
+      }
+
+      const response = await fetch(url, {
         ...options,
         headers: {
           ...defaultHeaders,
           ...options.headers,
         },
-        credentials: 'include', // Always include credentials for cookies
+        credentials: 'include',
         mode: 'cors'
-      };
-      
-      const response = await fetch(url, fetchOptions);
-      
-      console.log(`Request took ${Date.now() - startTime}ms`);
-      
+      });
+
       // Handle auth errors
       if (response.status === 401 || response.status === 403) {
         window.location.href = '/login';
         throw new Error('Session expired. Please log in again.');
       }
-      
+
       if (!response.ok) {
-        console.error('API Error:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: url
-        });
-        
         let errorMessage = `API error: ${response.statusText}`;
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } catch {
-          // If JSON parsing fails, use status text
+          // Hvis JSON parsing feiler, bruk status text
         }
-        
         throw new Error(errorMessage);
       }
-      
+
       return response;
     } catch (error) {
-      console.error('Network Error:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        url: url
-      });
+      console.error('API Error:', error);
       throw error;
     }
   },

@@ -1,49 +1,40 @@
-
 import { config } from '../config';
 
-interface CSRFResponse {
-  token: string;
-}
+class CSRFService {
+  private csrfToken: string | null = null;
 
-const csrfService = {
-  async getToken(): Promise<string> {
+  async getHeaders() {
+    if (!this.csrfToken) {
+      await this.fetchToken();
+    }
+    return {
+      'X-CSRF-Token': this.csrfToken || ''
+    };
+  }
+
+  async fetchToken() {
     try {
-      
-      if (this._token) {
-        return this._token;
-      }
-
       const response = await fetch(`${config.apiUrl}/csrf-token`, {
-        method: 'GET',
-        credentials: 'include', 
+        credentials: 'include',
+        mode: 'cors'
       });
-
+      
       if (!response.ok) {
         throw new Error('Failed to fetch CSRF token');
       }
-
-      const data: CSRFResponse = await response.json();
-      this._token = data.token;
-      return this._token;
+      
+      const data = await response.json();
+      this.csrfToken = data.token;
     } catch (error) {
-      console.error('Error getting CSRF token:', error);
-      return '';
+      console.error('Error fetching CSRF token:', error);
+      throw error;
     }
-  },
+  }
 
-  async getHeaders(): Promise<Record<string, string>> {
-    const token = await this.getToken();
-    return {
-      'X-CSRF-Token': token,
-    };
-  },
+  async resetToken() {
+    this.csrfToken = null;
+    await this.fetchToken();
+  }
+}
 
-  resetToken(): void {
-    this._token = null;
-  },
-
-  
-  _token: null as string | null,
-};
-
-export default csrfService;
+export default new CSRFService();
