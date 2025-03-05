@@ -67,20 +67,23 @@
 }
  
 @layer base {
+  * {
+    @apply border-border;
+  }
   body {
-    @apply bg-background-color text-foreground-color;
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Add smooth transition for theme changes */
+  html {
+    color-scheme: light;
+    transition: background-color 0.3s ease;
+  }
+  html.dark {
+    color-scheme: dark;
   }
 }
-
-@layer components {
-  /* Your custom component styles with @apply go here */
-}
-
-@layer utilities {
-  /* Your custom utility styles with @apply go here */
-}
-
-/* For any styles that don't use @apply, you can place them here */
 
 .excel-like-grid .handsontable {
   font-size: 13px;
