@@ -5,6 +5,7 @@ import { SpreadsheetViewer } from '../components/SpreadsheetViewer';
 import { useAuthStore } from '../store/authStore';
 import { config } from '../config';
 import { Switch } from '../components/ui/switch';
+import api from '../utils/api';
 
 type DocumentType = 'excel';
 
@@ -72,27 +73,25 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchEmptyPreview = async () => {
       try {
-        const response = await fetch(`${config.apiUrl}/get-empty-excel`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (!response.ok) {
-          throw new Error('Failed to get empty Excel preview');
-        }
+        console.log("Fetching empty preview...");
+        const response = await api.fetch('/get-empty-excel');
         const data = await response.json();
+        
         if (data.previewImage) {
+          console.log("Received preview image, setting state");
           setPreviewImage(data.previewImage);
+        } else {
+          console.error("No preview image in response");
+          setError('No preview image available');
         }
       } catch (error) {
+        console.error("Error fetching preview:", error);
         setError('Failed to load preview template');
       }
     };
 
-    if (token) {
-      fetchEmptyPreview();
-    }
-  }, [token]);
+    fetchEmptyPreview();
+  }, []); // Kjør bare én gang ved oppstart
 
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
@@ -129,20 +128,14 @@ export default function Dashboard() {
     if (sessionId && isGenerating) {
       pollInterval = setInterval(async () => {
         try {
-          const response = await fetch(`${config.apiUrl}/generation-status/${sessionId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
+          const response = await api.fetch(`/generation-status/${sessionId}`);
+          const data = await response.json();
           
-          if (response.ok) {
-            const data = await response.json();
-            if (data.status === "Complete") {
-              setIsGenerating(false);
-              setSessionId(null);
-              if (data.previewImage) setPreviewImage(data.previewImage);
-              if (data.formatting) setFormatting(data.formatting);
-            }
+          if (data.status === "Complete") {
+            setIsGenerating(false);
+            setSessionId(null);
+            if (data.previewImage) setPreviewImage(data.previewImage);
+            if (data.formatting) setFormatting(data.formatting);
           }
         } catch (error) {
           console.error('Error polling status:', error);
@@ -269,76 +262,34 @@ export default function Dashboard() {
     setFormatting(null);
   
     try {
-     
-      const url = selectedFiles.length > 0
-        ? `${config.apiUrl}/generate-macro-with-file`
-        : `${config.apiUrl}/generate-macro`;
+      const formData = new FormData();
+      formData.append('prompt', prompt);
+      formData.append('format', 'xlsx');
+      formData.append('enhancedMode', enhancedMode.toString());
       
-      let options: RequestInit;
-  
+      // Legg til filer hvis de finnes
       if (selectedFiles.length > 0) {
-        const formData = new FormData();
         selectedFiles.forEach((fileInfo, index) => {
           formData.append(`file${index}`, fileInfo.file);
         });
-  
-        const fileInstructions = selectedFiles.map(f => {
-          const ext = f.name.split('.').pop()?.toLowerCase();
-          if (ext === 'xlsx' || ext === 'xls') {
-            return `Analyze and improve the Excel file "${f.name}":
-  - Clean up and optimize formatting
-  - Enhance layout and readability
-  - Improve any existing charts or tables
-  - Add data validation where appropriate
-  - Fix any formulas or calculations`;
-          } else if (ext === 'csv') {
-            return `Process and structure the CSV file "${f.name}"`;
-          }
-          return `Use the content from "${f.name}" as reference`;
-        }).join("\n\n");
-  
-        const updatedPrompt = `${prompt}\n\nFile-specific instructions:\n${fileInstructions}`;
-        formData.append('prompt', updatedPrompt);
-        formData.append('format', 'xlsx'); 
         formData.append('fileCount', selectedFiles.length.toString());
-        formData.append('enhancedMode', enhancedMode.toString()); 
-  
-        options = {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        };
-      } else {
-        options = {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ 
-            prompt, 
-            format: 'xlsx', 
-            enhancedMode 
-          }) 
-        };
       }
-  
-      const response = await fetch(url, options);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to generate document');
-      }
-  
+
+      // Bruk riktig endepunkt basert på om vi har filer eller ikke
+      const endpoint = selectedFiles.length > 0 ? '/generate-excel-with-file' : '/generate-excel';
+      const response = await api.fetch(endpoint, {
+        method: 'POST',
+        body: formData
+      });
+
       const result = await response.json();
-      setSessionId(result.sessionId);
-  
+      
       if (result.error) {
         throw new Error(result.error);
       }
-  
+
+      setSessionId(result.sessionId);
+      
       if (result.previewImage) {
         setPreviewImage(result.previewImage);
         setIsGenerating(false);
@@ -347,10 +298,9 @@ export default function Dashboard() {
       }
       
       if (result.formatting) setFormatting(result.formatting);
-  
       
       await refreshUserData();
-  
+      
     } catch (error: any) {
       console.error('Error details:', error);
       setError(error.message || 'Failed to generate document. Please try again.');

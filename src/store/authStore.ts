@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import create from 'zustand';
 import api from '../utils/api';
 import { config } from '../config';
 import csrfService from './csrfService';
@@ -51,51 +51,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   refreshUserData: async () => {
     try {
-      console.log("Refreshing user data...");
+      const response = await api.fetch('/verify-token');
       
-     
-      const tokenResponse = await api.fetch('/verify-token', {
-        credentials: 'include' 
-      });
-      
-      if (!tokenResponse.ok) {
-        throw new Error('Failed to refresh user data - session verification failed');
+      if (!response.ok) {
+        throw new Error('Failed to refresh user data');
       }
       
-      const userData = await tokenResponse.json();
-      
-     
-      const tokenInfoResponse = await api.fetch('/user/tokens', {
-        credentials: 'include'
-      });
-      
-      if (tokenInfoResponse.ok) {
-        const tokenData = await tokenInfoResponse.json();
-        
-        
-        set({ 
-          user: { 
-            ...userData,
-            tokens: tokenData.current_tokens || userData.tokens || 0,
-          }, 
-          isAuthenticated: true,
-          tokens: tokenData.current_tokens || userData.tokens || 0,
-          planType: userData.planType,
-          isDemoUser: userData.planType === 'Demo',
-        });
-        
-        console.log('Updated user data with token info');
-      } else {
-      
-        set({ 
-          user: { ...userData }, 
-          isAuthenticated: true,
-          tokens: userData.tokens || 0,
-          planType: userData.planType,
-          isDemoUser: userData.planType === 'Demo',
-        });
-      }
-      
+      const userData = await response.json();
+      set({ user: userData });
       return true;
     } catch (error) {
       console.error('Error refreshing user data:', error);
@@ -125,7 +88,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       const response = await api.fetch('/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password })
       });
 
       const userData = await response.json();

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../utils/api';
@@ -23,8 +23,17 @@ export function SpreadsheetViewer({
 }: SpreadsheetViewerProps) {
   const { user } = useAuthStore();
   const token = user?.token;
+  const [imageError, setImageError] = useState(false);
 
-  
+  useEffect(() => {
+    if (previewImage) {
+      console.log("Preview image received, length:", previewImage.length);
+      setImageError(false);
+    } else {
+      console.log("No preview image available");
+    }
+  }, [previewImage]);
+
   useEffect(() => {
     if (previewImage) {
       console.log("Preview image received:", previewImage.substring(0, 50) + "...");
@@ -141,10 +150,16 @@ export function SpreadsheetViewer({
                     imageRendering: '-webkit-optimize-contrast',
                     display: 'block'
                   }}
+                  onError={(e) => {
+                    console.error("Image failed to load");
+                    setImageError(true);
+                  }}
                 />
               ) : (
                 <div className="flex items-center justify-center h-[600px]">
-                  <p className="text-gray-400">No preview available</p>
+                  <p className="text-gray-400">
+                    {imageError ? "Failed to load preview" : "No preview available"}
+                  </p>
                 </div>
               )}
             </div>
