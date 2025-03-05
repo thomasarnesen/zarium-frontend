@@ -52,48 +52,44 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       console.log("Refreshing user data...");
       
-     
       const tokenResponse = await api.fetch('/verify-token', {
         credentials: 'include' 
       });
       
       if (!tokenResponse.ok) {
-        throw new Error('Failed to refresh user data - session verification failed');
+        // Hvis token er ugyldig, behold brukerdata men prøv å fornye token
+        try {
+          const refreshResponse = await api.fetch('/refresh-token', {
+            method: 'POST',
+            credentials: 'include'
+          });
+          
+          if (!refreshResponse.ok) {
+            throw new Error('Could not refresh session');
+          }
+          
+          // Fortsett med oppdatering av brukerdata med ny token
+          const userData = await refreshResponse.json();
+          set({ user: userData });
+        } catch (error) {
+          console.error('Session refresh failed:', error);
+          return false;
+        }
       }
       
       const userData = await tokenResponse.json();
       
-     
-      const tokenInfoResponse = await api.fetch('/user/tokens', {
-        credentials: 'include'
-      });
-      
-      if (tokenInfoResponse.ok) {
-        const tokenData = await tokenInfoResponse.json();
-        
-        
-        set({ 
-          user: { 
-            ...userData,
-            tokens: tokenData.current_tokens || userData.tokens || 0,
-          }, 
-          isAuthenticated: true,
-          tokens: tokenData.current_tokens || userData.tokens || 0,
-          planType: userData.planType,
-          isDemoUser: userData.planType === 'Demo',
-        });
-        
-        console.log('Updated user data with token info');
-      } else {
-      
-        set({ 
-          user: { ...userData }, 
-          isAuthenticated: true,
-          tokens: userData.tokens || 0,
-          planType: userData.planType,
-          isDemoUser: userData.planType === 'Demo',
-        });
-      }
+      // Oppdater brukerdata men behold token
+      set(state => ({ 
+        user: { 
+          ...userData,
+          token: state.user?.token // Behold eksisterende token
+        }, 
+        isAuthenticated: true,
+        tokens: userData.tokens || 0,
+        planType: userData.planType,
+        isDemoUser: userData.planType === 'Demo',
+      }));
       
       return true;
     } catch (error) {

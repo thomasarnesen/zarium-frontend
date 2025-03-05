@@ -37,6 +37,33 @@ const api = {
       const response = await fetch(url, fetchOptions);
       console.log(`Request took ${Date.now() - startTime}ms`);
       
+      // Håndter 401/403 bedre
+      if (response.status === 401 || response.status === 403) {
+        // Prøv å fornye token først
+        try {
+          const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
+            method: 'POST',
+            credentials: 'include'
+          });
+          
+          if (refreshResponse.ok) {
+            // Prøv original forespørsel på nytt med ny token
+            const retryResponse = await fetch(url, fetchOptions);
+            if (retryResponse.ok) {
+              return retryResponse;
+            }
+          }
+        } catch (error) {
+          console.error('Token refresh failed:', error);
+        }
+        
+        // Hvis refresh feilet og vi er på dashboard, omdiriger til login
+        if (window.location.pathname === '/dashboard') {
+          window.location.href = '/login';
+        }
+        throw new Error('Session expired');
+      }
+
       if (!response.ok) {
         let errorMessage = response.statusText;
         try {
