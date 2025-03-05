@@ -67,21 +67,12 @@
 }
  
 @layer base {
-  * {
-    @apply border-border;
-  }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Add smooth transition for theme changes */
   html {
-    color-scheme: light;
     transition: background-color 0.3s ease;
-  }
-  html.dark {
-    color-scheme: dark;
   }
 }
 
