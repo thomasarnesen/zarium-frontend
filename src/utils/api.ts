@@ -9,7 +9,7 @@ const api = {
     
     let retryCount = 0;
     const maxRetries = 3;
-    const retryDelay = 1000; // 1 second
+    const retryDelay = 1000;
 
     const executeRequest = async (shouldRetry = true): Promise<Response> => {
       try {
@@ -30,7 +30,7 @@ const api = {
 
         const response = await fetch(url, fetchOptions);
 
-        // For lange genererings-requests, forny token proaktivt
+        // For lange operasjoner, forny token proaktivt
         if (endpoint.includes('generate-macro')) {
           try {
             await fetch(`${config.apiUrl}/api/refresh-token`, {
@@ -39,7 +39,7 @@ const api = {
               mode: 'cors'
             });
           } catch (error) {
-            console.warn('Failed to refresh token during generation:', error);
+            console.warn('Token refresh during generation failed:', error);
           }
         }
 
@@ -48,8 +48,7 @@ const api = {
             retryCount++;
             console.log(`Attempt ${retryCount}: Refreshing token...`);
             
-            // Vent litt før retry
-            await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
             
             const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
               method: 'POST',
@@ -58,13 +57,15 @@ const api = {
             });
 
             if (refreshResponse.ok) {
-              console.log('Token refreshed, retrying request...');
-              return executeRequest(true);
+              console.log('Token refreshed successfully');
+              return executeRequest(false);
             }
           }
-          // Kun redirect til login hvis vi har prøvd alle retries
-          if (retryCount >= maxRetries && window.location.pathname === '/dashboard') {
-            window.location.href = '/login';
+
+          // Kun redirect til login hvis alle retries er brukt
+          if (retryCount >= maxRetries) {
+            console.error('Max retries reached, session expired');
+            throw new Error('Session expired');
           }
         }
 

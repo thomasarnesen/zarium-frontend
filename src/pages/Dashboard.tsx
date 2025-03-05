@@ -262,11 +262,23 @@ export default function Dashboard() {
     setFormatting(null);
   
     try {
-      // Oppdater tokens før generering
-      await refreshUserData();
+      // Forny token før generering
+      const tokenResponse = await api.fetch('/refresh-token', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (!tokenResponse.ok) {
+        throw new Error('Failed to refresh session');
+      }
 
       const endpoint = selectedFiles.length > 0 ? '/generate-macro-with-file' : '/generate-macro';
       
+      const requestOptions: RequestInit = {
+        method: 'POST',
+        credentials: 'include'
+      };
+
       if (selectedFiles.length > 0) {
         const formData = new FormData();
         selectedFiles.forEach((fileInfo, index) => {
@@ -276,51 +288,25 @@ export default function Dashboard() {
         formData.append('format', 'xlsx');
         formData.append('fileCount', selectedFiles.length.toString());
         formData.append('enhancedMode', enhancedMode.toString());
-
-        const response = await api.fetch(endpoint, {
-          method: 'POST',
-          body: formData
-        });
-
-        const result = await response.json();
-        // ...handle response
-        handleGenerationResult(result);
+        requestOptions.body = formData;
       } else {
-        // For generering uten filer, send JSON
-        const response = await api.fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            prompt,
-            format: 'xlsx',
-            enhancedMode
-          })
+        requestOptions.headers = {
+          'Content-Type': 'application/json',
+        };
+        requestOptions.body = JSON.stringify({
+          prompt,
+          format: 'xlsx',
+          enhancedMode
         });
-
-        const result = await response.json();
-        handleGenerationResult(result);
       }
 
-      // Oppdater tokens etter vellykket generering
-      try {
-        await refreshUserData();
-      } catch (error) {
-        console.error('Failed to refresh tokens after generation:', error);
-        // Ikke avbryt prosessen hvis token-oppdatering feiler
-      }
+      const response = await api.fetch(endpoint, requestOptions);
+      const result = await response.json();
+      await handleGenerationResult(result);
 
     } catch (error: any) {
-      if (error.message === 'Session expired') {
-        // Håndter utløpt sesjon spesifikt
-        setError('Your session has expired. Please log in again.');
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 2000);
-      } else {
-        setError(error.message || 'Failed to generate document. Please try again.');
-      }
+      console.error('Generation error:', error);
+      setError(error.message || 'Failed to generate document. Please try again.');
       setIsGenerating(false);
       setGenerationStatus('');
       setSessionId(null);
@@ -328,30 +314,30 @@ export default function Dashboard() {
   };
 
   const handleGenerationResult = async (result: any) => {
-    if (result.error) {
-      throw new Error(result.error);
-    }
-
-    setSessionId(result.sessionId);
-    
-    if (result.previewImage) {
-      setPreviewImage(result.previewImage);
-    }
-    
-    if (result.formatting) {
-      setFormatting(result.formatting);
-    }
-
     try {
-      await refreshUserData();
-    } catch (error) {
-      console.error('Failed to refresh user data:', error);
-      // Fortsett uten å kaste error siden genereringen var vellykket
-    }
+      if (result.error) {
+        throw new Error(result.error);
+      }
 
-    setIsGenerating(false);
-    setGenerationStatus('');
-    setSessionId(null);
+      if (result.previewImage) {
+        setPreviewImage(result.previewImage);
+      }
+      
+      if (result.formatting) {
+        setFormatting(result.formatting);
+      }
+
+      // Refresh user data etter vellykket generering
+      await refreshUserData();
+
+    } catch (error) {
+      console.error('Error handling generation result:', error);
+      throw error;
+    } finally {
+      setIsGenerating(false);
+      setGenerationStatus('');
+      setSessionId(null);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
