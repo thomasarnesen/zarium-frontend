@@ -1,8 +1,6 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import NavBar from './Navbar';
-import Footer from './Footer';
-
+import  NavBar  from './Navbar';
 import { ThemeToggle } from './ThemeToggle';
 
 export function Layout() {
@@ -15,7 +13,6 @@ export function Layout() {
       <div className="fixed bottom-5 right-5 z-50">
         <ThemeToggle />
       </div>
-      <Footer />
     </div>
   );
 }
