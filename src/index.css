@@ -72,6 +72,16 @@
   }
 }
 
+@layer components {
+  /* Your custom component styles with @apply go here */
+}
+
+@layer utilities {
+  /* Your custom utility styles with @apply go here */
+}
+
+/* For any styles that don't use @apply, you can place them here */
+
 .excel-like-grid .handsontable {
   font-size: 13px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
