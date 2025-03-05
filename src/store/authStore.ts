@@ -50,32 +50,38 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   refreshUserData: async () => {
     try {
-      console.log("Refreshing user data...");
-      
-      const [tokenResponse, tokenInfoResponse] = await Promise.all([
+      const [tokenResponse, tokenInfoResponse] = await Promise.allSettled([
         api.fetch('/verify-token'),
         api.fetch('/user/tokens')
       ]);
 
-      if (!tokenResponse.ok || !tokenInfoResponse.ok) {
-        throw new Error('Failed to refresh user data');
+      if (tokenResponse.status === 'fulfilled' && tokenResponse.value.ok) {
+        const userData = await tokenResponse.value.json();
+        
+        if (tokenInfoResponse.status === 'fulfilled' && tokenInfoResponse.value.ok) {
+          const tokenData = await tokenInfoResponse.value.json();
+          
+          set({ 
+            user: { ...userData },
+            isAuthenticated: true,
+            tokens: tokenData.current_tokens || userData.tokens || 0,
+            planType: userData.planType,
+            isDemoUser: userData.planType === 'Demo'
+          });
+        } else {
+          set({ 
+            user: { ...userData },
+            isAuthenticated: true,
+            tokens: userData.tokens || 0,
+            planType: userData.planType,
+            isDemoUser: userData.planType === 'Demo'
+          });
+        }
+        return true;
       }
-
-      const userData = await tokenResponse.json();
-      const tokenData = await tokenInfoResponse.json();
-
-      set({ 
-        user: { ...userData },
-        isAuthenticated: true,
-        tokens: tokenData.current_tokens || userData.tokens || 0,
-        planType: userData.planType,
-        isDemoUser: userData.planType === 'Demo'
-      });
-      
-      return true;
+      return false;
     } catch (error) {
       console.error('Error refreshing user data:', error);
-      // Ikke nullstill bruker umiddelbart ved feil
       return false;
     }
   },

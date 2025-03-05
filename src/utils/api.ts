@@ -8,17 +8,11 @@ const api = {
     const url = `${config.apiUrl}${apiEndpoint}`;
     
     let retryCount = 0;
-    try {
-      console.log(`Fetching ${url}...`);
-      const startTime = Date.now();
-      
-      const maxRetries = 3;
-      
-      const executeRequest = async (shouldRetry = true): Promise<Response> => {
-        if (retryCount >= maxRetries) {
-          throw new Error(`Maximum retries (${maxRetries}) exceeded`);
-        }
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1 second
 
+    const executeRequest = async (shouldRetry = true): Promise<Response> => {
+      try {
         const csrfHeaders = await csrfService.getHeaders();
         const isFormData = options.body instanceof FormData;
         
@@ -34,75 +28,58 @@ const api = {
           mode: 'cors'
         };
 
-        try {
-          const response = await fetch(url, fetchOptions);
-          
-          if (response.status === 401 || response.status === 403) {
-            if (shouldRetry) {
-              console.log(`Attempt ${retryCount + 1}: Token expired, attempting refresh...`);
-              const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
-                method: 'POST',
-                credentials: 'include',
-                mode: 'cors'
-              });
-              
-              if (refreshResponse.ok) {
-                console.log('Token refreshed successfully, retrying original request');
-                retryCount++;
-                return executeRequest(true);
-              } else {
-                console.log('Token refresh failed');
-                if (window.location.pathname === '/dashboard') {
-                  window.location.href = '/login';
-                }
-                throw new Error('Session expired');
-              }
-            } else {
-              throw new Error('Authentication failed after token refresh');
-            }
+        const response = await fetch(url, fetchOptions);
+
+        // For lange genererings-requests, forny token proaktivt
+        if (endpoint.includes('generate-macro')) {
+          try {
+            await fetch(`${config.apiUrl}/api/refresh-token`, {
+              method: 'POST',
+              credentials: 'include',
+              mode: 'cors'
+            });
+          } catch (error) {
+            console.warn('Failed to refresh token during generation:', error);
           }
-          
-          return response;
-        } catch (error) {
-          if (error instanceof Error) {
-            if (error.message === 'Session expired') {
-              throw error;
-            }
-            if (shouldRetry && retryCount < maxRetries) {
-              console.log(`Request failed, attempt ${retryCount + 1} of ${maxRetries}`);
-              retryCount++;
-              // Eksponensiell backoff: 1s, 2s, 4s...
-              await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+        }
+
+        if (response.status === 401 || response.status === 403) {
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.log(`Attempt ${retryCount}: Refreshing token...`);
+            
+            // Vent litt før retry
+            await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+            
+            const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
+              method: 'POST',
+              credentials: 'include',
+              mode: 'cors'
+            });
+
+            if (refreshResponse.ok) {
+              console.log('Token refreshed, retrying request...');
               return executeRequest(true);
             }
           }
-          throw error;
+          // Kun redirect til login hvis vi har prøvd alle retries
+          if (retryCount >= maxRetries && window.location.pathname === '/dashboard') {
+            window.location.href = '/login';
+          }
         }
-      };
 
-      const response = await executeRequest();
-      console.log(`Request completed in ${Date.now() - startTime}ms after ${retryCount} retries`);
-
-      if (!response.ok) {
-        let errorMessage = response.statusText;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          // If JSON parsing fails, use status text
+        return response;
+      } catch (error) {
+        if (shouldRetry && retryCount < maxRetries) {
+          retryCount++;
+          await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+          return executeRequest(true);
         }
-        throw new Error(errorMessage);
+        throw error;
       }
+    };
 
-      return response;
-    } catch (error) {
-      console.error('Network Error:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        url: url,
-        retries: retryCount
-      });
-      throw error;
-    }
+    return executeRequest();
   },
   
   uploadFile: async (endpoint: string, file: File, additionalData?: Record<string, any>) => {
