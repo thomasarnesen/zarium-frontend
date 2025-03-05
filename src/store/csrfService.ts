@@ -14,13 +14,14 @@ class CSRFService {
 
   async fetchToken() {
     try {
-      const response = await fetch(`${config.apiUrl}/csrf-token`, {
+      // Oppdater URL til å bruke /api prefix
+      const response = await fetch(`${config.apiUrl}/api/csrf-token`, {
         credentials: 'include',
         mode: 'cors'
       });
       
       if (!response.ok) {
-        throw new Error('Failed to fetch CSRF token');
+        throw new Error(`Failed to fetch CSRF token: ${response.status}`);
       }
       
       const data = await response.json();
