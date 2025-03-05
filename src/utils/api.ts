@@ -4,65 +4,75 @@ import csrfService from '../store/csrfService';
 
 const api = {
   fetch: async (endpoint: string, options: RequestInit = {}) => {
-    const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
-    const url = `${config.apiUrl}${apiEndpoint}`;
+    const url = `${config.apiUrl}${endpoint}`;
     
     try {
-      console.log(`Making request to ${url}`);
+      console.log(`Fetching ${url}...`);
+      const startTime = Date.now();
       
-      // Get CSRF headers with retry
-      let csrfHeaders = {};
-      try {
-        csrfHeaders = await csrfService.getHeaders();
-      } catch (error) {
-        console.warn('CSRF token fetch failed, retrying after delay...');
-        // Add longer delay before retry
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        try {
-          await csrfService.resetToken();
-          csrfHeaders = await csrfService.getHeaders();
-        } catch (retryError) {
-          console.error('CSRF token fetch failed after retry, proceeding without token');
-        }
-      }
-
-      const defaultHeaders: Record<string, string> = {
+      // Get CSRF headers
+      const csrfHeaders = await csrfService.getHeaders();
+      
+      // Create default headers
+      const defaultHeaders = {
+        'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
         ...csrfHeaders
       };
-
-      // Only add Content-Type for JSON requests
-      if (!(options.body instanceof FormData)) {
-        defaultHeaders['Content-Type'] = 'application/json';
-      }
-
-      const response = await fetch(url, {
+      
+      // Use HTTP-only cookies for auth
+      const fetchOptions: RequestInit = {
         ...options,
         headers: {
           ...defaultHeaders,
           ...options.headers,
         },
-        credentials: 'include',
+        credentials: 'include', // Always include credentials for cookies
         mode: 'cors'
-      });
-
-      if (!response.ok) {
-        console.error('API Error:', response.status, response.statusText);
-        const errorText = await response.text();
-        throw new Error(errorText || `API error: ${response.statusText}`);
+      };
+      
+      const response = await fetch(url, fetchOptions);
+      
+      console.log(`Request took ${Date.now() - startTime}ms`);
+      
+      // Handle auth errors
+      if (response.status === 401 || response.status === 403) {
+        window.location.href = '/login';
+        throw new Error('Session expired. Please log in again.');
       }
-
+      
+      if (!response.ok) {
+        console.error('API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: url
+        });
+        
+        let errorMessage = `API error: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // If JSON parsing fails, use status text
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
       return response;
     } catch (error) {
-      console.error('Network Error:', error);
+      console.error('Network Error:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        url: url
+      });
       throw error;
     }
   },
   
   uploadFile: async (endpoint: string, file: File, additionalData?: Record<string, any>) => {
-    // Add /api prefix to all endpoints
-    const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
-    const url = `${config.apiUrl}${apiEndpoint}`;
+    const url = `${config.apiUrl}${endpoint}`;
     const formData = new FormData();
     
     formData.append('file', file);
@@ -79,7 +89,7 @@ const api = {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          ...(csrfHeaders as Record<string, string>),
+          ...csrfHeaders,
           // Let browser set Content-Type with boundary
         },
         body: formData,

@@ -8,8 +8,11 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isDemoMode } = useAuthStore();
+  
+  console.log("User data in protected route:", user);
+  console.log("Token:", user?.token);
 
-  if (!isDemoMode && !user?.email) {
+  if (!isDemoMode && !user?.token) {
     return <Navigate to="/login" replace />;
   }
 

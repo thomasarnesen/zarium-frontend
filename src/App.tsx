@@ -73,7 +73,11 @@ export default function App() {
           const userData = JSON.parse(storedUser);
           
           if (userData.token) {
-            const response = await api.fetch('/verify-token');
+            const response = await api.fetch('/verify-token', {
+              headers: {
+                'Authorization': `Bearer ${userData.token}`,
+              }
+            });
             
             if (response.ok) {
               const verifiedData = await response.json();

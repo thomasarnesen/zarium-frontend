@@ -275,13 +275,12 @@ export default function Dashboard() {
         formData.append('fileCount', selectedFiles.length.toString());
       }
 
-      // Bruk riktig endepunkt basert på om vi har filer eller ikke
-      const endpoint = selectedFiles.length > 0 ? '/generate-excel-with-file' : '/generate-excel';
-      const response = await api.fetch(endpoint, {
+      // Bruk en enkelt endepunkt for både med og uten filer
+      const response = await api.fetch('/generate-macro', {
         method: 'POST',
         body: formData
       });
-
+      
       const result = await response.json();
       
       if (result.error) {
