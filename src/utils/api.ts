@@ -4,7 +4,9 @@ import csrfService from '../store/csrfService';
 
 const api = {
   fetch: async (endpoint: string, options: RequestInit = {}) => {
-    const url = `${config.apiUrl}${endpoint}`;
+    // Add /api prefix to all endpoints
+    const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
+    const url = `${config.apiUrl}${apiEndpoint}`;
     
     try {
       console.log(`Fetching ${url}...`);
@@ -72,7 +74,9 @@ const api = {
   },
   
   uploadFile: async (endpoint: string, file: File, additionalData?: Record<string, any>) => {
-    const url = `${config.apiUrl}${endpoint}`;
+    // Add /api prefix to all endpoints
+    const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
+    const url = `${config.apiUrl}${apiEndpoint}`;
     const formData = new FormData();
     
     formData.append('file', file);
