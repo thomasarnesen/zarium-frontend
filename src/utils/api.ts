@@ -13,9 +13,24 @@ const api = {
 
     const executeRequest = async (shouldRetry = true): Promise<Response> => {
       try {
-        const csrfHeaders = await csrfService.getHeaders();
+        // Add authorization from localStorage if available
         const storedAuth = localStorage.getItem('authUser');
-        const authData = storedAuth ? JSON.parse(storedAuth) : null;
+        let authHeaders = {};
+        
+        if (storedAuth) {
+          try {
+            const authData = JSON.parse(storedAuth);
+            if (authData.token) {
+              authHeaders = {
+                'Authorization': `Bearer ${authData.token}`
+              };
+            }
+          } catch (e) {
+            console.warn('Failed to parse stored auth data', e);
+          }
+        }
+        
+        const csrfHeaders = await csrfService.getHeaders();
         const isFormData = options.body instanceof FormData;
         
         const fetchOptions: RequestInit = {
@@ -23,52 +38,64 @@ const api = {
           headers: {
             ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
             'Accept': 'application/json',
+            ...authHeaders,
             ...csrfHeaders,
-            ...(authData?.token && { 'Authorization': `Bearer ${authData.token}` }),
             ...options.headers,
           },
           credentials: 'include',
           mode: 'cors'
         };
 
-        const response = await fetch(url, fetchOptions);
-
-        // For lange operasjoner, forny token proaktivt
+        // For Excel generation, preemptively refresh the token
         if (endpoint.includes('generate-macro')) {
           try {
-            await fetch(`${config.apiUrl}/api/refresh-token`, {
-              method: 'POST',
-              credentials: 'include',
-              mode: 'cors'
-            });
-          } catch (error) {
-            console.warn('Token refresh during generation failed:', error);
-          }
-        }
-
-        if (response.status === 401 || response.status === 403) {
-          if (retryCount < maxRetries) {
-            retryCount++;
-            console.log(`Attempt ${retryCount}: Refreshing token...`);
-            
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-            
+            console.log("Preemptively refreshing token before generation...");
             const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
               method: 'POST',
               credentials: 'include',
-              mode: 'cors'
+              mode: 'cors',
+              headers: { ...authHeaders, ...csrfHeaders }
             });
-
+            
             if (refreshResponse.ok) {
-              console.log('Token refreshed successfully');
-              return executeRequest(false);
+              console.log("Token refreshed before generation");
+            }
+          } catch (error) {
+            console.warn('Preemptive token refresh failed:', error);
+          }
+        }
+
+        const response = await fetch(url, fetchOptions);
+
+        // Re-authenticate on 401/403 errors
+        if (response.status === 401 || response.status === 403) {
+          if (retryCount < maxRetries && shouldRetry) {
+            retryCount++;
+            console.log(`Auth error, attempt ${retryCount}: Refreshing token...`);
+            
+            try {
+              const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
+                method: 'POST',
+                credentials: 'include',
+                mode: 'cors',
+                headers: { ...authHeaders, ...csrfHeaders }
+              });
+              
+              if (refreshResponse.ok) {
+                console.log('Token refreshed, retrying request');
+                // Update isAuthenticated in localStorage
+                localStorage.setItem('isAuthenticated', 'true');
+                return executeRequest(false);
+              }
+            } catch (e) {
+              console.error('Failed to refresh token:', e);
             }
           }
-
-          // Kun redirect til login hvis alle retries er brukt
+          
+          // If we're still having auth issues after retries, consider clearing auth
           if (retryCount >= maxRetries) {
-            console.error('Max retries reached, session expired');
-            throw new Error('Session expired');
+            console.error('Authentication failed after maximum retries');
+            // Don't automatically redirect - let the component handle it
           }
         }
 
@@ -76,6 +103,7 @@ const api = {
       } catch (error) {
         if (shouldRetry && retryCount < maxRetries) {
           retryCount++;
+          console.log(`Network error, retrying (${retryCount}/${maxRetries})...`);
           await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
           return executeRequest(true);
         }
@@ -83,7 +111,27 @@ const api = {
       }
     };
 
-    return executeRequest();
+    try {
+      const startTime = Date.now();
+      const response = await executeRequest();
+      console.log(`Request to ${endpoint} completed in ${Date.now() - startTime}ms`);
+
+      if (!response.ok) {
+        let errorMessage = response.statusText;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // If JSON parsing fails, use status text
+        }
+        throw new Error(errorMessage);
+      }
+
+      return response;
+    } catch (error) {
+      console.error(`API Error (${endpoint}):`, error);
+      throw error;
+    }
   },
   
   uploadFile: async (endpoint: string, file: File, additionalData?: Record<string, any>) => {

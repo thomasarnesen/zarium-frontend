@@ -34,11 +34,10 @@ interface AuthState {
   setUser: (user: User | null) => void;
   refreshUserData: () => Promise<boolean>;
   toggleEnhancedMode: () => void;
-  initialize: () => Promise<void>;  // Ny funksjon
+  initialize: () => Promise<void>; 
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-
   user: null,
   isAuthenticated: false,
   isDemoMode: false,
@@ -50,6 +49,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   refreshUserData: async () => {
     try {
+      console.log("Refreshing user data...");
+      
+      // First try refreshing the token to ensure we have a valid session
+      try {
+        await api.fetch('/refresh-token', {
+          method: 'POST',
+          credentials: 'include',
+        });
+      } catch (error) {
+        console.warn('Token refresh during data refresh failed:', error);
+        // Continue anyway to try to get data
+      }
+
       const [tokenResponse, tokenInfoResponse] = await Promise.allSettled([
         api.fetch('/verify-token'),
         api.fetch('/user/tokens')
@@ -58,11 +70,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (tokenResponse.status === 'fulfilled' && tokenResponse.value.ok) {
         const userData = await tokenResponse.value.json();
         
+        // Update localStorage with latest user data
+        const authUser = JSON.parse(localStorage.getItem('authUser') || '{}');
+        
+        const updatedUser = {
+          ...userData,
+          token: authUser.token || userData.token,
+        };
+        
+        localStorage.setItem('authUser', JSON.stringify(updatedUser));
+        localStorage.setItem('isAuthenticated', 'true');
+        
+        // Update state
         if (tokenInfoResponse.status === 'fulfilled' && tokenInfoResponse.value.ok) {
           const tokenData = await tokenInfoResponse.value.json();
           
           set({ 
-            user: { ...userData },
+            user: updatedUser,
             isAuthenticated: true,
             tokens: tokenData.current_tokens || userData.tokens || 0,
             planType: userData.planType,
@@ -70,13 +94,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
         } else {
           set({ 
-            user: { ...userData },
+            user: updatedUser,
             isAuthenticated: true,
             tokens: userData.tokens || 0,
             planType: userData.planType,
             isDemoUser: userData.planType === 'Demo'
           });
         }
+        
         return true;
       }
       return false;
@@ -88,24 +113,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setUser: (user) => {
     if (user) {
-      // Lagre all brukerdata i localStorage
-      localStorage.setItem('authUser', JSON.stringify({
+      const authData = {
         id: user.id,
         email: user.email,
         planType: user.planType,
         tokens: user.tokens,
         token: user.token,
-        isAuthenticated: true
-      }));
+      };
+      
+      localStorage.setItem('authUser', JSON.stringify(authData));
+      localStorage.setItem('isAuthenticated', 'true');
     } else {
       localStorage.removeItem('authUser');
+      localStorage.removeItem('isAuthenticated');
     }
     
     set({
       user,
       isAuthenticated: !!user,
       planType: user?.planType || null,
-      tokens: user?.tokens || 0
+      tokens: user?.tokens || 0,
+      isDemoUser: user?.planType === 'Demo'
     });
   },
 
@@ -200,59 +228,59 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   toggleEnhancedMode: () => set((state) => ({ enhancedMode: !state.enhancedMode })),
 
   initialize: async () => {
-    try {
-      // Hent lagret brukerdata
-      const storedAuth = localStorage.getItem('authUser');
-      if (storedAuth) {
+    // Check for stored authentication data
+    const storedAuth = localStorage.getItem('authUser');
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    
+    if (storedAuth && isAuthenticated) {
+      try {
         const authData = JSON.parse(storedAuth);
         
-        // Verifiser token med backend
-        const response = await api.fetch('/verify-token', {
-          method: 'POST',
-          credentials: 'include'
+        // Set initial user data from localStorage
+        set({
+          user: authData,
+          isAuthenticated: true,
+          planType: authData.planType,
+          tokens: authData.tokens || 0,
+          isDemoUser: authData.planType === 'Demo'
         });
-
-        if (response.ok) {
-          const userData = await response.json();
-          // Oppdater med fersk data fra backend, men behold token
-          set({
-            user: {
-              ...userData,
-              token: authData.token
-            },
-            isAuthenticated: true,
-            planType: userData.planType,
-            tokens: userData.tokens,
-            isDemoUser: userData.planType === 'Demo'
-          });
-        } else {
-          // Hvis token er ugyldig, prøv å fornye
+        
+        // Then try to verify and refresh the token
+        try {
           const refreshResponse = await api.fetch('/refresh-token', {
             method: 'POST',
             credentials: 'include'
           });
-
+          
           if (refreshResponse.ok) {
-            const refreshedData = await refreshResponse.json();
-            set({
-              user: {
-                ...refreshedData,
-                token: authData.token
-              },
-              isAuthenticated: true,
-              planType: refreshedData.planType,
-              tokens: refreshedData.tokens,
-              isDemoUser: refreshedData.planType === 'Demo'
-            });
-          } else {
-            // Hvis refresh feiler, logg ut
-            get().logout();
+            console.log("✅ Token refreshed on app start");
+            
+            // Now get updated user data
+            const response = await api.fetch('/verify-token');
+            if (response.ok) {
+              const userData = await response.json();
+              
+              // Update with fresh data but keep token
+              set({ 
+                user: {
+                  ...userData,
+                  token: authData.token
+                },
+                tokens: userData.tokens || 0,
+                planType: userData.planType,
+                isDemoUser: userData.planType === 'Demo'
+              });
+            }
           }
+        } catch (error) {
+          console.warn('Failed to refresh authentication on startup:', error);
+          // Keep using stored data without refreshing
         }
+      } catch (error) {
+        console.error('Failed to parse stored authentication data:', error);
+        localStorage.removeItem('authUser');
+        localStorage.removeItem('isAuthenticated');
       }
-    } catch (error) {
-      console.error('Error initializing auth state:', error);
-      // Ikke logg ut automatisk ved feil, la brukeren prøve på nytt
     }
   }
 }));
