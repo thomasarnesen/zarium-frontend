@@ -35,6 +35,7 @@ interface AuthState {
   setUser: (user: User | null) => void;
   refreshUserData: () => Promise<boolean>;
   toggleEnhancedMode: () => void;
+  initialize: () => Promise<void>;  // Ny funksjon
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -110,6 +111,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       planType: user?.planType || null,
       tokens: user?.tokens || 0
     });
+    // Lagre i localStorage hvis bruker er logget inn, eller fjern hvis logget ut
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
+    }
   },
 
   login: async (email: string, password: string) => {
@@ -201,4 +208,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   toggleEnhancedMode: () => set((state) => ({ enhancedMode: !state.enhancedMode })),
+
+  initialize: async () => {
+    // Prøv å hente bruker fra localStorage først
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      set({ user: JSON.parse(savedUser) });
+      
+      // Verifiser token med backend
+      try {
+        const response = await api.fetch('/verify-token');
+        const userData = await response.json();
+        set({ user: userData });
+      } catch (error) {
+        // Hvis token er ugyldig, logg ut bruker
+        set({ user: null });
+        localStorage.removeItem('user');
+      }
+    }
+  }
 }));

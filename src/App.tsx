@@ -61,6 +61,7 @@ export default function App() {
   const isMaintenanceMode = useMaintenanceStore((state) => state.isMaintenanceMode);
   const isDark = useThemeStore((state) => state.isDark);
   const setUser = useAuthStore((state) => state.setUser);
+  const initialize = useAuthStore(state => state.initialize);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,6 +106,10 @@ export default function App() {
 
     initializeApp();
   }, [setUser]);
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
 
   useEffect(() => {
     if (isDark) {
