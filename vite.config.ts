@@ -13,12 +13,14 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5176, // Match your current port
-    strictPort: true, // Allow fallback to other ports if needed
+    port: 5176,
+    strictPort: true,
     cors: true
   },
   optimizeDeps: {
     include: ['@stripe/stripe-js'],
     exclude: ['fsevents']
-  }
+  },
+  // Add this to ensure proper path handling in production
+  base: '/'
 });

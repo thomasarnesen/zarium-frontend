@@ -1,6 +1,0 @@
-[build]
-  command = "npm run build"
-  publish = "dist"
-
-[build.environment]
-  PYTHON_VERSION = "3.9"  # Eller en annen versjon som Netlify støtter
