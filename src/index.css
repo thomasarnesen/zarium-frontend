@@ -68,7 +68,7 @@
  
 @layer base {
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background-color text-foreground-color;
   }
 }
 
