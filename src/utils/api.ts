@@ -4,33 +4,35 @@ import csrfService from '../store/csrfService';
 
 const api = {
   fetch: async (endpoint: string, options: RequestInit = {}) => {
+    const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
+    const url = `${config.apiUrl}${apiEndpoint}`;
+    
     try {
-      const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
-      const url = `${config.apiUrl}${apiEndpoint}`;
+      console.log(`Making request to ${url}`);
       
-      // Retry CSRF token fetch if it fails
+      // Get CSRF headers with retry
       let csrfHeaders = {};
       try {
         csrfHeaders = await csrfService.getHeaders();
       } catch (error) {
-        console.warn('Failed to get CSRF token on first try, retrying...');
+        console.warn('CSRF token fetch failed, retrying once...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
         try {
           await csrfService.resetToken();
           csrfHeaders = await csrfService.getHeaders();
         } catch (retryError) {
-          console.error('Failed to get CSRF token after retry:', retryError);
+          console.error('CSRF token fetch failed after retry');
         }
       }
-      
+
       const defaultHeaders: Record<string, string> = {
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
         ...csrfHeaders
       };
 
-      // Don't include Content-Type for FormData
-      if (options.body instanceof FormData) {
-        delete defaultHeaders['Content-Type'];
+      // Only add Content-Type for JSON requests
+      if (!(options.body instanceof FormData)) {
+        defaultHeaders['Content-Type'] = 'application/json';
       }
 
       const response = await fetch(url, {
@@ -43,26 +45,15 @@ const api = {
         mode: 'cors'
       });
 
-      // Handle auth errors
-      if (response.status === 401 || response.status === 403) {
-        window.location.href = '/login';
-        throw new Error('Session expired. Please log in again.');
-      }
-
       if (!response.ok) {
-        let errorMessage = `API error: ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          // Hvis JSON parsing feiler, bruk status text
-        }
-        throw new Error(errorMessage);
+        console.error('API Error:', response.status, response.statusText);
+        const errorText = await response.text();
+        throw new Error(errorText || `API error: ${response.statusText}`);
       }
 
       return response;
     } catch (error) {
-      console.error('API Error:', error);
+      console.error('Network Error:', error);
       throw error;
     }
   },
@@ -87,7 +78,7 @@ const api = {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          ...csrfHeaders,
+          ...(csrfHeaders as Record<string, string>),
           // Let browser set Content-Type with boundary
         },
         body: formData,

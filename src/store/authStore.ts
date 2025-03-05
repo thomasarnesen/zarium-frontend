@@ -1,6 +1,5 @@
 import create from 'zustand';
 import api from '../utils/api';
-import { config } from '../config';
 import csrfService from './csrfService';
 interface User {
   id: number;
