@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import { useThemeStore } from './store/themeStore';
 import { Toaster } from 'react-hot-toast';
-import { ThemeProvider } from './components/ui/theme-provider';
 import api from './utils/api';
 
 // Import pages
@@ -26,8 +26,21 @@ const TOKEN_REFRESH_INTERVAL = 10 * 60 * 1000;
 
 function App() {
   const { initialize, isAuthenticated } = useAuthStore();
+  const { isDark } = useThemeStore();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Apply the dark/light theme class based on themeStore's isDark state
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (isDark) {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.add('light');
+      root.classList.remove('dark');
+    }
+  }, [isDark]);
 
   useEffect(() => {
     const initApp = async () => {
@@ -99,9 +112,17 @@ function App() {
   }
 
   return (
-    <ThemeProvider defaultTheme="light">
+    <div className={`app ${isDark ? 'dark' : 'light'}`}>
       <BrowserRouter>
-        <Toaster position="top-center" />
+        <Toaster 
+          position="top-center" 
+          toastOptions={{
+            style: {
+              background: isDark ? '#1f2937' : '#ffffff',
+              color: isDark ? '#ffffff' : '#000000',
+            },
+          }}
+        />
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
@@ -133,7 +154,7 @@ function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-    </ThemeProvider>
+    </div>
   );
 }
 

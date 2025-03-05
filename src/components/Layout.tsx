@@ -1,11 +1,21 @@
+import React from 'react';
 import { Outlet } from 'react-router-dom';
-import Navbar from './Navbar';
+import NavBar from './Navbar';
+import Footer from './Footer';
+
+import { ThemeToggle } from './ThemeToggle';
 
 export function Layout() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
-      <Navbar />
-      <Outlet />
+    <div className="flex flex-col min-h-screen">
+      <NavBar />
+      <main className="flex-grow">
+        <Outlet />
+      </main>
+      <div className="fixed bottom-5 right-5 z-50">
+        <ThemeToggle />
+      </div>
+      <Footer />
     </div>
   );
 }
