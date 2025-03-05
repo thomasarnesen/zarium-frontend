@@ -15,13 +15,14 @@ const api = {
       try {
         csrfHeaders = await csrfService.getHeaders();
       } catch (error) {
-        console.warn('CSRF token fetch failed, retrying once...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.warn('CSRF token fetch failed, retrying after delay...');
+        // Add longer delay before retry
+        await new Promise(resolve => setTimeout(resolve, 2000));
         try {
           await csrfService.resetToken();
           csrfHeaders = await csrfService.getHeaders();
         } catch (retryError) {
-          console.error('CSRF token fetch failed after retry');
+          console.error('CSRF token fetch failed after retry, proceeding without token');
         }
       }
 
