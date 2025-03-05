@@ -108,7 +108,33 @@ export default function App() {
   }, [setUser]);
 
   useEffect(() => {
-    initialize();
+    const initApp = async () => {
+      setIsLoading(true);
+      try {
+        await initialize();
+        
+        // Sett opp intervall for token-fornyelse
+        const refreshInterval = setInterval(async () => {
+          try {
+            await api.fetch('/refresh-token', {
+              method: 'POST',
+              credentials: 'include'
+            });
+          } catch (error) {
+            console.warn('Token refresh failed:', error);
+          }
+        }, 15 * 60 * 1000); // Forny token hvert 15. minutt
+
+        return () => clearInterval(refreshInterval);
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        setError('Failed to initialize application');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initApp();
   }, [initialize]);
 
   useEffect(() => {

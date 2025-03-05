@@ -87,6 +87,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   setUser: (user) => {
+    if (user) {
+      // Lagre all brukerdata i localStorage
+      localStorage.setItem('authUser', JSON.stringify({
+        id: user.id,
+        email: user.email,
+        planType: user.planType,
+        tokens: user.tokens,
+        token: user.token,
+        isAuthenticated: true
+      }));
+    } else {
+      localStorage.removeItem('authUser');
+    }
     
     set({
       user,
@@ -94,12 +107,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       planType: user?.planType || null,
       tokens: user?.tokens || 0
     });
-    // Lagre i localStorage hvis bruker er logget inn, eller fjern hvis logget ut
-    if (user) {
-      localStorage.setItem('user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('user');
-    }
   },
 
   login: async (email: string, password: string) => {
@@ -193,21 +200,59 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   toggleEnhancedMode: () => set((state) => ({ enhancedMode: !state.enhancedMode })),
 
   initialize: async () => {
-    // Prøv å hente bruker fra localStorage først
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      set({ user: JSON.parse(savedUser) });
-      
-      // Verifiser token med backend
-      try {
-        const response = await api.fetch('/verify-token');
-        const userData = await response.json();
-        set({ user: userData });
-      } catch (error) {
-        // Hvis token er ugyldig, logg ut bruker
-        set({ user: null });
-        localStorage.removeItem('user');
+    try {
+      // Hent lagret brukerdata
+      const storedAuth = localStorage.getItem('authUser');
+      if (storedAuth) {
+        const authData = JSON.parse(storedAuth);
+        
+        // Verifiser token med backend
+        const response = await api.fetch('/verify-token', {
+          method: 'POST',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          // Oppdater med fersk data fra backend, men behold token
+          set({
+            user: {
+              ...userData,
+              token: authData.token
+            },
+            isAuthenticated: true,
+            planType: userData.planType,
+            tokens: userData.tokens,
+            isDemoUser: userData.planType === 'Demo'
+          });
+        } else {
+          // Hvis token er ugyldig, prøv å fornye
+          const refreshResponse = await api.fetch('/refresh-token', {
+            method: 'POST',
+            credentials: 'include'
+          });
+
+          if (refreshResponse.ok) {
+            const refreshedData = await refreshResponse.json();
+            set({
+              user: {
+                ...refreshedData,
+                token: authData.token
+              },
+              isAuthenticated: true,
+              planType: refreshedData.planType,
+              tokens: refreshedData.tokens,
+              isDemoUser: refreshedData.planType === 'Demo'
+            });
+          } else {
+            // Hvis refresh feiler, logg ut
+            get().logout();
+          }
+        }
       }
+    } catch (error) {
+      console.error('Error initializing auth state:', error);
+      // Ikke logg ut automatisk ved feil, la brukeren prøve på nytt
     }
   }
 }));

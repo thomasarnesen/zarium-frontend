@@ -14,6 +14,8 @@ const api = {
     const executeRequest = async (shouldRetry = true): Promise<Response> => {
       try {
         const csrfHeaders = await csrfService.getHeaders();
+        const storedAuth = localStorage.getItem('authUser');
+        const authData = storedAuth ? JSON.parse(storedAuth) : null;
         const isFormData = options.body instanceof FormData;
         
         const fetchOptions: RequestInit = {
@@ -22,6 +24,7 @@ const api = {
             ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
             'Accept': 'application/json',
             ...csrfHeaders,
+            ...(authData?.token && { 'Authorization': `Bearer ${authData.token}` }),
             ...options.headers,
           },
           credentials: 'include',
