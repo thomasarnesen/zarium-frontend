@@ -4,7 +4,6 @@ import csrfService from '../store/csrfService';
 
 const api = {
   fetch: async (endpoint: string, options: RequestInit = {}) => {
-    // Add /api prefix to all endpoints
     const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
     const url = `${config.apiUrl}${apiEndpoint}`;
     
@@ -15,51 +14,37 @@ const api = {
       // Get CSRF headers
       const csrfHeaders = await csrfService.getHeaders();
       
-      // Create default headers
-      const defaultHeaders = {
+      // Don't set Content-Type for FormData
+      const isFormData = options.body instanceof FormData;
+      const defaultHeaders = isFormData ? {
+        ...csrfHeaders
+      } : {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
         ...csrfHeaders
       };
       
-      // Use HTTP-only cookies for auth
       const fetchOptions: RequestInit = {
         ...options,
         headers: {
           ...defaultHeaders,
           ...options.headers,
         },
-        credentials: 'include', // Always include credentials for cookies
+        credentials: 'include',
         mode: 'cors'
       };
       
       const response = await fetch(url, fetchOptions);
-      
       console.log(`Request took ${Date.now() - startTime}ms`);
       
-      // Handle auth errors
-      if (response.status === 401 || response.status === 403) {
-        window.location.href = '/login';
-        throw new Error('Session expired. Please log in again.');
-      }
-      
       if (!response.ok) {
-        console.error('API Error:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: url
-        });
-        
-        let errorMessage = `API error: ${response.statusText}`;
+        let errorMessage = response.statusText;
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } catch {
           // If JSON parsing fails, use status text
         }
-        
         throw new Error(errorMessage);
       }
       

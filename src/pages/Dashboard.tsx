@@ -262,44 +262,44 @@ export default function Dashboard() {
     setFormatting(null);
   
     try {
-      const formData = new FormData();
-      formData.append('prompt', prompt);
-      formData.append('format', 'xlsx');
-      formData.append('enhancedMode', enhancedMode.toString());
+      const endpoint = selectedFiles.length > 0 ? '/generate-macro-with-file' : '/generate-macro';
       
-      // Legg til filer hvis de finnes
       if (selectedFiles.length > 0) {
+        const formData = new FormData();
         selectedFiles.forEach((fileInfo, index) => {
           formData.append(`file${index}`, fileInfo.file);
         });
+        formData.append('prompt', prompt);
+        formData.append('format', 'xlsx');
         formData.append('fileCount', selectedFiles.length.toString());
+        formData.append('enhancedMode', enhancedMode.toString());
+
+        const response = await api.fetch(endpoint, {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+        // ...handle response
+        handleGenerationResult(result);
+      } else {
+        // For generering uten filer, send JSON
+        const response = await api.fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt,
+            format: 'xlsx',
+            enhancedMode
+          })
+        });
+
+        const result = await response.json();
+        handleGenerationResult(result);
       }
 
-      // Bruk en enkelt endepunkt for både med og uten filer
-      const response = await api.fetch('/generate-macro', {
-        method: 'POST',
-        body: formData
-      });
-      
-      const result = await response.json();
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      setSessionId(result.sessionId);
-      
-      if (result.previewImage) {
-        setPreviewImage(result.previewImage);
-        setIsGenerating(false);
-        setGenerationStatus('');
-        setSessionId(null);
-      }
-      
-      if (result.formatting) setFormatting(result.formatting);
-      
-      await refreshUserData();
-      
     } catch (error: any) {
       console.error('Error details:', error);
       setError(error.message || 'Failed to generate document. Please try again.');
@@ -307,6 +307,27 @@ export default function Dashboard() {
       setGenerationStatus('');
       setSessionId(null);
     }
+  };
+
+  const handleGenerationResult = (result: any) => {
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    setSessionId(result.sessionId);
+    
+    if (result.previewImage) {
+      setPreviewImage(result.previewImage);
+      setIsGenerating(false);
+      setGenerationStatus('');
+      setSessionId(null);
+    }
+    
+    if (result.formatting) {
+      setFormatting(result.formatting);
+    }
+
+    refreshUserData().catch(console.error);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
