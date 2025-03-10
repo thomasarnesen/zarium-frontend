@@ -144,24 +144,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (email: string, password: string) => {
     try {
-      console.log("🚀 Attempting to log in...");
+      console.log("🔄 Starting login process...");
       
-      // Sørg for at CSRF-token er hentet
-      await csrfService.getToken();
+      // Ensure we have a CSRF token before proceeding
+      let csrfHeaders;
+      try {
+        console.log("🔒 Obtaining CSRF token...");
+        // Force a fresh token fetch
+        csrfService.resetToken();
+        const token = await csrfService.getToken();
+        csrfHeaders = { 'X-CSRF-Token': token };
+        console.log("🔑 CSRF token obtained successfully");
+      } catch (csrfError) {
+        console.error("❌ Failed to obtain CSRF token:", csrfError);
+        throw new Error("Unable to secure your login. Please refresh the page and try again.");
+      }
       
-      const csrfHeaders = await csrfService.getHeaders();
-      console.log("CSRF headers for login:", csrfHeaders);
-      
+      console.log("📤 Sending login request with CSRF protection...");
       const response = await api.fetch('/login', {
         method: 'POST',
+        headers: {
+          ...csrfHeaders,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ email, password }),
-        headers: csrfHeaders,
       });
   
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Authentication failed" }));
+        throw new Error(errorData.error || "Authentication failed");
+      }
+  
       const userData = await response.json();
-      console.log("✅ User data received");
+      console.log("✅ Login successful");
       
       get().setUser(userData);
+      localStorage.removeItem('manualLogout'); // Clear any previous logout flag
     } catch (error) {
       console.error('❌ Login error:', error);
       throw error;

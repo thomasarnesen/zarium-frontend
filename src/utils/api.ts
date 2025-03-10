@@ -46,8 +46,8 @@ const api = {
             ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
             'Accept': 'application/json',
             ...authHeaders,
-            ...csrfHeaders,  // Legg til CSRF-headers
-            ...options.headers,
+            ...csrfHeaders,
+            ...options.headers,  // Viktig: La options.headers overstyre standard headers
           },
           credentials: 'include',
           mode: 'cors'
