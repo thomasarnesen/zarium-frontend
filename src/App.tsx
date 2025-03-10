@@ -4,7 +4,7 @@ import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { Toaster } from 'react-hot-toast';
 import api from './utils/api';
-import Navbar from './components/Navbar';
+
 
 // Import pages
 import HomePage from './pages/Home';
@@ -104,7 +104,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Navbar />
+
       <Toaster 
         position="top-center" 
         toastOptions={{
