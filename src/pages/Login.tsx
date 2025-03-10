@@ -1,15 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { FileSpreadsheet, Sparkles } from 'lucide-react';
+import csrfService from '../store/csrfService';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [csrfLoading, setCsrfLoading] = useState(true);
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
+
+  // Hent CSRF-token ved innlasting av komponenten
+  useEffect(() => {
+    const fetchCsrfToken = async () => {
+      try {
+        setCsrfLoading(true);
+        await csrfService.getToken();
+        console.log("CSRF token hentet ved start av Login-komponenten");
+      } catch (error) {
+        console.error("Kunne ikke hente CSRF token:", error);
+        setError("Det oppstod et problem med sikkerhetskonfigurasjonen. Prøv å laste siden på nytt.");
+      } finally {
+        setCsrfLoading(false);
+      }
+    };
+    
+    fetchCsrfToken();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,11 +37,24 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // Dobbeltsjekk at vi har CSRF-token
+      if (!csrfService._token) {
+        try {
+          await csrfService.getToken();
+        } catch (csrfError) {
+          throw new Error("Kunne ikke hente sikkerhetstoken. Prøv å laste siden på nytt.");
+        }
+      }
+      
       await login(email, password);
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
-      setError(error.message || 'Invalid login credentials');
+      if (error.message?.includes("403")) {
+        setError("Innlogging feilet på grunn av manglende sikkerhetstoken. Prøv å laste siden på nytt.");
+      } else {
+        setError(error.message || 'Feil e-post eller passord');
+      }
     } finally {
       setLoading(false);
     }
@@ -60,6 +93,12 @@ export default function Login() {
                 </div>
               )}
               
+              {csrfLoading && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 text-yellow-600 dark:text-yellow-200 px-4 py-3 rounded-lg text-center">
+                  Forbereder sikker innlogging...
+                </div>
+              )}
+              
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-emerald-800 dark:text-emerald-200 mb-2">
                   Email address
@@ -90,17 +129,11 @@ export default function Login() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || csrfLoading}
                 className="w-full py-2 px-4 rounded-lg bg-emerald-800 dark:bg-emerald-700 text-white hover:bg-emerald-900 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition-colors border border-emerald-900 dark:border-emerald-600"
               >
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading ? 'Signing in...' : (csrfLoading ? 'Preparing...' : 'Sign in')}
               </button>
-
-              <div className="mt-4 text-center">
-                <Link to="/forgot-password" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
-                  Forgot your password?
-                </Link>
-              </div>
             </form>
           </div>
         </div>

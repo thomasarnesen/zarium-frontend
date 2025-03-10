@@ -10,9 +10,17 @@ const api = {
     let retryCount = 0;
     const maxRetries = 3;
     const retryDelay = 1000;
-
+  
     const executeRequest = async (shouldRetry = true): Promise<Response> => {
       try {
+        // Hent CSRF-headers FØRST
+        let csrfHeaders = {};
+        try {
+          csrfHeaders = await csrfService.getHeaders();
+        } catch (csrfError) {
+          console.warn('Failed to get CSRF headers:', csrfError);
+        }
+        
         // Add authorization from localStorage if available
         const storedAuth = localStorage.getItem('authUser');
         let authHeaders = {};
@@ -30,7 +38,6 @@ const api = {
           }
         }
         
-        const csrfHeaders = await csrfService.getHeaders();
         const isFormData = options.body instanceof FormData;
         
         const fetchOptions: RequestInit = {
@@ -39,12 +46,14 @@ const api = {
             ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
             'Accept': 'application/json',
             ...authHeaders,
-            ...csrfHeaders,
+            ...csrfHeaders,  // Legg til CSRF-headers
             ...options.headers,
           },
           credentials: 'include',
           mode: 'cors'
         };
+  
+        console.log(`Sending request to ${endpoint} with CSRF token:`, csrfHeaders);
 
         // For Excel generation, preemptively refresh the token
         if (endpoint.includes('generate-macro')) {

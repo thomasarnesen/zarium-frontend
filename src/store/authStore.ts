@@ -141,11 +141,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       console.log("🚀 Attempting to log in...");
       
+      // Sørg for at CSRF-token er hentet
+      await csrfService.getToken();
+      
+      const csrfHeaders = await csrfService.getHeaders();
+      console.log("CSRF headers for login:", csrfHeaders);
+      
       const response = await api.fetch('/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
+        headers: csrfHeaders,
       });
-
+  
       const userData = await response.json();
       console.log("✅ User data received");
       
