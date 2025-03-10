@@ -469,8 +469,8 @@ export default function Dashboard() {
                     <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
                       {isBasicPlan 
-                        ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans. Uses more tokens per generation."
-                        : "Enhanced Mode creates more reliable spreadsheets with better handling of complex formulas and larger datasets. This option produces more consistent results and smarter business logic, but uses more tokens and reaches limits faster. Ideal for important projects where quality matters most."}
+                        ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans."
+                        : "Uses more tokens per generation. Ideal for important projects where quality matters most."}
                     </div>
                   </div>
                 </div>
