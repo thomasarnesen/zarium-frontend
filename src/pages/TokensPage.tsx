@@ -78,13 +78,11 @@ export function TokensPage() {
       setLoading(false);
     }
   };
-
-  
   useEffect(() => {
     if (user?.token && !refreshing) {
       fetchTokenInfo();
     }
-  }, [user]);
+  }, []); 
 
   const handleBuyTokens = async () => {
     try {

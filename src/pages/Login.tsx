@@ -134,6 +134,12 @@ export default function Login() {
               >
                 {loading ? 'Signing in...' : (csrfLoading ? 'Preparing...' : 'Sign in')}
               </button>
+              
+              <div className="mt-4 text-center">
+                <Link to="/forgot-password" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
+                  Forgot your password?
+                </Link>
+              </div>
             </form>
           </div>
         </div>

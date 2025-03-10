@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import api from '../utils/api';
 import csrfService from './csrfService';
+declare global {
+  interface Window {
+    tokenRefreshInterval?: number;
+  }
+}
 interface User {
   id: number;
   email: string;
@@ -191,13 +196,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     try {
+      // Sett flagg for manuell utlogging
+      localStorage.setItem('manualLogout', 'true');
+      
+      // Stopp token refresh-intervallet hvis det finnes
+      if (window.tokenRefreshInterval) {
+        clearInterval(window.tokenRefreshInterval);
+        window.tokenRefreshInterval = undefined;
+      }
       
       await api.fetch('/logout', {
         method: 'POST',
       });
       
-      
       csrfService.resetToken();
+      localStorage.removeItem('authUser');
       
       get().setUser(null);
       set({
