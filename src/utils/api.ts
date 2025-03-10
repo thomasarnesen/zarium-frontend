@@ -78,6 +78,12 @@ const api = {
 
         // Re-authenticate on 401/403 errors
         if (response.status === 401 || response.status === 403) {
+          // If we received a 401/403 error and we manually logged out, don't try to refresh token
+          if (localStorage.getItem('manualLogout') === 'true') {
+            // Just abort - don't try to refresh token
+            throw new Error(`Auth error: ${response.status}`);
+          }
+
           if (retryCount < maxRetries && shouldRetry) {
             retryCount++;
             console.log(`Auth error, attempt ${retryCount}: Refreshing token...`);

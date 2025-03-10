@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { FileSpreadsheet, Download, Sparkles, Upload, Lock, HelpCircle, ArrowRight } from 'lucide-react';
 import { SpreadsheetViewer } from '../components/SpreadsheetViewer';
 import { useAuthStore } from '../store/authStore';
@@ -29,9 +29,11 @@ const TOKENS_PER_UPLOAD = 500;
 
 export default function Dashboard() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { selectedType } = (location.state as LocationState) || {};
   const { user, planType, tokens, useTokens, refreshUserData, enhancedMode, toggleEnhancedMode } = useAuthStore();
   const token = user?.token;
+  const isAuthenticated = !!user;
   const isBasicPlan = planType === 'Basic';  
   const canUseEnhancedMode = !isBasicPlan;
 
@@ -147,6 +149,17 @@ export default function Dashboard() {
       if (pollInterval) clearInterval(pollInterval);
     };
   }, [isGenerating, sessionId, token]);
+
+  useEffect(() => {
+    // Short delay to ensure authentication status is updated
+    const checkAuth = setTimeout(() => {
+      if (!isAuthenticated) {
+        navigate('/login');
+      }
+    }, 100);
+    
+    return () => clearTimeout(checkAuth);
+  }, [isAuthenticated, navigate]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const currentPlanType = user?.planType;

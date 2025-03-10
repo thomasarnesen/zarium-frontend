@@ -202,27 +202,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Stopp token refresh-intervallet hvis det finnes
       if (window.tokenRefreshInterval) {
         clearInterval(window.tokenRefreshInterval);
-        window.tokenRefreshInterval = undefined;
+        (window as any).tokenRefreshInterval = undefined;
       }
       
+      // Kall utloggingsendepunktet
       await api.fetch('/logout', {
         method: 'POST',
       });
       
+      // Nullstill CSRF-token
       csrfService.resetToken();
-      localStorage.removeItem('authUser');
       
+      // Fjern ALLE relaterte elementer fra localStorage
+      localStorage.removeItem('authUser');
+      localStorage.removeItem('isAuthenticated');
+      
+      // Fjern evt cookies
+      document.cookie.split(";").forEach(function(c) {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      
+      // Nullstill alle tilstander i auth-store
       get().setUser(null);
       set({
         isDemoMode: false,
         planType: null,
-        tokens: 0
+        tokens: 0,
+        isAuthenticated: false // Viktig å sette denne til false
       });
+      
+      // Tving en oppdatering av komponenter som er avhengige av autentiseringsstatus
+      window.dispatchEvent(new Event('auth-changed'));
+      
     } catch (error) {
       console.error('Logout error:', error);
     }
   },
-
  
   enableDemoMode: (selectedPlan) => set({
     isDemoMode: true,
