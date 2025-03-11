@@ -138,7 +138,11 @@ export function SpreadsheetViewer({
             <div
               ref={containerRef}
               className="w-full h-full overflow-auto"
-              style={{ pointerEvents: isGenerating ? 'none' : 'auto' }}
+              style={{ 
+                pointerEvents: isGenerating ? 'none' : 'auto',
+                width: '1088px',
+                height: '1510px'
+              }}
             >
               <div className="min-w-full min-h-full">
                 {previewImage ? (
