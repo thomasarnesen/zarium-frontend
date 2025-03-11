@@ -27,6 +27,42 @@ export function SpreadsheetViewer({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState(0.85);
 
+  // Add custom style for the slider thumb
+  useEffect(() => {
+    // Add a style element to the document head
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = `
+      .slider-thumb::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #059669;
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      
+      .slider-thumb::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #059669;
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    // Clean up the style element on component unmount
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
+  // Log when preview image changes
   useEffect(() => {
     if (previewImage) {
       console.log("Preview image received, length:", previewImage.length);
@@ -138,11 +174,7 @@ export function SpreadsheetViewer({
             <div
               ref={containerRef}
               className="w-full h-full overflow-auto"
-              style={{ 
-                pointerEvents: isGenerating ? 'none' : 'auto',
-                width: '1088px',
-                height: '1510px'
-              }}
+              style={{ pointerEvents: isGenerating ? 'none' : 'auto' }}
             >
               <div className="min-w-full min-h-full">
                 {previewImage ? (
@@ -184,13 +216,13 @@ export function SpreadsheetViewer({
           </div>
         </div>
 
-        {/* Right side controls (download and zoom) */}
-        <div className="ml-4 flex flex-col gap-4">
-          {/* Download Button at the top right */}
+        {/* Right side controls (download and zoom) - positioned closer to the viewer */}
+        <div className="ml-2 flex flex-col items-center">
+          {/* Download Button at the top right - width matching height */}
           {formatting?.downloadUrl && (
             <button
               onClick={planType === 'Demo' ? undefined : handleDownload}
-              className={`inline-flex items-center justify-center p-2 ${
+              className={`inline-flex items-center justify-center p-2 w-10 h-10 ${
                 planType === 'Demo'
                   ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
                   : 'bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer'
@@ -209,13 +241,13 @@ export function SpreadsheetViewer({
             </button>
           )}
           
-          {/* Zoom control below download button - without box */}
-          <div className="mt-8 pl-2">
+          {/* Zoom control further below download button */}
+          <div className="mt-16 pl-2">
             <div className="flex flex-col items-center">
-              <span className="text-xs text-emerald-600 dark:text-emerald-400 mb-2">
+              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-3">
                 {Math.round(scale * 100)}%
               </span>
-              <div className="rotate-90 h-24 flex items-center">
+              <div className="rotate-90 h-32 flex items-center">
                 <input
                   id="zoom-slider"
                   type="range"
@@ -225,8 +257,11 @@ export function SpreadsheetViewer({
                   onChange={handleZoomChange}
                   onClick={handleZoomClick}
                   title="Zoom level"
-                  className="w-24 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70"
-                  style={{ direction: 'rtl' }} /* This reverses the slider direction */
+                  className="w-32 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70 slider-thumb"
+                  style={{ 
+                    direction: 'rtl',
+                    accentColor: '#059669'
+                  }}
                 />
               </div>
             </div>
