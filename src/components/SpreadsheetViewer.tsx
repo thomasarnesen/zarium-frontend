@@ -186,7 +186,7 @@ export function SpreadsheetViewer({
                       transformOrigin: 'top left',
                       width: `${100 / scale}%`,  /* Make content wider when zoomed in */
                       height: `${100 / scale}%`, /* Make content taller when zoomed in */
-                      minHeight: '648px',        /* Ensure minimum size matches container */
+                      minHeight: '1510x',        /* Ensure minimum size matches container */
                       minWidth: '1088px'         /* Ensure minimum size matches container */
                     }}
                   >
