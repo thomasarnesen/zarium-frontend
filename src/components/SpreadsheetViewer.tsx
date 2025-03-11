@@ -143,14 +143,15 @@ export function SpreadsheetViewer({
               <div className="min-w-full min-h-full">
                 {previewImage ? (
                   <div 
-                    className="origin-top-left"
                     style={{
                       transform: `scale(${scale})`,
                       transition: 'transform 0.1s ease-out',
                       cursor: 'grab',
                       transformOrigin: 'top left',
-                      height: 'fit-content',
-                      width: 'fit-content'
+                      width: `${100 / scale}%`,  /* Make content wider when zoomed in */
+                      height: `${100 / scale}%`, /* Make content taller when zoomed in */
+                      minHeight: '648px',        /* Ensure minimum size matches container */
+                      minWidth: '1088px'         /* Ensure minimum size matches container */
                     }}
                   >
                     <img
@@ -204,8 +205,8 @@ export function SpreadsheetViewer({
             </button>
           )}
           
-          {/* Zoom control below download button */}
-          <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-emerald-200 dark:border-emerald-800 shadow-sm">
+          {/* Zoom control below download button - without box */}
+          <div className="mt-8 pl-2">
             <div className="flex flex-col items-center">
               <span className="text-xs text-emerald-600 dark:text-emerald-400 mb-2">
                 {Math.round(scale * 100)}%
@@ -220,7 +221,8 @@ export function SpreadsheetViewer({
                   onChange={handleZoomChange}
                   onClick={handleZoomClick}
                   title="Zoom level"
-                  className="w-24 h-2 appearance-none cursor-pointer bg-emerald-200 dark:bg-emerald-700 rounded-lg"
+                  className="w-24 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70"
+                  style={{ direction: 'rtl' }} /* This reverses the slider direction */
                 />
               </div>
             </div>
