@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, ChangeEvent } from 'react';
 import { Download } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../utils/api';
@@ -24,36 +24,22 @@ export function SpreadsheetViewer({
   const { user } = useAuthStore();
   const token = user?.token;
   const [imageError, setImageError] = useState(false);
-  
-  // Add refs and state for panning functionality
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [isPanning, setIsPanning] = useState(false);
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
   const [startPanPosition, setStartPanPosition] = useState({ x: 0, y: 0 });
-  const [scale, setScale] = useState(0.85); // Start with a zoomed out view
+  const [isPanning, setIsPanning] = useState(false);
+  const [scale, setScale] = useState(0.85);
 
   useEffect(() => {
     if (previewImage) {
       console.log("Preview image received, length:", previewImage.length);
       setImageError(false);
-      // Reset pan position when new image loads
+      // Reset pan position to top-left when new image loads
       setPanPosition({ x: 0, y: 0 });
     } else {
       console.log("No preview image available");
     }
   }, [previewImage]);
-
-  useEffect(() => {
-    if (previewImage) {
-      console.log("Preview image received:", previewImage.substring(0, 50) + "...");
-    } else if (!isGenerating) {
-      console.log("No preview image received and not generating");
-    }
-    
-    if (formatting) {
-      console.log("Formatting received:", formatting);
-    }
-  }, [previewImage, formatting, isGenerating]);
 
   // Handle mouse events for panning
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -103,6 +89,11 @@ export function SpreadsheetViewer({
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isPanning, handleMouseMove, handleMouseUp]);
+
+  const handleZoomChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const newValue = parseFloat(e.target.value);
+    setScale(newValue / 100);
+  };
 
   const handleDownload = async () => {
     if (!formatting?.downloadUrl) {
@@ -165,10 +156,10 @@ export function SpreadsheetViewer({
   return (
     <div className="relative w-full">
       <div className="flex items-start gap-2">
-        {/* Increased container size */}
+        {/* Main viewer container with increased height */}
         <div 
           className="flex-grow overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm relative"
-          style={{ height: '700px' }} // Increased height from 600px to 700px
+          style={{ height: '700px' }}
         >
           {isGenerating && (
             <div className="absolute inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center">
@@ -191,21 +182,23 @@ export function SpreadsheetViewer({
           {/* Content container with ref for panning */}
           <div
             ref={containerRef}
-            className="w-full h-full overflow-hidden"
+            className="w-full h-full overflow-auto"
             style={{ pointerEvents: isGenerating ? 'none' : 'auto' }}
             onMouseDown={handleMouseDown}
           >
             <div
-              className="relative w-full h-full flex items-center justify-center"
+              className="relative min-h-full min-w-full"
             >
               {previewImage ? (
                 <div 
-                  className="transform-container"
+                  className="origin-top-left"
                   style={{
-                    transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${scale})`,
+                    transform: `scale(${scale})`,
                     transition: isPanning ? 'none' : 'transform 0.1s ease-out',
                     cursor: isPanning ? 'grabbing' : 'grab',
-                    transformOrigin: 'center center'
+                    transformOrigin: 'top left',
+                    height: 'fit-content',
+                    width: 'fit-content'
                   }}
                 >
                   <img
@@ -223,7 +216,7 @@ export function SpreadsheetViewer({
                   />
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full w-full">
+                <div className="flex items-center justify-center h-full">
                   <p className="text-gray-400">
                     {imageError ? "Failed to load preview" : "No preview available"}
                   </p>
@@ -233,23 +226,29 @@ export function SpreadsheetViewer({
           </div>
         </div>
        
-        {/* Zoom controls */}
+        {/* Controls */}
         <div className="flex flex-col gap-2">
-          <button
-            onClick={() => setScale(prev => Math.min(prev + 0.1, 1.5))}
-            className="inline-flex items-center justify-center p-2 bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800 shadow-sm"
-            title="Zoom in"
-          >
-            +
-          </button>
-          
-          <button
-            onClick={() => setScale(prev => Math.max(prev - 0.1, 0.5))}
-            className="inline-flex items-center justify-center p-2 bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800 shadow-sm"
-            title="Zoom out"
-          >
-            -
-          </button>
+          {/* Zoom control as slider */}
+          <div className="flex items-center bg-white dark:bg-gray-800 p-2 rounded-lg border border-emerald-200 dark:border-emerald-800 shadow-sm">
+            <label htmlFor="zoom-slider" className="sr-only">Zoom level</label>
+            <input
+              id="zoom-slider"
+              type="range"
+              min="50"
+              max="150"
+              value={Math.round(scale * 100)}
+              onChange={handleZoomChange}
+              className="w-20 h-1 bg-emerald-200 dark:bg-emerald-700 rounded-lg appearance-none cursor-pointer"
+              style={{
+                transform: 'rotate(-90deg)',
+                transformOrigin: 'center',
+                margin: '2rem 0'
+              }}
+            />
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 ml-1">
+              {Math.round(scale * 100)}%
+            </span>
+          </div>
           
           <button
             onClick={() => {
@@ -284,11 +283,6 @@ export function SpreadsheetViewer({
             </button>
           )}
         </div>
-      </div>
-      
-      {/* Optional instructions if needed */}
-      <div className="mt-2 text-xs text-center text-gray-500 dark:text-gray-400">
-        Drag to pan view • Use + and - buttons to zoom • Click ↺ to reset view
       </div>
     </div>
   );
