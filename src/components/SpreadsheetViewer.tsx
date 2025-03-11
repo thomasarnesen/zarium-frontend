@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, ChangeEvent } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Download } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../utils/api';
@@ -36,9 +36,14 @@ export function SpreadsheetViewer({
     }
   }, [previewImage]);
 
-  const handleZoomChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseFloat(e.target.value);
     setScale(newValue / 100);
+    console.log("Zoom changed to:", newValue);
+  };
+
+  const handleZoomClick = (e: React.MouseEvent<HTMLInputElement>) => {
+    e.stopPropagation();
   };
 
   const handleDownload = async () => {
@@ -100,123 +105,128 @@ export function SpreadsheetViewer({
   };
 
   return (
-    <div className="relative flex items-center justify-center">
-      {/* Left side zoom control - minimalist design */}
-      <div className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-xs text-emerald-600 dark:text-emerald-400">
-            {Math.round(scale * 100)}%
-          </span>
-          <input
-            id="zoom-slider"
-            type="range"
-            min="50"
-            max="150"
-            value={Math.round(scale * 100)}
-            onChange={handleZoomChange}
-            className="h-48 w-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded zoom-slider-vertical"
-            title="Zoom control"
-            aria-label="Adjust zoom level"
-          />
-        </div>
-      </div>
-      
-      {/* Main container - exact size as specified and centered */}
-      <div className="flex items-start mx-auto">
-        <div 
-          className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm relative"
-          style={{ 
-            width: '1088px', 
-            height: '648px'
-          }} 
-        >
-          {isGenerating && (
-            <div className="absolute inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl max-w-sm mx-4">
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-emerald-500 border-t-transparent" />
-                  </div>
-                  
-                  <div className="text-center">
-                    <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400">
-                      {getStatusDescription(generationStatus)}
-                    </h3>
+    <div className="relative">
+      <div className="flex items-start">
+        {/* Main spreadsheet viewer container with fixed size */}
+        <div className="flex flex-col"> 
+          <div 
+            className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm relative"
+            style={{ 
+              width: '1088px', 
+              height: '648px'
+            }} 
+          >
+            {isGenerating && (
+              <div className="absolute inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl max-w-sm mx-4">
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="relative">
+                      <div className="animate-spin rounded-full h-10 w-10 border-2 border-emerald-500 border-t-transparent" />
+                    </div>
+                    
+                    <div className="text-center">
+                      <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400">
+                        {getStatusDescription(generationStatus)}
+                      </h3>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-         
-          {/* Content container with built-in overflow scrolling */}
-          <div
-            ref={containerRef}
-            className="w-full h-full overflow-auto"
-            style={{ pointerEvents: isGenerating ? 'none' : 'auto' }}
-          >
-            <div className="relative h-full w-full">
-              {previewImage ? (
-                <div 
-                  className="origin-top-left"
-                  style={{
-                    transform: `scale(${scale})`,
-                    transition: 'transform 0.1s ease-out',
-                    cursor: 'grab',
-                    transformOrigin: 'top left',
-                    height: 'fit-content',
-                    width: 'fit-content'
-                  }}
-                >
-                  <img
-                    src={previewImage || ''}
-                    alt="Excel preview"
-                    className="max-w-none"
+            )}
+           
+            {/* Content container with built-in overflow scrolling */}
+            <div
+              ref={containerRef}
+              className="w-full h-full overflow-auto"
+              style={{ pointerEvents: isGenerating ? 'none' : 'auto' }}
+            >
+              <div className="min-w-full min-h-full">
+                {previewImage ? (
+                  <div 
+                    className="origin-top-left"
                     style={{
-                      imageRendering: '-webkit-optimize-contrast',
-                      display: 'block'
+                      transform: `scale(${scale})`,
+                      transition: 'transform 0.1s ease-out',
+                      cursor: 'grab',
+                      transformOrigin: 'top left',
+                      height: 'fit-content',
+                      width: 'fit-content'
                     }}
-                    onError={() => {
-                      console.error("Image failed to load");
-                      setImageError(true);
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-400">
-                    {imageError ? "Failed to load preview" : "No preview available"}
-                  </p>
-                </div>
-              )}
+                  >
+                    <img
+                      src={previewImage || ''}
+                      alt="Excel preview"
+                      className="max-w-none"
+                      style={{
+                        imageRendering: '-webkit-optimize-contrast',
+                        display: 'block'
+                      }}
+                      onError={() => {
+                        console.error("Image failed to load");
+                        setImageError(true);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-gray-400">
+                      {imageError ? "Failed to load preview" : "No preview available"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right side controls (download and zoom) */}
+        <div className="ml-4 flex flex-col gap-4">
+          {/* Download Button at the top right */}
+          {formatting?.downloadUrl && (
+            <button
+              onClick={planType === 'Demo' ? undefined : handleDownload}
+              className={`inline-flex items-center justify-center p-2 ${
+                planType === 'Demo'
+                  ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
+                  : 'bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer'
+              } rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800 shadow-sm`}
+              title={planType === 'Demo'
+                ? 'Upgrade to Basic or higher to download files'
+                : 'Download Excel File'
+              }
+              disabled={planType === 'Demo'}
+            >
+              <Download className={`h-5 w-5 ${
+                planType === 'Demo'
+                  ? 'text-gray-400' 
+                  : ''
+              }`} />
+            </button>
+          )}
+          
+          {/* Zoom control below download button */}
+          <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-emerald-200 dark:border-emerald-800 shadow-sm">
+            <div className="flex flex-col items-center">
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 mb-2">
+                {Math.round(scale * 100)}%
+              </span>
+              <div className="rotate-90 h-24 flex items-center">
+                <input
+                  id="zoom-slider"
+                  type="range"
+                  min="50"
+                  max="150"
+                  value={Math.round(scale * 100)}
+                  onChange={handleZoomChange}
+                  onClick={handleZoomClick}
+                  title="Zoom level"
+                  className="w-24 h-2 appearance-none cursor-pointer bg-emerald-200 dark:bg-emerald-700 rounded-lg"
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
-      
-      {/* Right side download button */}
-      {formatting?.downloadUrl && (
-        <div className="absolute right-0 top-1/2 -translate-y-1/2">
-          <button
-            onClick={planType === 'Demo' ? undefined : handleDownload}
-            className={`inline-flex items-center justify-center p-2 ${
-              planType === 'Demo'
-                ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
-                : 'bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer'
-            } rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800 shadow-sm`}
-            title={planType === 'Demo'
-              ? 'Upgrade to Basic or higher to download files'
-              : 'Download Excel File'
-            }
-            disabled={planType === 'Demo'}
-          >
-            <Download className={`h-5 w-5 ${
-              planType === 'Demo'
-                ? 'text-gray-400' 
-                : ''
-            }`} />
-          </button>
-        </div>
-      )}
     </div>
   );
 }
