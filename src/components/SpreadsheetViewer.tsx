@@ -364,7 +364,7 @@ export function SpreadsheetViewer({
           </div>
           
           {/* Absolute-positioned controls */}
-          <div className="absolute" style={{ right: '-36px', top: 0 }}>
+          <div className="absolute" style={{ right: '-46px', top: 0 }}>
             {/* Download Button - always visible but disabled if no downloadUrl */}
             <button
               onClick={formatting?.downloadUrl ? handleDownload : undefined}
@@ -390,7 +390,7 @@ export function SpreadsheetViewer({
           </div>
           
           {/* Vertically centered zoom control - moved slightly to the left */}
-          <div className="absolute" style={{ right: '-95px', top: 'calc(50% - 80px)' }}>
+          <div className="absolute" style={{ right: '-115px', top: 'calc(50% - 80px)' }}>
             <div className="flex flex-col items-center">
               <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4">
                 {Math.round(scale * 100)}%
