@@ -244,7 +244,7 @@ export function SpreadsheetViewer({
           </div>
           
           {/* Vertically centered zoom control */}
-          <div className="absolute" style={{ right: '-64px', top: 'calc(50% - 80px)' }}>
+          <div className="absolute" style={{ right: '-74px', top: 'calc(50% - 80px)' }}>
             <div className="flex flex-col items-center">
               <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-2">
                 {Math.round(scale * 100)}%
@@ -259,7 +259,7 @@ export function SpreadsheetViewer({
                   onChange={handleZoomChange}
                   onClick={handleZoomClick}
                   title="Zoom slider"
-                  className="w-28 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70 slider-thumb"
+                  className="w-40 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70 slider-thumb"
                   style={{ 
                     direction: 'rtl',
                     accentColor: '#059669'
