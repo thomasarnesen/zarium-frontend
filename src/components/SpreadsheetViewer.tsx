@@ -25,7 +25,7 @@ export function SpreadsheetViewer({
   const token = user?.token;
   const [imageError, setImageError] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [scale, setScale] = useState(0.85);
+  const [scale, setScale] = useState(0.75);
 
   // Add custom style for the slider thumb
   useEffect(() => {
@@ -253,8 +253,8 @@ export function SpreadsheetViewer({
                 <input
                   id="zoom-slider"
                   type="range"
-                  min="50"
-                  max="150"
+                  min="10"
+                  max="190"
                   value={Math.round(scale * 100)}
                   onChange={handleZoomChange}
                   onClick={handleZoomClick}
