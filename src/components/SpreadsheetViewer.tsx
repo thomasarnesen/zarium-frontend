@@ -209,10 +209,38 @@ export function SpreadsheetViewer({
                     />
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-400">
-                      {imageError ? "Failed to load preview" : "No preview available"}
-                    </p>
+                  <div className="h-full w-full bg-white">
+                    {/* Excel-like grid header */}
+                    <div className="flex border-b border-gray-200">
+                      <div className="w-10 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center"></div>
+                      {/* Column headers A-Z */}
+                      {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map((letter, index) => (
+                        <div 
+                          key={letter}
+                          className="w-24 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium"
+                        >
+                          {letter}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Excel-like grid rows */}
+                    {Array.from({ length: 100 }, (_, i) => i + 1).map(rowNum => (
+                      <div key={rowNum} className="flex border-b border-gray-200">
+                        {/* Row number */}
+                        <div className="w-10 h-6 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium">
+                          {rowNum}
+                        </div>
+                        
+                        {/* Row cells */}
+                        {Array.from({ length: 26 }, (_, i) => i).map(cellIndex => (
+                          <div 
+                            key={cellIndex}
+                            className="w-24 h-6 border-r border-gray-200"
+                          ></div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -257,10 +285,10 @@ export function SpreadsheetViewer({
                   type="range"
                   min="50"
                   max="150"
-                  title = "Zoom"
                   value={Math.round(scale * 100)}
                   onChange={handleZoomChange}
                   onClick={handleZoomClick}
+                  title = "Zoom"
                   className="w-40 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70 slider-thumb"
                   style={{ 
                     direction: 'rtl',

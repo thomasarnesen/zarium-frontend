@@ -72,28 +72,7 @@ export default function Dashboard() {
     }
   }, [selectedType]);
 
-  useEffect(() => {
-    const fetchEmptyPreview = async () => {
-      try {
-        console.log("Fetching empty preview...");
-        const response = await api.fetch('/get-empty-excel');
-        const data = await response.json();
-        
-        if (data.previewImage) {
-          console.log("Received preview image, setting state");
-          setPreviewImage(data.previewImage);
-        } else {
-          console.error("No preview image in response");
-          setError('No preview image available');
-        }
-      } catch (error) {
-        console.error("Error fetching preview:", error);
-        setError('Failed to load preview template');
-      }
-    };
 
-    fetchEmptyPreview();
-  }, []); // Kjør bare én gang ved oppstart
 
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
