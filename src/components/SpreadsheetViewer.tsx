@@ -175,8 +175,12 @@ export function SpreadsheetViewer({
             {/* Content container with built-in overflow scrolling */}
             <div
               ref={containerRef}
-              className="w-full h-full overflow-auto"
-              style={{ pointerEvents: isGenerating ? 'none' : 'auto' }}
+              className="w-full h-full" 
+              style={{ 
+                pointerEvents: isGenerating ? 'none' : 'auto',
+                overflowY: 'auto',
+                overflowX: 'scroll' // Always show horizontal scrollbar
+              }}
             >
               <div className="min-w-full min-h-full">
                 {previewImage ? (
@@ -218,10 +222,11 @@ export function SpreadsheetViewer({
                   ) : (
                     // Show Excel-like grid when no preview is available
                     <div 
-                      className="overflow-auto"
+                      className="overflow-auto" // Keep overflow-auto here
                       style={{
                         width: '100%',
-                        height: '100%'
+                        height: '100%',
+                        overflowX: 'scroll' // Always show horizontal scrollbar
                       }}
                     >
                       <div 
@@ -307,7 +312,7 @@ export function SpreadsheetViewer({
           </div>
           
           {/* Vertically centered zoom control - moved slightly to the left */}
-          <div className="absolute" style={{ right: '-32px', top: 'calc(50% - 80px)' }}>
+          <div className="absolute" style={{ right: '-80px', top: 'calc(50% - 80px)' }}>
             <div className="flex flex-col items-center">
               <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4">
                 {Math.round(scale * 100)}%
