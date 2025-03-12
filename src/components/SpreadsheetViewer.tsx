@@ -18,6 +18,16 @@ interface SpreadsheetViewerProps {
 const BASE_WIDTH = 1288; // Original 1088 + 200
 const BASE_HEIGHT = 648;
 
+// Constants for the grid
+const CELL_HEIGHT = 6; // 1.5rem (6 in tailwind units)
+const CELL_WIDTH = 24; // 6rem (24 in tailwind units)
+const HEADER_HEIGHT = 8; // 2rem (8 in tailwind units)
+const TRIPLE_WIDTH = CELL_WIDTH * 3; // Triple width for columns (18rem or 72 in tailwind)
+const ROW_COUNT = 100; // Number of rows
+const A_Z_COUNT = 26; // A-Z columns
+const AA_BA_COUNT = 27; // AA-BA columns (27 combinations)
+const TOTAL_COLUMNS = A_Z_COUNT + AA_BA_COUNT; // Total column count
+
 export function SpreadsheetViewer({ 
   previewImage, 
   isGenerating, 
@@ -308,49 +318,54 @@ export function SpreadsheetViewer({
                           transform: `scale(${scale})`,
                           transition: 'transform 0.1s ease-out',
                           transformOrigin: 'top left',
-                          width: `${Math.min(2700, Math.max(BASE_WIDTH, BASE_WIDTH / scale))}px`,  // Adjusted for new width
+                          width: `${Math.min(2700, Math.max(BASE_WIDTH, BASE_WIDTH / scale))}px`,
                           height: `${Math.min(1500, Math.max(BASE_HEIGHT, BASE_HEIGHT / scale))}px`
                         }}
                       >
-                        <div className="h-full w-full bg-white" style={{ minWidth: '2700px' }}>
+                        {/* Calculate the exact width needed for the grid */}
+                        <div className="h-full w-full bg-white" style={{ 
+                          minWidth: `calc(12px + ${TRIPLE_WIDTH * TOTAL_COLUMNS}px)` // Row header width (12px) + total column width
+                        }}>
                           {/* Excel-like grid header */}
                           <div className="flex border-b border-gray-200 sticky top-0 z-10">
                             {/* Fixed width for row header cell */}
                             <div className="w-12 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center sticky left-0 z-20"></div>
                             
-                            {/* Column headers A-Z, AA-BZ */}
+                            {/* Column headers A-Z, AA-BA */}
                             {[
                               // A-Z columns
-                              ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)),
-                              // AA-BZ columns (expanded from AA-BA to have 37 more columns)
-                              ...Array.from({ length: 64 }, (_, i) => {
-                                const firstChar = String.fromCharCode(65 + Math.floor(i / 26));
-                                const secondChar = String.fromCharCode(65 + (i % 26));
+                              ...Array.from({ length: A_Z_COUNT }, (_, i) => String.fromCharCode(65 + i)),
+                              // AA-BA columns
+                              ...Array.from({ length: AA_BA_COUNT }, (_, i) => {
+                                const firstChar = 'A';
+                                const secondChar = String.fromCharCode(65 + i);
                                 return firstChar + secondChar;
                               })
                             ].map((column, index) => (
                               <div 
                                 key={column}
-                                className="w-72 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium"
+                                className={`h-${HEADER_HEIGHT} bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium`}
+                                style={{ width: `${TRIPLE_WIDTH}px` }}
                               >
                                 {column}
                               </div>
                             ))}
                           </div>
                           
-                          {/* Excel-like grid rows - now up to 150 */}
-                          {Array.from({ length: 150 }, (_, i) => i + 1).map(rowNum => (
+                          {/* Excel-like grid rows - limited to 100 rows */}
+                          {Array.from({ length: ROW_COUNT }, (_, i) => i + 1).map(rowNum => (
                             <div key={rowNum} className="flex border-b border-gray-200">
                               {/* Row number - sticky left - fixed width */}
                               <div className="w-12 h-6 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium sticky left-0">
                                 {rowNum}
                               </div>
                               
-                              {/* Row cells - extended to match the number of columns in the header (26 + 64 = 90) */}
-                              {Array.from({ length: 90 }, (_, i) => i).map(cellIndex => (
+                              {/* Row cells - A-Z and AA-BA */}
+                              {Array.from({ length: TOTAL_COLUMNS }, (_, i) => i).map(cellIndex => (
                                 <div 
                                   key={cellIndex}
-                                  className="w-72 h-6 border-r border-gray-200"
+                                  className={`h-${CELL_HEIGHT} border-r border-gray-200`}
+                                  style={{ width: `${TRIPLE_WIDTH}px` }}
                                 ></div>
                               ))}
                             </div>
