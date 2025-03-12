@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import  NavBar  from './Navbar';
-import { ThemeToggle } from './ThemeToggle';
+
 
 export function Layout() {
   return (
@@ -10,9 +10,7 @@ export function Layout() {
       <main className="flex-grow">
         <Outlet />
       </main>
-      <div className="fixed bottom-5 right-5 z-50">
-        <ThemeToggle />
-      </div>
+
     </div>
   );
 }
