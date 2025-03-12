@@ -14,6 +14,10 @@ interface SpreadsheetViewerProps {
   planType?: string;
 }
 
+// New base dimensions - increased width by 200px
+const BASE_WIDTH = 1288; // Original 1088 + 200
+const BASE_HEIGHT = 648;
+
 export function SpreadsheetViewer({ 
   previewImage, 
   isGenerating, 
@@ -216,8 +220,8 @@ export function SpreadsheetViewer({
           <div 
             className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm"
             style={{ 
-              width: '1388px', 
-              height: '648px'
+              width: `${BASE_WIDTH}px`, 
+              height: `${BASE_HEIGHT}px`
             }} 
           >
             {isGenerating && (
@@ -261,12 +265,12 @@ export function SpreadsheetViewer({
                       transition: 'transform 0.1s ease-out',
                       cursor: 'grab',
                       transformOrigin: 'top left',
-                      width: `${Math.min(1425, Math.max(1088, 1088 / scale))}px`,
-                      height: `${Math.min(755, Math.max(648, 648 / scale))}px`,
-                      maxWidth: '1425px',  /* Maximum width when fully zoomed in */
+                      width: `${Math.min(1625, Math.max(BASE_WIDTH, BASE_WIDTH / scale))}px`,  // Adjusted for new width
+                      height: `${Math.min(755, Math.max(BASE_HEIGHT, BASE_HEIGHT / scale))}px`,
+                      maxWidth: '1625px',  /* Maximum width when fully zoomed in - adjusted */
                       maxHeight: '755px',  /* Maximum height when fully zoomed in */
-                      minHeight: '648px',  /* Ensure minimum size matches container */
-                      minWidth: '1088px'   /* Ensure minimum size matches container */
+                      minHeight: `${BASE_HEIGHT}px`,  /* Ensure minimum size matches container */
+                      minWidth: `${BASE_WIDTH}px`   /* Ensure minimum size matches container */
                     }}
                   >
                     <img
@@ -304,11 +308,11 @@ export function SpreadsheetViewer({
                           transform: `scale(${scale})`,
                           transition: 'transform 0.1s ease-out',
                           transformOrigin: 'top left',
-                          width: `${Math.min(2500, Math.max(1088, 1088 / scale))}px`,
-                          height: `${Math.min(1500, Math.max(648, 648 / scale))}px`
+                          width: `${Math.min(2700, Math.max(BASE_WIDTH, BASE_WIDTH / scale))}px`,  // Adjusted for new width
+                          height: `${Math.min(1500, Math.max(BASE_HEIGHT, BASE_HEIGHT / scale))}px`
                         }}
                       >
-                        <div className="h-full w-full bg-white" style={{ minWidth: '2500px' }}>
+                        <div className="h-full w-full bg-white" style={{ minWidth: '2700px' }}>  // Adjusted for new width
                           {/* Excel-like grid header */}
                           <div className="flex border-b border-gray-200 sticky top-0 z-10">
                             <div className="w-10 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center sticky left-0 z-20"></div>

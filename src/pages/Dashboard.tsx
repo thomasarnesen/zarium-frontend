@@ -449,7 +449,7 @@ export default function Dashboard() {
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
                       {isBasicPlan 
                         ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans."
-                        : "Uses more tokens per generation. Ideal for important projects where quality matters most."}
+                        : "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans.Uses more tokens per generation. Ideal for important projects where quality matters most."}
                     </div>
                   </div>
                 </div>
