@@ -144,9 +144,9 @@ export function SpreadsheetViewer({
     <div className="relative">
       <div className="flex items-start">
         {/* Main spreadsheet viewer container with fixed size */}
-        <div className="flex flex-col"> 
+        <div className="relative"> 
           <div 
-            className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm relative"
+            className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm"
             style={{ 
               width: '1088px', 
               height: '648px'
@@ -184,10 +184,12 @@ export function SpreadsheetViewer({
                       transition: 'transform 0.1s ease-out',
                       cursor: 'grab',
                       transformOrigin: 'top left',
-                      width: `${100 / scale}%`,  /* Make content wider when zoomed in */
-                      height: `${100 / scale}%`, /* Make content taller when zoomed in */
-                      minHeight: '1510x',        /* Ensure minimum size matches container */
-                      minWidth: '1088px'         /* Ensure minimum size matches container */
+                      width: `${Math.min(1425, Math.max(1088, 1088 / scale))}px`,
+                      height: `${Math.min(755, Math.max(648, 648 / scale))}px`,
+                      maxWidth: '1425px',  /* Maximum width when fully zoomed in */
+                      maxHeight: '755px',  /* Maximum height when fully zoomed in */
+                      minHeight: '648px',  /* Ensure minimum size matches container */
+                      minWidth: '1088px'   /* Ensure minimum size matches container */
                     }}
                   >
                     <img
@@ -214,37 +216,37 @@ export function SpreadsheetViewer({
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Right side controls (download and zoom) - positioned closer to the viewer */}
-        <div className="ml-2 flex flex-col items-center">
-          {/* Download Button at the top right - width matching height */}
-          {formatting?.downloadUrl && (
-            <button
-              onClick={planType === 'Demo' ? undefined : handleDownload}
-              className={`inline-flex items-center justify-center p-2 w-10 h-10 ${
-                planType === 'Demo'
-                  ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
-                  : 'bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer'
-              } rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800 shadow-sm`}
-              title={planType === 'Demo'
-                ? 'Upgrade to Basic or higher to download files'
-                : 'Download Excel File'
-              }
-              disabled={planType === 'Demo'}
-            >
-              <Download className={`h-5 w-5 ${
-                planType === 'Demo'
-                  ? 'text-gray-400' 
-                  : ''
-              }`} />
-            </button>
-          )}
+          {/* Absolute-positioned controls */}
+          <div className="absolute" style={{ right: '-36px', top: 0 }}>
+            {/* Download Button - smaller size */}
+            {formatting?.downloadUrl && (
+              <button
+                onClick={planType === 'Demo' ? undefined : handleDownload}
+                className={`inline-flex items-center justify-center p-1.5 w-8 h-8 ${
+                  planType === 'Demo'
+                    ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
+                    : 'bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer'
+                } rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800 shadow-sm`}
+                title={planType === 'Demo'
+                  ? 'Upgrade to Basic or higher to download files'
+                  : 'Download Excel File'
+                }
+                disabled={planType === 'Demo'}
+              >
+                <Download className={`h-4 w-4 ${
+                  planType === 'Demo'
+                    ? 'text-gray-400' 
+                    : ''
+                }`} />
+              </button>
+            )}
+          </div>
           
-          {/* Zoom control further below download button */}
-          <div className="mt-16 pl-2">
+          {/* Vertically centered zoom control */}
+          <div className="absolute" style={{ right: '-48px', top: 'calc(50% - 80px)' }}>
             <div className="flex flex-col items-center">
-              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-3">
+              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-2">
                 {Math.round(scale * 100)}%
               </span>
               <div className="rotate-90 h-32 flex items-center">
@@ -256,8 +258,8 @@ export function SpreadsheetViewer({
                   value={Math.round(scale * 100)}
                   onChange={handleZoomChange}
                   onClick={handleZoomClick}
-                  title="Zoom level"
-                  className="w-32 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70 slider-thumb"
+                  title="Zoom slider"
+                  className="w-28 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70 slider-thumb"
                   style={{ 
                     direction: 'rtl',
                     accentColor: '#059669'
