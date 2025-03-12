@@ -209,10 +209,10 @@ export function SpreadsheetViewer({
                     />
                   </div>
                 ) : (
-                  <div className="h-full w-full bg-white">
+                  <div className="h-full w-full bg-white overflow-auto" style={{ minWidth: '1425px' }}>
                     {/* Excel-like grid header */}
-                    <div className="flex border-b border-gray-200">
-                      <div className="w-10 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center"></div>
+                    <div className="flex border-b border-gray-200 sticky top-0 z-10">
+                      <div className="w-10 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center sticky left-0 z-20"></div>
                       {/* Column headers A-Z */}
                       {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map((letter, index) => (
                         <div 
@@ -227,8 +227,8 @@ export function SpreadsheetViewer({
                     {/* Excel-like grid rows */}
                     {Array.from({ length: 100 }, (_, i) => i + 1).map(rowNum => (
                       <div key={rowNum} className="flex border-b border-gray-200">
-                        {/* Row number */}
-                        <div className="w-10 h-6 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium">
+                        {/* Row number - sticky left */}
+                        <div className="w-10 h-6 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium sticky left-0">
                           {rowNum}
                         </div>
                         
@@ -249,34 +249,34 @@ export function SpreadsheetViewer({
 
           {/* Absolute-positioned controls */}
           <div className="absolute" style={{ right: '-36px', top: 0 }}>
-            {/* Download Button - smaller size */}
-            {formatting?.downloadUrl && (
-              <button
-                onClick={planType === 'Demo' ? undefined : handleDownload}
-                className={`inline-flex items-center justify-center p-1.5 w-8 h-8 ${
-                  planType === 'Demo'
-                    ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
-                    : 'bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer'
-                } rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800 shadow-sm`}
-                title={planType === 'Demo'
+            {/* Download Button - always visible but disabled if no downloadUrl */}
+            <button
+              onClick={formatting?.downloadUrl ? handleDownload : undefined}
+              className={`inline-flex items-center justify-center p-1.5 w-8 h-8 ${
+                !formatting?.downloadUrl
+                  ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
+                  : 'bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer'
+              } rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800 shadow-sm`}
+              title={!formatting?.downloadUrl
+                ? 'Generate a spreadsheet first'
+                : planType === 'Demo'
                   ? 'Upgrade to Basic or higher to download files'
                   : 'Download Excel File'
-                }
-                disabled={planType === 'Demo'}
-              >
-                <Download className={`h-5 w-5 ${
-                  planType === 'Demo'
-                    ? 'text-gray-400' 
-                    : ''
-                }`} />
-              </button>
-            )}
+              }
+              disabled={!formatting?.downloadUrl || planType === 'Demo'}
+            >
+              <Download className={`h-5 w-5 ${
+                !formatting?.downloadUrl || planType === 'Demo'
+                  ? 'text-gray-400' 
+                  : ''
+              }`} />
+            </button>
           </div>
           
           {/* Vertically centered zoom control - moved slightly to the left */}
-          <div className="absolute" style={{ right: '-32px', top: 'calc(50% - 80px)' }}>
+          <div className="absolute" style={{ right: '-74px', top: 'calc(50% - 80px)' }}>
             <div className="flex flex-col items-center">
-              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-2">
+              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4">
                 {Math.round(scale * 100)}%
               </span>
               <div className="rotate-90 h-32 flex items-center">
@@ -285,10 +285,10 @@ export function SpreadsheetViewer({
                   type="range"
                   min="50"
                   max="150"
+                  title = "Zoom"
                   value={Math.round(scale * 100)}
                   onChange={handleZoomChange}
                   onClick={handleZoomClick}
-                  title = "Zoom"
                   className="w-40 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70 slider-thumb"
                   style={{ 
                     direction: 'rtl',
