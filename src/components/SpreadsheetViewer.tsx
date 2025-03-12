@@ -25,7 +25,7 @@ export function SpreadsheetViewer({
   const token = user?.token;
   const [imageError, setImageError] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [scale, setScale] = useState(0.75);
+  const [scale, setScale] = useState(0.85);
 
   // Add custom style for the slider thumb
   useEffect(() => {
@@ -40,8 +40,8 @@ export function SpreadsheetViewer({
         border-radius: 50%;
         background: #059669;
         cursor: pointer;
-        border: none;
-        box-shadow: none;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
       
       .slider-thumb::-moz-range-thumb {
@@ -50,8 +50,8 @@ export function SpreadsheetViewer({
         border-radius: 50%;
         background: #059669;
         cursor: pointer;
-        border: none;
-        box-shadow: none;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
     `;
     document.head.appendChild(styleElement);
@@ -73,9 +73,11 @@ export function SpreadsheetViewer({
   }, [previewImage]);
 
   const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
-    setScale(newValue / 100);
-    console.log("Zoom changed to:", newValue);
+    const sliderValue = parseFloat(e.target.value);
+    // Map slider value 50-150 to actual scale 0.3-1.5
+    const actualScale = 0.3 + (sliderValue - 50) * 0.012;
+    setScale(actualScale);
+    console.log("Slider value:", sliderValue, "Actual scale:", actualScale);
   };
 
   const handleZoomClick = (e: React.MouseEvent<HTMLInputElement>) => {
@@ -234,7 +236,7 @@ export function SpreadsheetViewer({
                 }
                 disabled={planType === 'Demo'}
               >
-                <Download className={`h-4 w-4 ${
+                <Download className={`h-5 w-5 ${
                   planType === 'Demo'
                     ? 'text-gray-400' 
                     : ''
@@ -243,23 +245,23 @@ export function SpreadsheetViewer({
             )}
           </div>
           
-          {/* Vertically centered zoom control */}
-          <div className="absolute" style={{ right: '-74px', top: 'calc(50% - 80px)' }}>
+          {/* Vertically centered zoom control - moved slightly to the left */}
+          <div className="absolute" style={{ right: '-32px', top: 'calc(50% - 80px)' }}>
             <div className="flex flex-col items-center">
               <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-2">
                 {Math.round(scale * 100)}%
               </span>
-              <div className="rotate-90 h-45 flex items-center">
+              <div className="rotate-90 h-32 flex items-center">
                 <input
                   id="zoom-slider"
                   type="range"
-                  min="30"
-                  max="190"
+                  min="50"
+                  max="150"
                   value={Math.round(scale * 100)}
                   onChange={handleZoomChange}
                   onClick={handleZoomClick}
-                  title="Zoom slider"
-                  className="w-28 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70 slider-thumb"
+                  title = "Zoom slider"
+                  className="w-40 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70 slider-thumb"
                   style={{ 
                     direction: 'rtl',
                     accentColor: '#059669'
