@@ -315,7 +315,8 @@ export function SpreadsheetViewer({
                         <div className="h-full w-full bg-white" style={{ minWidth: '2700px' }}>
                           {/* Excel-like grid header */}
                           <div className="flex border-b border-gray-200 sticky top-0 z-10">
-                            <div className="w-10 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center sticky left-0 z-20"></div>
+                            {/* Fixed width for row header cell */}
+                            <div className="w-12 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center sticky left-0 z-20"></div>
                             
                             {/* Column headers A-Z, AA-BZ */}
                             {[
@@ -340,13 +341,13 @@ export function SpreadsheetViewer({
                           {/* Excel-like grid rows - now up to 150 */}
                           {Array.from({ length: 150 }, (_, i) => i + 1).map(rowNum => (
                             <div key={rowNum} className="flex border-b border-gray-200">
-                              {/* Row number - sticky left */}
-                              <div className="w-10 h-6 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium sticky left-0">
+                              {/* Row number - sticky left - fixed width */}
+                              <div className="w-12 h-6 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium sticky left-0">
                                 {rowNum}
                               </div>
                               
                               {/* Row cells - extended to match the number of columns in the header (26 + 64 = 90) */}
-                              {Array.from({ length: 90 }, (_, i) => i).map(cellIndex => (
+                              {Array.from({ length: 64 }, (_, i) => i).map(cellIndex => (
                                 <div 
                                   key={cellIndex}
                                   className="w-24 h-6 border-r border-gray-200"
