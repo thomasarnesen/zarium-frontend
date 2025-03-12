@@ -297,7 +297,7 @@ export function SpreadsheetViewer({
                   ) : (
                     // Show Excel-like grid when no preview is available
                     <div 
-                      className="h-full w-full" // Remove overflow-auto completely
+                      className="h-full w-full"
                       style={{
                         width: '100%',
                         height: '100%'
@@ -312,17 +312,21 @@ export function SpreadsheetViewer({
                           height: `${Math.min(1500, Math.max(BASE_HEIGHT, BASE_HEIGHT / scale))}px`
                         }}
                       >
-                        <div className="h-full w-full bg-white" style={{ minWidth: '2700px' }}>  // Adjusted for new width
+                        <div className="h-full w-full bg-white" style={{ minWidth: '2700px' }}>
                           {/* Excel-like grid header */}
                           <div className="flex border-b border-gray-200 sticky top-0 z-10">
                             <div className="w-10 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center sticky left-0 z-20"></div>
                             
-                            {/* Column headers A-Z, AA-BA */}
+                            {/* Column headers A-Z, AA-BZ */}
                             {[
                               // A-Z columns
                               ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)),
-                              // AA-BA columns
-                              ...Array.from({ length: 27 }, (_, i) => 'A' + String.fromCharCode(65 + i))
+                              // AA-BZ columns (expanded from AA-BA to have 37 more columns)
+                              ...Array.from({ length: 64 }, (_, i) => {
+                                const firstChar = String.fromCharCode(65 + Math.floor(i / 26));
+                                const secondChar = String.fromCharCode(65 + (i % 26));
+                                return firstChar + secondChar;
+                              })
                             ].map((column, index) => (
                               <div 
                                 key={column}
@@ -341,8 +345,8 @@ export function SpreadsheetViewer({
                                 {rowNum}
                               </div>
                               
-                              {/* Row cells - A-Z and AA-BA */}
-                              {Array.from({ length: 53 }, (_, i) => i).map(cellIndex => (
+                              {/* Row cells - extended to match the number of columns in the header (26 + 64 = 90) */}
+                              {Array.from({ length: 90 }, (_, i) => i).map(cellIndex => (
                                 <div 
                                   key={cellIndex}
                                   className="w-24 h-6 border-r border-gray-200"
