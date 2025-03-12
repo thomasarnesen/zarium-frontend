@@ -35,23 +35,23 @@ export function SpreadsheetViewer({
       .slider-thumb::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         background: #059669;
         cursor: pointer;
-        border: 2px solid white;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        border: none;
+        box-shadow: none;
       }
       
       .slider-thumb::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         background: #059669;
         cursor: pointer;
-        border: 2px solid white;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        border: none;
+        box-shadow: none;
       }
     `;
     document.head.appendChild(styleElement);
@@ -249,11 +249,11 @@ export function SpreadsheetViewer({
               <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-2">
                 {Math.round(scale * 100)}%
               </span>
-              <div className="rotate-90 h-32 flex items-center">
+              <div className="rotate-90 h-45 flex items-center">
                 <input
                   id="zoom-slider"
                   type="range"
-                  min="10"
+                  min="30"
                   max="190"
                   value={Math.round(scale * 100)}
                   onChange={handleZoomChange}
