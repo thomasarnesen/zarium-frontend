@@ -107,7 +107,7 @@ export default function Dashboard() {
         const timeout = setTimeout(() => {
           if (!isMounted) return;
           setGenerationStatus(message);
-        }, index * 4000); // Show each message for ~4 seconds
+        }, index * 6000); // Show each message for ~4 seconds
         
         timeouts.push(timeout);
       });
