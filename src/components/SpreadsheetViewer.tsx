@@ -222,11 +222,10 @@ export function SpreadsheetViewer({
                   ) : (
                     // Show Excel-like grid when no preview is available
                     <div 
-                      className="overflow-auto" // Keep overflow-auto here
+                      className="h-full w-full" // Remove overflow-auto completely
                       style={{
                         width: '100%',
-                        height: '100%',
-                        overflowX: 'scroll' // Always show horizontal scrollbar
+                        height: '100%'
                       }}
                     >
                       <div 
@@ -312,7 +311,7 @@ export function SpreadsheetViewer({
           </div>
           
           {/* Vertically centered zoom control - moved slightly to the left */}
-          <div className="absolute" style={{ right: '-80px', top: 'calc(50% - 80px)' }}>
+          <div className="absolute" style={{ right: '-85px', top: 'calc(50% - 80px)' }}>
             <div className="flex flex-col items-center">
               <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4">
                 {Math.round(scale * 100)}%
