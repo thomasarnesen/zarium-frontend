@@ -35,8 +35,8 @@ export function SpreadsheetViewer({
       .slider-thumb::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 14px;
-        height: 14px;
+        width: 16px;
+        height: 16px;
         border-radius: 50%;
         background: #059669;
         cursor: pointer;
@@ -45,8 +45,8 @@ export function SpreadsheetViewer({
       }
       
       .slider-thumb::-moz-range-thumb {
-        width: 14px;
-        height: 14px;
+        width: 16px;
+        height: 16px;
         border-radius: 50%;
         background: #059669;
         cursor: pointer;
@@ -257,10 +257,10 @@ export function SpreadsheetViewer({
                   type="range"
                   min="50"
                   max="150"
+                  title = "Zoom"
                   value={Math.round(scale * 100)}
                   onChange={handleZoomChange}
                   onClick={handleZoomClick}
-                  title = "Zoom slider"
                   className="w-40 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70 slider-thumb"
                   style={{ 
                     direction: 'rtl',
