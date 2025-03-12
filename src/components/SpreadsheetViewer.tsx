@@ -230,7 +230,7 @@ export function SpreadsheetViewer({
         {/* Main spreadsheet viewer container with fixed size - centered with margin */}
         <div className="relative" style={{ marginLeft: '-100px' }}> {/* Offset to center the expanded width */}
           <div 
-            className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm"
+            className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm relative"
             style={{ 
               width: `${BASE_WIDTH}px`, 
               height: `${BASE_HEIGHT}px`
@@ -250,6 +250,30 @@ export function SpreadsheetViewer({
                       </h3>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+           
+            {/* Chart tip message - moved inside container for proper positioning */}
+            {previewImage && formatting?.hasChart && !isGenerating && (
+              <div className="absolute top-4 right-4 z-20 max-w-xs">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-lg border border-emerald-200 dark:border-emerald-800">
+                  <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                    <span className="font-medium">Note:</span> Charts may overlap with data in the preview. 
+                    Download the Excel file to reposition elements as needed.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Quick Start Guide info - moved inside container for proper positioning */}
+            {previewImage && formatting?.downloadUrl && !isGenerating && (
+              <div className="absolute bottom-4 right-4 z-20 max-w-xs">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-lg border border-emerald-200 dark:border-emerald-800">
+                  <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                    <span className="font-medium">Tip:</span> A Quick Start Guide is included in the workbook 
+                    with helpful information to get started.
+                  </p>
                 </div>
               </div>
             )}

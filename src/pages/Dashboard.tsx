@@ -77,11 +77,16 @@ export default function Dashboard() {
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
     let currentPhase = 0;
+    
+    // Define all possible phases with their durations
     const phases = [
-      { name: 'Processing', minDuration: 2000, maxDuration: 4000 },
-      { name: 'Thinking', minDuration: 2000, maxDuration: 4000 },
-      { name: 'Generating', minDuration: 2000, maxDuration: 4000 },
-      { name: 'Finalizing', minDuration: 2000, maxDuration: 3000 }
+      { name: 'Processing', minDuration: 3500, maxDuration: 5000 },
+      { name: 'Analyzing your requirements...', minDuration: 3500, maxDuration: 5000 },
+      { name: 'Thinking', minDuration: 3500, maxDuration: 5000 },
+      { name: 'Designing spreadsheet structure...', minDuration: 3500, maxDuration: 5000 },
+      { name: 'Generating', minDuration: 3500, maxDuration: 5000 },
+      { name: 'Generating Excel file...', minDuration: 3500, maxDuration: 5000 },
+      { name: 'Finalizing', minDuration: 3000, maxDuration: 4500 }
     ];
 
     const getRandomDuration = (min: number, max: number) => {
@@ -143,8 +148,10 @@ export default function Dashboard() {
   // Add an effect to automatically stop loading when the preview image arrives
   useEffect(() => {
     if (previewImage) {
-      // Stop the loading state when preview image is received
+      // Stop the loading state and all status indicators when preview image is received
       setIsGenerating(false);
+      setGenerationStatus('');
+      setSessionId(null);
     }
   }, [previewImage]);
 
