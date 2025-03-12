@@ -94,9 +94,9 @@ export function SpreadsheetViewer({
   const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const sliderValue = parseFloat(e.target.value);
     
-    // If showing the Excel grid (no preview image), limit minimum zoom to 70%
-    if (!previewImage && !imageError && sliderValue < 70) {
-      setScale(0.7); // Set minimum zoom to 70% for Excel grid
+    // If showing the Excel grid (no preview image), limit minimum zoom to 60%
+    if (!previewImage && !imageError && sliderValue < 60) {
+      setScale(0.6); // Set minimum zoom to 60% for Excel grid
       return;
     }
     
@@ -214,9 +214,9 @@ export function SpreadsheetViewer({
 
   // Get the minimum zoom value for the slider based on content type
   const getMinZoomValue = () => {
-    // If showing the Excel grid (no preview image and no error), limit to 70%
+    // If showing the Excel grid (no preview image and no error), limit to 60%
     if (!previewImage && !imageError) {
-      return 70;
+      return 60;
     }
     // Otherwise use the default minimum zoom of 50%
     return 50;
