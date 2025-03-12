@@ -158,11 +158,11 @@ export function SpreadsheetViewer({
       case 'Finalizing':
         return "Finalizing your document...\nAlmost there!";
       case 'Analyzing your requirements...':
-        return "Analyzing your requirements...\nComplex requests take more time";
+        return "Tip: Don't miss the Quick Start Guide in your downloaded Excel file\nit contains important setup instructions for optimal use.";
       case 'Designing spreadsheet structure...':
         return "Designing spreadsheet structure...";
       case 'Generating Excel file...':
-        return "Generating Excel file...\nCharts and graphs may appear over data in the preview";
+        return "Charts and graphs may appear over data in the preview \nCharts and graphs may appear over data in the preview";
       case 'Complete':
         return "Generation complete!";
       default:
