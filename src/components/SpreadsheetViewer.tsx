@@ -215,8 +215,8 @@ export function SpreadsheetViewer({
   return (
     <div className="relative">
       <div className="flex items-start">
-        {/* Main spreadsheet viewer container with fixed size */}
-        <div className="relative"> 
+        {/* Main spreadsheet viewer container with fixed size - centered with margin */}
+        <div className="relative" style={{ marginLeft: '-100px' }}> {/* Offset to center the expanded width */}
           <div 
             className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm"
             style={{ 
