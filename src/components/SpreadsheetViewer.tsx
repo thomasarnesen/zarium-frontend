@@ -95,8 +95,8 @@ export function SpreadsheetViewer({
     const sliderValue = parseFloat(e.target.value);
     
     // If showing the Excel grid (no preview image), limit minimum zoom to 60%
-    if (!previewImage && !imageError && sliderValue < 60) {
-      setScale(0.8); // Set minimum zoom to 60% for Excel grid
+    if (!previewImage && !imageError && sliderValue < 90) {
+      setScale(0.9); // Set minimum zoom to 60% for Excel grid
       return;
     }
     
