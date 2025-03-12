@@ -140,6 +140,14 @@ export default function Dashboard() {
     return () => clearTimeout(checkAuth);
   }, [isAuthenticated, navigate]);
 
+  // Add an effect to automatically stop loading when the preview image arrives
+  useEffect(() => {
+    if (previewImage) {
+      // Stop the loading state when preview image is received
+      setIsGenerating(false);
+    }
+  }, [previewImage]);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const currentPlanType = user?.planType;
     

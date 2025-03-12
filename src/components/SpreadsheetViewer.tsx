@@ -86,12 +86,12 @@ export function SpreadsheetViewer({
     if (previewImage) {
       console.log("Preview image received, length:", previewImage.length);
       setImageError(false);
-      // Immediately stop the loading state when image is received
-      setIsGenerating(false);
+      // Remove the direct modification of isGenerating state
+      // setIsGenerating(false); - This is causing the error
     } else {
       console.log("No preview available");
     }
-  }, [previewImage, setIsGenerating]);
+  }, [previewImage]); // Remove setIsGenerating from dependencies
 
   const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const sliderValue = parseFloat(e.target.value);
