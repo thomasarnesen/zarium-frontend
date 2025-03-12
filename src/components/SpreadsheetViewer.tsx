@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, MouseEvent } from 'react';
 import { Download } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../utils/api';
@@ -26,6 +26,11 @@ export function SpreadsheetViewer({
   const [imageError, setImageError] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState(0.85);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [scrollTop, setScrollTop] = useState(0);
 
   // Add custom style for the slider thumb
   useEffect(() => {
@@ -142,6 +147,50 @@ export function SpreadsheetViewer({
     }
   };
 
+  // Handle mouse down event to start dragging
+  const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    setIsDragging(true);
+    setStartX(e.pageX - containerRef.current!.offsetLeft);
+    setStartY(e.pageY - containerRef.current!.offsetTop);
+    setScrollLeft(containerRef.current!.scrollLeft);
+    setScrollTop(containerRef.current!.scrollTop);
+    e.preventDefault();
+    document.body.style.userSelect = 'none'; // Prevent text selection during drag
+  };
+
+  // Handle mouse move event to perform dragging
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    const x = e.pageX - containerRef.current!.offsetLeft;
+    const y = e.pageY - containerRef.current!.offsetTop;
+    const walkX = (x - startX) * 1.5; // Multiply for faster scroll
+    const walkY = (y - startY) * 1.5;
+    containerRef.current!.scrollLeft = scrollLeft - walkX;
+    containerRef.current!.scrollTop = scrollTop - walkY;
+  };
+
+  // Handle mouse up event to stop dragging
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    document.body.style.userSelect = ''; // Re-enable text selection
+  };
+
+  // Clean up event listeners when component unmounts
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        document.body.style.userSelect = '';
+      }
+    };
+
+    // Add global event listener to handle mouse up outside the component
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isDragging]);
+
   return (
     <div className="relative">
       <div className="flex items-start">
@@ -179,8 +228,13 @@ export function SpreadsheetViewer({
               style={{ 
                 pointerEvents: isGenerating ? 'none' : 'auto',
                 overflowY: 'auto',
-                overflowX: 'scroll' // Always show horizontal scrollbar
+                overflowX: 'scroll', // Always show horizontal scrollbar
+                cursor: isDragging ? 'grabbing' : 'grab' // Change cursor based on drag state
               }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
             >
               <div className="min-w-full min-h-full">
                 {previewImage ? (
@@ -311,7 +365,7 @@ export function SpreadsheetViewer({
           </div>
           
           {/* Vertically centered zoom control - moved slightly to the left */}
-          <div className="absolute" style={{ right: '-85px', top: 'calc(50% - 80px)' }}>
+          <div className="absolute" style={{ right: '-95px', top: 'calc(50% - 80px)' }}>
             <div className="flex flex-col items-center">
               <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4">
                 {Math.round(scale * 100)}%
