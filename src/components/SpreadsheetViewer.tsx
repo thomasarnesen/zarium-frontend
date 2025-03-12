@@ -152,9 +152,9 @@ export function SpreadsheetViewer({
       case 'Processing':
         return "Processing your request...\nGeneration time depends on complexity";
       case 'Thinking':
-        return "Setting up and structuring your document...\nThis may take a moment";
+        return "Charts and graphs may appear over data in the preview...\nThis can be adjustet when downloading xlsx file";
       case 'Generating':
-        return "Creating your spreadsheet...\nComplex spreadsheets may take longer"; 
+        return "Tip: Don't miss the Quick Start Guide in your downloaded Excel file \nit contains important setup instructions for optimal use."; 
       case 'Finalizing':
         return "Finalizing your document...\nAlmost there!";
       case 'Analyzing your requirements...':
@@ -169,6 +169,7 @@ export function SpreadsheetViewer({
         return status || "Processing your request...";
     }
   };
+
 
   // Handle mouse down event to start dragging
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {

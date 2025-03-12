@@ -76,42 +76,49 @@ export default function Dashboard() {
 
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
-    let currentPhase = 0;
+    let timeouts: NodeJS.Timeout[] = [];
+    let isMounted = true;
     
-    // Define all possible phases with their durations
-    const phases = [
-      { name: 'Processing', minDuration: 3500, maxDuration: 5000 },
-      { name: 'Analyzing your requirements...', minDuration: 3500, maxDuration: 5000 },
-      { name: 'Thinking', minDuration: 3500, maxDuration: 5000 },
-      { name: 'Designing spreadsheet structure...', minDuration: 3500, maxDuration: 5000 },
-      { name: 'Generating', minDuration: 3500, maxDuration: 5000 },
-      { name: 'Generating Excel file...', minDuration: 3500, maxDuration: 5000 },
-      { name: 'Finalizing', minDuration: 3000, maxDuration: 4500 }
+    // Define all the messages we want to show in sequence
+    const messages = [
+      'Processing',
+      'Analyzing your requirements...',
+      'Thinking',
+      'Designing spreadsheet structure...',
+      'Generating',
+      'Generating Excel file...',
+      'Finalizing'
     ];
 
-    const getRandomDuration = (min: number, max: number) => {
-      return Math.floor(Math.random() * (max - min + 1) + min);
+    // Clear all timeouts on unmount or when dependencies change
+    const clearAllTimeouts = () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
+      timeouts = [];
     };
-
-    const updateStatus = () => {
-      if (currentPhase < phases.length) {
-        const phase = phases[currentPhase];
-        setGenerationStatus(phase.name);
-        currentPhase++;
+    
+    // Create a fixed schedule for status updates to ensure all messages are seen
+    const scheduleStatusUpdates = () => {
+      if (!isGenerating || sessionId) return;
+      
+      clearAllTimeouts(); // Clear any existing timeouts
+      
+      // Display each message for a specific duration
+      messages.forEach((message, index) => {
+        const timeout = setTimeout(() => {
+          if (!isMounted) return;
+          setGenerationStatus(message);
+        }, index * 4000); // Show each message for ~4 seconds
         
-        if (currentPhase < phases.length) {
-          setTimeout(updateStatus, getRandomDuration(phase.minDuration, phase.maxDuration));
-        }
-      }
+        timeouts.push(timeout);
+      });
     };
 
     if (isGenerating && !sessionId) {
-      currentPhase = 0;
-      updateStatus();
+      scheduleStatusUpdates();
     }
-
     
     if (sessionId && isGenerating) {
+      // Existing polling code
       pollInterval = setInterval(async () => {
         try {
           const response = await api.fetch(`/generation-status/${sessionId}`);
@@ -130,6 +137,8 @@ export default function Dashboard() {
     }
 
     return () => {
+      isMounted = false;
+      clearAllTimeouts();
       if (pollInterval) clearInterval(pollInterval);
     };
   }, [isGenerating, sessionId, token]);
