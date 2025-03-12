@@ -79,6 +79,13 @@ export function SpreadsheetViewer({
 
   const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const sliderValue = parseFloat(e.target.value);
+    
+    // If showing the Excel grid (no preview image), limit minimum zoom to 70%
+    if (!previewImage && !imageError && sliderValue < 70) {
+      setScale(0.7); // Set minimum zoom to 70% for Excel grid
+      return;
+    }
+    
     // Map slider value 50-150 to actual scale 0.3-1.5
     const actualScale = 0.3 + (sliderValue - 50) * 0.012;
     setScale(actualScale);
@@ -191,6 +198,16 @@ export function SpreadsheetViewer({
     };
   }, [isDragging]);
 
+  // Get the minimum zoom value for the slider based on content type
+  const getMinZoomValue = () => {
+    // If showing the Excel grid (no preview image and no error), limit to 70%
+    if (!previewImage && !imageError) {
+      return 70;
+    }
+    // Otherwise use the default minimum zoom of 50%
+    return 50;
+  };
+
   return (
     <div className="relative">
       <div className="flex items-start">
@@ -199,7 +216,7 @@ export function SpreadsheetViewer({
           <div 
             className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm"
             style={{ 
-              width: '1088px', 
+              width: '1388px', 
               height: '648px'
             }} 
           >
@@ -374,10 +391,10 @@ export function SpreadsheetViewer({
                 <input
                   id="zoom-slider"
                   type="range"
-                  min="50"
+                  min={getMinZoomValue()}
                   max="150"
                   title = "Zoom"
-                  value={Math.round(scale * 100)}
+                  value={Math.max(getMinZoomValue(), Math.round(scale * 100))}
                   onChange={handleZoomChange}
                   onClick={handleZoomClick}
                   className="w-40 h-1 appearance-none cursor-pointer bg-emerald-600 dark:bg-emerald-400 rounded-lg opacity-70 slider-thumb"
