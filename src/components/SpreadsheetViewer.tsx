@@ -86,10 +86,12 @@ export function SpreadsheetViewer({
     if (previewImage) {
       console.log("Preview image received, length:", previewImage.length);
       setImageError(false);
+      // Immediately stop the loading state when image is received
+      setIsGenerating(false);
     } else {
       console.log("No preview available");
     }
-  }, [previewImage]);
+  }, [previewImage, setIsGenerating]);
 
   const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const sliderValue = parseFloat(e.target.value);
@@ -148,19 +150,19 @@ export function SpreadsheetViewer({
   const getStatusDescription = (status: string) => {
     switch (status) {
       case 'Processing':
-        return "Processing your request...";
+        return "Processing your request...\nGeneration time depends on complexity";
       case 'Thinking':
-        return "Setting up and structuring your document...";
+        return "Setting up and structuring your document...\nThis may take a moment";
       case 'Generating':
-        return "Creating your spreadsheet..."; 
+        return "Creating your spreadsheet...\nComplex spreadsheets may take longer"; 
       case 'Finalizing':
-        return "Finalizing your document...\nPlease be patient";
+        return "Finalizing your document...\nAlmost there!";
       case 'Analyzing your requirements...':
-        return "Analyzing your requirements...";
+        return "Analyzing your requirements...\nComplex requests take more time";
       case 'Designing spreadsheet structure...':
         return "Designing spreadsheet structure...";
       case 'Generating Excel file...':
-        return "Generating Excel file...";
+        return "Generating Excel file...\nCharts and graphs may appear over data in the preview";
       case 'Complete':
         return "Generation complete!";
       default:
@@ -393,7 +395,7 @@ export function SpreadsheetViewer({
                 ? 'Generate a spreadsheet first'
                 : planType === 'Demo'
                   ? 'Upgrade to Basic or higher to download files'
-                  : 'Download Excel File'
+                  : 'Download Excel file to edit, reposition charts, or customize formatting'
               }
               disabled={!formatting?.downloadUrl || planType === 'Demo'}
             >

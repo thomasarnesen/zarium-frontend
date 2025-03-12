@@ -78,10 +78,10 @@ export default function Dashboard() {
     let pollInterval: NodeJS.Timeout;
     let currentPhase = 0;
     const phases = [
-      { name: 'Processing', minDuration: 7000, maxDuration: 10000 },
-      { name: 'Thinking', minDuration: 8000, maxDuration: 13000 },
-      { name: 'Generating', minDuration: 7000, maxDuration: 12000 },
-      { name: 'Finalizing', minDuration: 3000, maxDuration: 6000 }
+      { name: 'Processing', minDuration: 2000, maxDuration: 4000 },
+      { name: 'Thinking', minDuration: 2000, maxDuration: 4000 },
+      { name: 'Generating', minDuration: 2000, maxDuration: 4000 },
+      { name: 'Finalizing', minDuration: 2000, maxDuration: 3000 }
     ];
 
     const getRandomDuration = (min: number, max: number) => {
@@ -239,11 +239,11 @@ export default function Dashboard() {
   };
 
   const getRandomDuration = () => {
-    return Math.floor(Math.random() * (11000 - 5000 + 1) + 5000); 
+    return Math.floor(Math.random() * (5000 - 2000 + 1) + 2000); 
   };
 
   const getRandomThinkingDuration = () => {
-    return Math.floor(Math.random() * (4000 - 1000 + 1) + 1000); 
+    return Math.floor(Math.random() * (2000 - 500 + 1) + 500); 
   };
 
   const handleGenerate = async () => {
