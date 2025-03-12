@@ -209,40 +209,63 @@ export function SpreadsheetViewer({
                     />
                   </div>
                 ) : (
-                  <div className="h-full w-full bg-white overflow-auto" style={{ minWidth: '1425px' }}>
-                    {/* Excel-like grid header */}
-                    <div className="flex border-b border-gray-200 sticky top-0 z-10">
-                      <div className="w-10 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center sticky left-0 z-20"></div>
-                      {/* Column headers A-Z */}
-                      {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map((letter, index) => (
-                        <div 
-                          key={letter}
-                          className="w-24 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium"
-                        >
-                          {letter}
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {/* Excel-like grid rows */}
-                    {Array.from({ length: 100 }, (_, i) => i + 1).map(rowNum => (
-                      <div key={rowNum} className="flex border-b border-gray-200">
-                        {/* Row number - sticky left */}
-                        <div className="w-10 h-6 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium sticky left-0">
-                          {rowNum}
+                  <div 
+                    className="overflow-auto"
+                    style={{
+                      width: '100%',
+                      height: '100%'
+                    }}
+                  >
+                    <div 
+                      style={{
+                        transform: `scale(${scale})`,
+                        transition: 'transform 0.1s ease-out',
+                        transformOrigin: 'top left',
+                        width: `${Math.min(2500, Math.max(1088, 1088 / scale))}px`,
+                        height: `${Math.min(1500, Math.max(648, 648 / scale))}px`
+                      }}
+                    >
+                      <div className="h-full w-full bg-white" style={{ minWidth: '2500px' }}>
+                        {/* Excel-like grid header */}
+                        <div className="flex border-b border-gray-200 sticky top-0 z-10">
+                          <div className="w-10 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center sticky left-0 z-20"></div>
+                          
+                          {/* Column headers A-Z, AA-BA */}
+                          {[
+                            // A-Z columns
+                            ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)),
+                            // AA-BA columns
+                            ...Array.from({ length: 27 }, (_, i) => 'A' + String.fromCharCode(65 + i))
+                          ].map((column, index) => (
+                            <div 
+                              key={column}
+                              className="w-24 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium"
+                            >
+                              {column}
+                            </div>
+                          ))}
                         </div>
                         
-                        {/* Row cells */}
-                        {Array.from({ length: 26 }, (_, i) => i).map(cellIndex => (
-                          <div 
-                            key={cellIndex}
-                            className="w-24 h-6 border-r border-gray-200"
-                          ></div>
+                        {/* Excel-like grid rows - now up to 150 */}
+                        {Array.from({ length: 150 }, (_, i) => i + 1).map(rowNum => (
+                          <div key={rowNum} className="flex border-b border-gray-200">
+                            {/* Row number - sticky left */}
+                            <div className="w-10 h-6 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium sticky left-0">
+                              {rowNum}
+                            </div>
+                            
+                            {/* Row cells - A-Z and AA-BA */}
+                            {Array.from({ length: 53 }, (_, i) => i).map(cellIndex => (
+                              <div 
+                                key={cellIndex}
+                                className="w-24 h-6 border-r border-gray-200"
+                              ></div>
+                            ))}
+                          </div>
                         ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
-                )}
               </div>
             </div>
           </div>
@@ -274,7 +297,7 @@ export function SpreadsheetViewer({
           </div>
           
           {/* Vertically centered zoom control - moved slightly to the left */}
-          <div className="absolute" style={{ right: '-74px', top: 'calc(50% - 80px)' }}>
+          <div className="absolute" style={{ right: '-80px', top: 'calc(50% - 80px)' }}>
             <div className="flex flex-col items-center">
               <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4">
                 {Math.round(scale * 100)}%
