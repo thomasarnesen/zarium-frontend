@@ -331,7 +331,7 @@ export function SpreadsheetViewer({
                             ].map((column, index) => (
                               <div 
                                 key={column}
-                                className="w-24 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium"
+                                className="w-72 h-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-sm text-gray-600 font-medium"
                               >
                                 {column}
                               </div>
@@ -347,10 +347,10 @@ export function SpreadsheetViewer({
                               </div>
                               
                               {/* Row cells - extended to match the number of columns in the header (26 + 64 = 90) */}
-                              {Array.from({ length: 64 }, (_, i) => i).map(cellIndex => (
+                              {Array.from({ length: 90 }, (_, i) => i).map(cellIndex => (
                                 <div 
                                   key={cellIndex}
-                                  className="w-24 h-6 border-r border-gray-200"
+                                  className="w-72 h-6 border-r border-gray-200"
                                 ></div>
                               ))}
                             </div>
