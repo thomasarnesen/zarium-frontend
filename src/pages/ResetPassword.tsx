@@ -17,9 +17,15 @@ export default function ResetPassword() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const queryToken = params.get('token');
+    
+    // Add more detailed logging
+    console.log("Reset token from URL:", queryToken ? `${queryToken.substring(0, 5)}...` : 'null');
+    
     if (queryToken) {
-      setToken(queryToken);
+      // Decode the token in case it was URL encoded
+      setToken(decodeURIComponent(queryToken));
     } else {
+      console.error("No token found in URL parameters");
       setError('Missing reset token');
     }
   }, [location]);
@@ -158,6 +164,16 @@ export default function ResetPassword() {
                     Back to Login
                   </Link>
                 </div>
+                
+                {/* Add debug information when not in production */}
+                {process.env.NODE_ENV !== 'production' && (
+                  <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Debug Info:</h3>
+                    <p className="text-xs mt-1 text-gray-600 dark:text-gray-400">Token present: {token ? 'Yes' : 'No'}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Token length: {token ? token.length : 0}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">URL parameters: {JSON.stringify(Object.fromEntries(new URLSearchParams(location.search)))}</p>
+                  </div>
+                )}
               </form>
             )}
           </div>

@@ -10,6 +10,10 @@ const api = {
     let retryCount = 0;
     const maxRetries = 3;
     const retryDelay = 1000;
+    
+    // Special handling for verification endpoints - use more retries
+    const isVerificationEndpoint = endpoint.includes('/verify-code') || endpoint.includes('/send-verification');
+    const verificationMaxRetries = 5;  // More retries for verification
   
     const executeRequest = async (shouldRetry = true): Promise<Response> => {
       try {
@@ -76,6 +80,15 @@ const api = {
 
         const response = await fetch(url, fetchOptions);
 
+        // Special handling for verification endpoints
+        if (isVerificationEndpoint && !response.ok) {
+          console.warn(`Verification endpoint error (${response.status}): ${endpoint}`);
+          
+          // For verification endpoints, we want to return the response even if not OK
+          // so we can extract the error message
+          return response;
+        }
+
         // Re-authenticate on 401/403 errors
         if (response.status === 401 || response.status === 403) {
           // If we received a 401/403 error and we manually logged out, don't try to refresh token
@@ -116,10 +129,18 @@ const api = {
 
         return response;
       } catch (error) {
-        if (shouldRetry && retryCount < maxRetries) {
+        const effectiveMaxRetries = isVerificationEndpoint ? verificationMaxRetries : maxRetries;
+        
+        if (shouldRetry && retryCount < effectiveMaxRetries) {
           retryCount++;
-          console.log(`Network error, retrying (${retryCount}/${maxRetries})...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+          console.log(`Network error, retrying (${retryCount}/${effectiveMaxRetries})...`);
+          
+          // Use exponential backoff for verification endpoints
+          const delay = isVerificationEndpoint 
+            ? retryDelay * Math.pow(2, retryCount - 1) // Exponential backoff
+            : retryDelay * retryCount; // Linear backoff
+            
+          await new Promise(resolve => setTimeout(resolve, delay));
           return executeRequest(true);
         }
         throw error;
@@ -131,7 +152,36 @@ const api = {
       const response = await executeRequest();
       console.log(`Request to ${endpoint} completed in ${Date.now() - startTime}ms`);
 
-      if (!response.ok) {
+      // Special handling for verification endpoints
+      if (isVerificationEndpoint) {
+        if (!response.ok) {
+          let errorMessage = response.statusText;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+            
+            // Enhance error messages for verification endpoints
+            if (endpoint.includes('/verify-code')) {
+              if (response.status === 400) {
+                if (errorMessage.includes('expired')) {
+                  errorMessage = 'Verification code has expired. Please request a new code.';
+                } else if (errorMessage.includes('invalid') || errorMessage.includes('not found')) {
+                  errorMessage = 'Invalid verification code. Please check and try again.';
+                }
+              } else if (response.status === 429) {
+                errorMessage = 'Too many attempts. Please try again later.';
+              }
+            }
+          } catch {
+            // If JSON parsing fails, use status text with added context
+            errorMessage = `Verification error: ${response.statusText}`;
+          }
+          
+          console.error(`Verification API error (${response.status}): ${errorMessage}`);
+          throw new Error(errorMessage);
+        }
+      } else if (!response.ok) {
+        // Standard error handling for non-verification endpoints
         let errorMessage = response.statusText;
         try {
           const errorData = await response.json();

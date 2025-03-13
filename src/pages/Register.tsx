@@ -102,63 +102,92 @@ export default function Register() {
     e.preventDefault();
     setVerificationError('');
     setLoading(true);
-
-    try {
+    
+    // Add retry logic
+    let attempts = 0;
+    const maxAttempts = 3;
+    let lastError = '';
+    
+    while (attempts < maxAttempts) {
+      try {
+        // Show feedback to the user about retry attempts
+        if (attempts > 0) {
+          setVerificationError(`Retrying... (Attempt ${attempts + 1}/${maxAttempts})`);
+        }
         
         const verifyResponse = await api.fetch('/verify-code', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                email: sentEmail,
-                code: verificationCode
-            }),
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: sentEmail,
+            code: verificationCode
+          }),
         });
-
-        if (!verifyResponse.ok) {
-            throw new Error('Invalid verification code');
-        }
-
-        
-        const isDemo = location.state?.isDemo;
-        await register(sentEmail, password, isDemo ? 'Demo' : selectedPlan);
-        
-        if (isDemo) {
-            
+  
+        if (verifyResponse.ok) {
+          // Success! Clear any error and continue with registration
+          setVerificationError('');
+          
+          // The existing registration code goes here:
+          const isDemo = location.state?.isDemo;
+          await register(sentEmail, password, isDemo ? 'Demo' : selectedPlan);
+          
+          if (isDemo) {
             navigate('/dashboard');
-        } else {
-            
+          } else {
             const response = await api.fetch('/create-checkout-session', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                },
-                body: JSON.stringify({
-                    priceId: stripePriceId,
-                    planName: selectedPlan,
-                    successUrl: `${window.location.origin}/dashboard?success=true`,
-                    cancelUrl: `${window.location.origin}/pricing?success=false`
-                }),
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              },
+              body: JSON.stringify({
+                priceId: stripePriceId,
+                planName: selectedPlan,
+                successUrl: `${window.location.origin}/dashboard?success=true`,
+                cancelUrl: `${window.location.origin}/pricing?success=false`
+              }),
             });
-
+  
             if (!response.ok) {
-                throw new Error('Failed to create checkout session');
+              throw new Error('Failed to create checkout session');
             }
-
+  
             const { url } = await response.json();
             if (url) {
-                window.location.href = url;
+              window.location.href = url;
             }
+          }
+          
+          // Break out of retry loop since we succeeded
+          break;
+        } else {
+          // Get the error message from the response
+          const errorData = await verifyResponse.json();
+          lastError = errorData.error || 'Verification failed';
+          throw new Error(lastError);
         }
-    } catch (error: any) {
-        setVerificationError(error.message || 'Verification failed');
-    } finally {
-        setLoading(false);
+      } catch (error: any) {
+        attempts++;
+        lastError = error.message || 'Verification failed';
+        
+        if (attempts >= maxAttempts) {
+          // All retries failed
+          setVerificationError(`Verification failed after ${maxAttempts} attempts. Please check your code or request a new one.`);
+        } else {
+          // Wait before retrying (increased delay for each attempt)
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+          // Continue to next attempt (loop will continue)
+        }
+      }
     }
+    
+    // Only reach here after all retries or successful verification
+    setLoading(false);
   };
-
+  
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-6 py-16">
@@ -325,6 +354,36 @@ export default function Register() {
                       className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
                       placeholder="Enter the 6-digit code"
                     />
+                    
+                    {/* Add this after the verification code input */}
+                    <div className="mt-2 text-right">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            setVerificationError('');
+                            const response = await api.fetch('/send-verification', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({ email: sentEmail }),
+                            });
+                            
+                            if (response.ok) {
+                              setVerificationError('Verification code resent. Please check your email.');
+                            } else {
+                              throw new Error('Failed to resend code');
+                            }
+                          } catch (error) {
+                            setVerificationError('Failed to resend verification code. Please try again.');
+                          }
+                        }}
+                        className="text-sm text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                      >
+                        Resend code
+                      </button>
+                    </div>
                   </div>
 
                   <button

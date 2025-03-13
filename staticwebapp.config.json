@@ -1,10 +1,24 @@
 {
+  "platform": {
+    "apiRuntime": "node:16",
+    "clientRuntime": "browser"
+  },
+  "networking": {
+    "allowedIpRanges": ["all"],
+    "sessionAffinity": "enabled"
+  },
   "routes": [
     {
       "route": "/login",
       "methods": ["POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/login"
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/login",
+      "headers": {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": "https://zarium.dev",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
+      }
     },
     {
       "route": "/register",
@@ -16,19 +30,37 @@
       "route": "/verify-token",
       "methods": ["GET", "POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/verify-token"
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/verify-token",
+      "headers": {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": "https://zarium.dev",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
+      }
     },
     {
       "route": "/csrf-token",
       "methods": ["GET", "OPTIONS"],
       "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/csrf-token"
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/csrf-token",
+      "headers": {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": "https://zarium.dev",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
+      }
     },
     {
       "route": "/logout",
       "methods": ["POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/logout"
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/logout",
+      "headers": {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": "https://zarium.dev",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
+      }
     },
     {
       "route": "/user/current",
@@ -118,7 +150,13 @@
       "route": "/verify-code",
       "methods": ["POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/verify-code"
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/verify-code",
+      "headers": {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": "https://zarium.dev",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
+      }
     },
     {
       "route": "/health",
@@ -136,6 +174,54 @@
       "route": "/*",
       "serve": "/index.html",
       "statusCode": 200
+    },
+    {
+      "route": "/request-password-reset",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/request-password-reset",
+      "headers": {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": "https://zarium.dev",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
+      }
+    },
+    {
+      "route": "/reset-password",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/reset-password",
+      "headers": {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": "https://zarium.dev",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
+      }
+    },
+    {
+      "route": "/refresh-token",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/refresh-token",
+      "headers": {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": "https://zarium.dev",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
+      }
+    },
+    {
+      "route": "/get-empty-excel",
+      "methods": ["GET", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/get-empty-excel"
+    },
+    {
+      "route": "/admin/users",
+      "methods": ["GET", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/admin/users"
     }
   ],
   "navigationFallback": {
@@ -152,7 +238,11 @@
     "Content-Security-Policy": "upgrade-insecure-requests",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
-    "X-XSS-Protection": "1; mode=block"
+    "X-XSS-Protection": "1; mode=block",
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Origin": "https://zarium.dev,https://icy-moss-05e401a03.6.azurestaticapps.net,http://localhost:5176",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
   },
   "mimeTypes": {
     ".json": "text/json"
