@@ -39,11 +39,23 @@ export default function Register() {
   }, [selectedPlan, navigate]);
 
   const validatePassword = (password: string) => {
-    const hasSpecialChar = /[!@#$%^-_&*¨(),.?":{}|<>]/.test(password);
-    const hasMinLength = password.length >= 6;
+    const hasCapitalLetter = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>_\-]/.test(password);
+    const hasMinLength = password.length >= 8;
     
     if (!hasMinLength) {
-      return "Password must be at least 6 characters long";
+      return "Password must be at least 8 characters long";
+    }
+    if (!hasCapitalLetter) {
+      return "Password must contain at least one capital letter";
+    }
+    if (!hasLowercase) {
+      return "Password must contain at least one lowercase letter";
+    }
+    if (!hasNumber) {
+      return "Password must contain at least one number";
     }
     if (!hasSpecialChar) {
       return "Password must contain at least one special character";
@@ -55,28 +67,49 @@ export default function Register() {
     e.preventDefault();
     setError('');
     
-    
+    // Password validation
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-
     
     const passwordError = validatePassword(password);
     if (passwordError) {
       setError(passwordError);
       return;
     }
-
+    
     if (!acceptTerms || !acceptPrivacy) {
       setError('You must accept both Terms of Service and Privacy Policy to continue');
       return;
     }
-
+    
     setLoading(true);
-
+    
     try {
+      // First check if email already exists
+      try {
+        const checkResponse = await api.fetch('/register/check-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+        
+        const checkData = await checkResponse.json();
+        
+        if (checkData && checkData.exists) {
+          setError('An account with this email already exists. Please login instead.');
+          setLoading(false);
+          return;
+        }
+      } catch (checkError) {
+        // If the endpoint doesn't exist yet, continue with the regular flow
+        console.warn('Email check failed, continuing with registration attempt:', checkError);
+      }
       
+      // Proceed with sending verification code
       const verifyResponse = await api.fetch('/send-verification', {
         method: 'POST',
         headers: {
@@ -84,16 +117,24 @@ export default function Register() {
         },
         body: JSON.stringify({ email }),
       });
-
+      
       if (!verifyResponse.ok) {
-        throw new Error('Failed to send verification code');
+        const responseData = await verifyResponse.json().catch(() => ({}));
+        
+        // Handle specific error cases
+        if (responseData.error && responseData.error.includes('already exists')) {
+          throw new Error('An account with this email already exists. Please login instead.');
+        } else {
+          throw new Error(responseData.error || 'Failed to send verification code');
+        }
       }
-
+      
+      // Success - show verification form
       setSentEmail(email);
       setShowVerification(true);
-      setLoading(false);
     } catch (error: any) {
       setError(error.message || 'Error sending verification code');
+    } finally {
       setLoading(false);
     }
   };
