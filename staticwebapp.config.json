@@ -3,10 +3,6 @@
     "apiRuntime": "node:16",
     "clientRuntime": "browser"
   },
-  "networking": {
-    "allowedIpRanges": ["all"],
-    "sessionAffinity": "enabled"
-  },
   "routes": [
     {
       "route": "/login",
