@@ -166,7 +166,7 @@ export default function Register() {
             code: verificationCode
           }),
         });
-  
+
         if (verifyResponse.ok) {
           // Success! Clear any error and continue with registration
           setVerificationError('');
@@ -175,31 +175,29 @@ export default function Register() {
           const isDemo = location.state?.isDemo;
           await register(sentEmail, password, isDemo ? 'Demo' : selectedPlan);
           
-          if (isDemo) {
-            navigate('/dashboard');
-          } else {
-            const response = await api.fetch('/create-checkout-session', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-              },
-              body: JSON.stringify({
-                priceId: stripePriceId,
-                planName: selectedPlan,
-                successUrl: `${window.location.origin}/dashboard?success=true`,
-                cancelUrl: `${window.location.origin}/pricing?success=false`
-              }),
-            });
-  
-            if (!response.ok) {
-              throw new Error('Failed to create checkout session');
-            }
-  
-            const { url } = await response.json();
-            if (url) {
-              window.location.href = url;
-            }
+          // Send all users through Stripe checkout, including Demo
+          const response = await api.fetch('/create-checkout-session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({
+              // Use Demo price ID for demo users, otherwise use the selected plan's price ID
+              priceId: isDemo ? 'price_1Qxz36B9ONdEOi8LjjNoQUN3' : stripePriceId,
+              planName: isDemo ? 'Demo' : selectedPlan,
+              successUrl: `${window.location.origin}/dashboard?success=true`,
+              cancelUrl: `${window.location.origin}/pricing?success=false`
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to create checkout session');
+          }
+
+          const { url } = await response.json();
+          if (url) {
+            window.location.href = url;
           }
           
           // Break out of retry loop since we succeeded
