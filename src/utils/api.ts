@@ -2,57 +2,153 @@
 import { config } from '../config';
 import csrfService from '../store/csrfService';
 
-// Enhanced fetch function with better error handling and token refresh
-async function enhancedFetch(url: string, options?: RequestInit): Promise<Response> {
-  // Always include credentials to ensure cookies are sent
-  const fetchOptions: RequestInit = {
-    ...options,
-    credentials: 'include'
-  };
-
-  try {
-    // Make the API request
-    const response = await fetch(`${config.apiUrl}${url}`, fetchOptions);
-    
-    // If the response is 401 Unauthorized, try to refresh the token once
-    if (response.status === 401) {
-      console.log("Unauthorized response detected, attempting token refresh");
-      
-      try {
-        // Try to refresh the token
-        const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
-          method: 'POST',
-          credentials: 'include'
-        });
-        
-        if (refreshResponse.ok) {
-          console.log("Token refresh successful, retrying original request");
-          // If refresh succeeded, retry the original request
-          return fetch(`${config.apiUrl}${url}`, fetchOptions);
-        } else {
-          console.log("Token refresh failed, redirecting to login");
-          // If refresh failed, user needs to log in again
-          window.location.href = '/login?session_expired=true';
-          return response; // Return the original 401 response
-        }
-      } catch (refreshError) {
-        console.error("Error during token refresh:", refreshError);
-        // Handle refresh network errors
-        window.location.href = '/login?network_error=true';
-        return response; // Return the original response
-      }
-    }
-    
-    return response;
-  } catch (error) {
-    console.error("API request failed:", error);
-    throw error;
-  }
-}
-
-// Replace the existing fetch implementation with the enhanced one
 const api = {
-  fetch: enhancedFetch,
+  fetch: async (endpoint: string, options: RequestInit = {}) => {
+    const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
+    const url = `${config.apiUrl}${apiEndpoint}`;
+    
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 1000;
+  
+    const executeRequest = async (shouldRetry = true): Promise<Response> => {
+      try {
+        // Hent CSRF-headers FØRST
+        let csrfHeaders = {};
+        try {
+          csrfHeaders = await csrfService.getHeaders();
+        } catch (csrfError) {
+          console.warn('Failed to get CSRF headers:', csrfError);
+        }
+        
+        // Add authorization from localStorage if available
+        const storedAuth = localStorage.getItem('authUser');
+        let authHeaders = {};
+        
+        if (storedAuth) {
+          try {
+            const authData = JSON.parse(storedAuth);
+            if (authData.token) {
+              authHeaders = {
+                'Authorization': `Bearer ${authData.token}`
+              };
+            }
+          } catch (e) {
+            console.warn('Failed to parse stored auth data', e);
+          }
+        }
+        
+        const isFormData = options.body instanceof FormData;
+        
+        const fetchOptions: RequestInit = {
+          ...options,
+          headers: {
+            ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+            'Accept': 'application/json',
+            ...authHeaders,
+            ...csrfHeaders,
+            ...options.headers,  // Viktig: La options.headers overstyre standard headers
+          },
+          credentials: 'include',
+          mode: 'cors'
+        };
+  
+        console.log(`Sending request to ${endpoint} with CSRF token:`, csrfHeaders);
+
+        // For Excel generation, preemptively refresh the token
+        if (endpoint.includes('generate-macro')) {
+          try {
+            console.log("Preemptively refreshing token before generation...");
+            const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
+              method: 'POST',
+              credentials: 'include',
+              mode: 'cors',
+              headers: { ...authHeaders, ...csrfHeaders }
+            });
+            
+            if (refreshResponse.ok) {
+              console.log("Token refreshed before generation");
+            }
+          } catch (error) {
+            console.warn('Preemptive token refresh failed:', error);
+          }
+        }
+
+        const response = await fetch(url, fetchOptions);
+
+        // Re-authenticate on 401/403 errors
+        if (response.status === 401 || response.status === 403) {
+          // If we received a 401/403 error and we manually logged out, don't try to refresh token
+          if (localStorage.getItem('manualLogout') === 'true') {
+            // Just abort - don't try to refresh token
+            throw new Error(`Auth error: ${response.status}`);
+          }
+
+          if (retryCount < maxRetries && shouldRetry) {
+            retryCount++;
+            console.log(`Auth error, attempt ${retryCount}: Refreshing token...`);
+            
+            try {
+              const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
+                method: 'POST',
+                credentials: 'include',
+                mode: 'cors',
+                headers: { ...authHeaders, ...csrfHeaders }
+              });
+              
+              if (refreshResponse.ok) {
+                console.log('Token refreshed, retrying request');
+                // Update isAuthenticated in localStorage
+                localStorage.setItem('isAuthenticated', 'true');
+                return executeRequest(false);
+              }
+            } catch (e) {
+              console.error('Failed to refresh token:', e);
+            }
+          }
+          
+          // If we're still having auth issues after retries, consider clearing auth
+          if (retryCount >= maxRetries) {
+            console.error('Authentication failed after maximum retries');
+            // Don't automatically redirect - let the component handle it
+          }
+        }
+
+        return response;
+      } catch (error) {
+        if (shouldRetry && retryCount < maxRetries) {
+          retryCount++;
+          console.log(`Network error, retrying (${retryCount}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+          return executeRequest(true);
+        }
+        throw error;
+      }
+    };
+
+    try {
+      const startTime = Date.now();
+      const response = await executeRequest();
+      console.log(`Request to ${endpoint} completed in ${Date.now() - startTime}ms`);
+
+      if (!response.ok) {
+        let errorMessage = response.statusText;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // If JSON parsing fails, use status text
+        }
+        throw new Error(errorMessage);
+      }
+
+      return response;
+    } catch (error) {
+      console.error(`API Error (${endpoint}):`, error);
+      throw error;
+    }
+  },
+  
   uploadFile: async (endpoint: string, file: File, additionalData?: Record<string, any>) => {
     // Add /api prefix to all endpoints
     const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
