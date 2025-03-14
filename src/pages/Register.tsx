@@ -184,8 +184,8 @@ export default function Register() {
             },
             body: JSON.stringify({
               // Use Demo price ID for demo users, otherwise use the selected plan's price ID
-              priceId: isDemo ? 'price_1Qxz36B9ONdEOi8LjjNoQUN3' : stripePriceId,
-              planName: isDemo ? 'Demo' : selectedPlan,
+              priceId: stripePriceId,
+              planName: selectedPlan,
               successUrl: `${window.location.origin}/dashboard?success=true`,
               cancelUrl: `${window.location.origin}/pricing?success=false`
             }),
