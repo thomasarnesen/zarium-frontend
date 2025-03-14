@@ -171,11 +171,16 @@ export default function Register() {
           // Success! Clear any error and continue with registration
           setVerificationError('');
           
-          // The existing registration code goes here:
+          // Register the user with the appropriate plan
           const isDemo = location.state?.isDemo;
-          await register(sentEmail, password, isDemo ? 'Demo' : selectedPlan);
+          const planType = isDemo ? 'Demo' : selectedPlan;
+          await register(sentEmail, password, planType);
           
-          // Send all users through Stripe checkout, including Demo
+          // Bruk korrekte prisIDer fra location state eller hent fra API
+          const priceId = isDemo 
+            ? location.state?.demoPriceId  // Bruk prisen som ble sendt med via location state
+            : stripePriceId;
+            
           const response = await api.fetch('/create-checkout-session', {
             method: 'POST',
             headers: {
@@ -183,9 +188,8 @@ export default function Register() {
               'Authorization': `Bearer ${localStorage.getItem('token')}`,
             },
             body: JSON.stringify({
-              // Use Demo price ID for demo users, otherwise use the selected plan's price ID
-              priceId: stripePriceId,
-              planName: selectedPlan,
+              priceId: priceId,
+              planName: planType,
               successUrl: `${window.location.origin}/dashboard?success=true`,
               cancelUrl: `${window.location.origin}/pricing?success=false`
             }),
