@@ -11,13 +11,14 @@ const api = {
     const maxRetries = 3;
     const retryDelay = 1000;
     
-    // Special handling for verification endpoints - use more retries
+    // Special handling for verification endpoints - use more retries for network issues
     const isVerificationEndpoint = endpoint.includes('/verify-code') || endpoint.includes('/send-verification');
-    const verificationMaxRetries = 5;  // More retries for verification
+    const isCheckoutEndpoint = endpoint.includes('/create-checkout-session');
+    const verificationMaxRetries = 2;  // Reduced retries for verification - only retry for network errors
   
     const executeRequest = async (shouldRetry = true): Promise<Response> => {
       try {
-        // Hent CSRF-headers FØRST
+        // Get CSRF headers FIRST
         let csrfHeaders = {};
         try {
           csrfHeaders = await csrfService.getHeaders();
@@ -51,13 +52,16 @@ const api = {
             'Accept': 'application/json',
             ...authHeaders,
             ...csrfHeaders,
-            ...options.headers,  // Viktig: La options.headers overstyre standard headers
+            ...options.headers,  // Important: Let options.headers override standard headers
           },
           credentials: 'include',
           mode: 'cors'
         };
   
-        console.log(`Sending request to ${endpoint} with CSRF token:`, csrfHeaders);
+        console.log(`Sending request to ${endpoint}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Request options:', fetchOptions);
+        }
 
         // For Excel generation, preemptively refresh the token
         if (endpoint.includes('generate-macro')) {
@@ -80,12 +84,21 @@ const api = {
 
         const response = await fetch(url, fetchOptions);
 
+        // Special handling for checkout endpoint - prioritize reliability
+        if (isCheckoutEndpoint && !response.ok) {
+          console.error(`Checkout error (${response.status}): ${endpoint}`);
+          
+          // For checkout, we want proper error messages
+          const errorData = await response.json().catch(() => ({ error: "Payment processing failed" }));
+          throw new Error(errorData.error || "Payment processing failed");
+        }
+
         // Special handling for verification endpoints
         if (isVerificationEndpoint && !response.ok) {
           console.warn(`Verification endpoint error (${response.status}): ${endpoint}`);
           
           // For verification endpoints, we want to return the response even if not OK
-          // so we can extract the error message
+          // so we can extract the error message - no retries for validation errors
           return response;
         }
 
@@ -129,6 +142,7 @@ const api = {
 
         return response;
       } catch (error) {
+        // For network errors (not HTTP errors like 400, 401, etc)
         const effectiveMaxRetries = isVerificationEndpoint ? verificationMaxRetries : maxRetries;
         
         if (shouldRetry && retryCount < effectiveMaxRetries) {
@@ -196,6 +210,88 @@ const api = {
     } catch (error) {
       console.error(`API Error (${endpoint}):`, error);
       throw error;
+    }
+  },
+  
+  // Helper method for direct access to auth token
+  getAuthToken: (): string | null => {
+    try {
+      const storedAuth = localStorage.getItem('authUser');
+      if (!storedAuth) return null;
+      
+      const authData = JSON.parse(storedAuth);
+      return authData.token || null;
+    } catch (e) {
+      console.warn('Error getting auth token:', e);
+      return null;
+    }
+  },
+  
+  // Special method for handling registration flow
+  registerWithVerification: async (
+    email: string, 
+    password: string, 
+    planType: string,
+    verificationCode: string
+  ): Promise<{ success: boolean, url?: string, error?: string }> => {
+    try {
+      // Step 1: Verify the code
+      const verifyResponse = await api.fetch('/api/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: verificationCode })
+      });
+      
+      if (!verifyResponse.ok) {
+        const errorData = await verifyResponse.json().catch(() => ({}));
+        return { 
+          success: false, 
+          error: errorData.error || 'Verification failed' 
+        };
+      }
+      
+      // Step 2: Create checkout session
+      try {
+        const checkoutResponse = await api.fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            planName: planType,
+            pendingUserEmail: email,
+            pendingUserPassword: password,
+            successUrl: `${window.location.origin}/dashboard?success=true&email=${encodeURIComponent(email)}`,
+            cancelUrl: `${window.location.origin}/pricing?success=false`
+          })
+        });
+        
+        if (!checkoutResponse.ok) {
+          const errorData = await checkoutResponse.json().catch(() => ({}));
+          return { 
+            success: false, 
+            error: errorData.error || 'Failed to create checkout session' 
+          };
+        }
+        
+        const { url } = await checkoutResponse.json();
+        if (!url) {
+          return { 
+            success: false, 
+            error: 'No redirect URL received from server' 
+          };
+        }
+        
+        return { success: true, url };
+      } catch (error: any) {
+        return { 
+          success: false, 
+          error: error.message || 'Failed to process payment'
+        };
+      }
+    } catch (error: any) {
+      return { 
+        success: false, 
+        error: error.message || 'Registration process failed'
+      };
     }
   },
   

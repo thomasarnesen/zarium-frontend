@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { Toaster } from 'react-hot-toast';
 import api from './utils/api';
 import { ThemeProvider } from './components/ThemeProvider';
+import toast from 'react-hot-toast';
 
 // Import pages
 import Home from './pages/Home';
@@ -12,11 +13,11 @@ import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import DashboardPage from './pages/Dashboard';
 import PricingPage from './pages/Pricing';
-import { TermsOfService}  from './pages/TermsOfService';
-import { PrivacyPolicy}  from './pages/PrivacyPolicy';
-import { HelpPage}  from './pages/HelpPage';
-import { TokensPage}  from './pages/TokensPage';
-import { MySubscription}  from './pages/MySubscription';
+import { TermsOfService } from './pages/TermsOfService';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { HelpPage } from './pages/HelpPage';
+import { TokensPage } from './pages/TokensPage';
+import { MySubscription } from './pages/MySubscription';
 import ForgotPasswordPage from './pages/ForgotPassword';
 import ResetPasswordPage from './pages/ResetPassword';
 import ErrorPage from './pages/ErrorPage';
@@ -25,6 +26,57 @@ import { Layout } from './components/Layout';
 
 // Force token refresh every 10 minutes
 const TOKEN_REFRESH_INTERVAL = 10 * 60 * 1000;
+
+// Component to handle post-payment actions
+function PostPaymentHandler() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { completeRegistrationAfterPayment, refreshUserData } = useAuthStore();
+  
+  useEffect(() => {
+    const handleSuccessfulPayment = async () => {
+      const searchParams = new URLSearchParams(location.search);
+      const success = searchParams.get('success') === 'true';
+      const email = searchParams.get('email');
+      
+      if (success && email) {
+        // Try to complete the registration
+        const result = await completeRegistrationAfterPayment(email);
+        
+        if (result) {
+          // Registration completed successfully
+          toast.success('Your account has been created and payment processed successfully!');
+          // Refresh user data to get latest tokens, etc.
+          await refreshUserData();
+        } else {
+          // The user was created by the webhook, but we couldn't log them in automatically
+          toast.success('Payment successful! Please log in with your credentials.');
+          // Redirect to login
+          navigate('/login');
+          return;
+        }
+      } else if (success) {
+        // Payment was successful for existing user (not a new registration)
+        toast.success('Payment processed successfully!');
+        // Refresh user data to get latest tokens, etc.
+        await refreshUserData();
+      }
+      
+      // Clean up URL parameters
+      if (success) {
+        // Remove query params but keep on dashboard
+        navigate('/dashboard', { replace: true });
+      }
+    };
+    
+    // Check if we're coming back from a payment
+    if (location.search.includes('success=')) {
+      handleSuccessfulPayment();
+    }
+  }, [location, completeRegistrationAfterPayment, navigate, refreshUserData]);
+  
+  return null;
+}
 
 function App() {
   const { initialize, isAuthenticated } = useAuthStore();
@@ -42,14 +94,14 @@ function App() {
         // Set up periodic token refresh
         const refreshInterval = setInterval(async () => {
           try {
-            // Sjekk om brukeren har logget ut manuelt
+            // Check if user manually logged out
             const wasManuallyLoggedOut = localStorage.getItem('manualLogout') === 'true';
             if (wasManuallyLoggedOut) {
               clearInterval(refreshInterval);
               return;
             }
             
-            await api.fetch('/refresh-token', {
+            await api.fetch('/api/refresh-token', {
               method: 'POST',
               credentials: 'include'
             });
@@ -60,7 +112,7 @@ function App() {
           }
         }, TOKEN_REFRESH_INTERVAL);
         
-        // Lagre intervallet så det kan avbrytes ved utlogging
+        // Store interval so it can be canceled on logout
         (window as any)['tokenRefreshInterval'] = refreshInterval;
         
         return () => {
@@ -81,17 +133,17 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) {
       localStorage.setItem('isAuthenticated', 'true');
-      // Fjern flagget for manuell utlogging når brukeren er innlogget
+      // Remove manual logout flag when user is logged in
       localStorage.removeItem('manualLogout');
     } else if (localStorage.getItem('isAuthenticated')) {
-      // Hvis vi var autentisert før, men ikke nå, sjekk om det var manuell utlogging
+      // If we were authenticated before, but not now, check if it was manual logout
       const wasManuallyLoggedOut = localStorage.getItem('manualLogout') === 'true';
       
       if (!wasManuallyLoggedOut) {
-        // Bare forsøk reautentisering hvis det ikke var manuell utlogging
+        // Only attempt re-auth if it wasn't manual logout
         const attemptReauth = async () => {
           try {
-            await api.fetch('/refresh-token', { 
+            await api.fetch('/api/refresh-token', { 
               method: 'POST',
               credentials: 'include'
             });
@@ -130,9 +182,12 @@ function App() {
             },
           }}
         />
+        {/* Add the PostPaymentHandler component */}
+        <PostPaymentHandler />
+        
         <Routes>
           <Route path="/" element={<Layout />}>
-            {/* Offentlige ruter som ikke krever innlogging */}
+            {/* Public routes that don't require login */}
             <Route index element={<Home />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />

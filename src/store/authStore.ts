@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import api from '../utils/api';
 import csrfService from './csrfService';
+
 declare global {
   interface Window {
     tokenRefreshInterval?: number;
   }
 }
+
 interface User {
   id: number;
   email: string;
@@ -20,6 +22,13 @@ interface User {
   generationsCount?: number;
 }
 
+interface PendingRegistration {
+  email: string;
+  password: string;
+  planType: 'Demo' | 'Basic' | 'Plus' | 'Pro';
+  verificationCompleted: boolean;
+}
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
@@ -29,9 +38,12 @@ interface AuthState {
   isDemoUser: boolean;
   generationsCount: number;
   enhancedMode: boolean;
+  pendingRegistration: PendingRegistration | null;
  
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, planType?: 'Demo' | 'Basic' | 'Plus' | 'Pro') => Promise<void>;
+  setPendingRegistration: (data: PendingRegistration | null) => void;
+  markVerificationComplete: () => void;
   logout: () => Promise<void>;
   enableDemoMode: (selectedPlan: 'Basic' | 'Plus' | 'Pro') => void;
   disableDemoMode: () => void;
@@ -40,6 +52,7 @@ interface AuthState {
   refreshUserData: () => Promise<boolean>;
   toggleEnhancedMode: () => void;
   initialize: () => Promise<void>; 
+  completeRegistrationAfterPayment: (email: string) => Promise<boolean>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -51,6 +64,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isDemoUser: false,
   generationsCount: 0,
   enhancedMode: false,
+  pendingRegistration: null,
 
   refreshUserData: async () => {
     try {
@@ -180,6 +194,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       get().setUser(userData);
       localStorage.removeItem('manualLogout'); // Clear any previous logout flag
+      
+      // Clear any pending registration since we're now logged in
+      localStorage.removeItem('pendingRegistration');
+      sessionStorage.removeItem('pendingRegistration');
+      set({ pendingRegistration: null });
     } catch (error) {
       console.error('❌ Login error:', error);
       throw error;
@@ -188,68 +207,121 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   register: async (email: string, password: string, planType = 'Basic') => {
     try {
-        const response = await api.fetch('/register', {
-            method: 'POST',
-            body: JSON.stringify({ 
-                email, 
-                password,
-                plan_type: planType 
-            }),
-        });
-     
-        const data = await response.json();
-     
-        if (!response.ok) {
-            throw new Error(data.error || 'Registration failed');
-        }
-     
-       
-        await get().login(email, password);
-     
+      // IMPORTANT CHANGE: We're now storing the registration data instead of
+      // immediately creating the user. The user will be created in the webhook
+      // after the Stripe payment is confirmed.
+      
+      const pendingData = {
+        email,
+        password,
+        planType,
+        verificationCompleted: false
+      };
+      
+      // Store in both sessionStorage and state
+      sessionStorage.setItem('pendingRegistration', JSON.stringify(pendingData));
+      
+      set({ pendingRegistration: pendingData });
+      
+      console.log("📝 Registration data stored pending verification and payment");
+      return;
     } catch (error) {
-        console.error('Registration error:', error);
-        throw error;
+      console.error('Registration preparation error:', error);
+      throw error;
+    }
+  },
+  
+  setPendingRegistration: (data) => {
+    if (data) {
+      sessionStorage.setItem('pendingRegistration', JSON.stringify(data));
+    } else {
+      sessionStorage.removeItem('pendingRegistration');
+    }
+    set({ pendingRegistration: data });
+  },
+  
+  markVerificationComplete: () => {
+    const current = get().pendingRegistration;
+    if (current) {
+      const updated = { ...current, verificationCompleted: true };
+      sessionStorage.setItem('pendingRegistration', JSON.stringify(updated));
+      set({ pendingRegistration: updated });
+    }
+  },
+  
+  completeRegistrationAfterPayment: async (email: string) => {
+    // This function will be called after successful payment
+    // At this point, the user should already be created by the webhook
+    // We just need to log them in
+    
+    try {
+      // Try to get the pending registration data
+      const pendingDataStr = sessionStorage.getItem('pendingRegistration');
+      if (!pendingDataStr) {
+        console.warn("No pending registration found");
+        return false;
+      }
+      
+      const pendingData = JSON.parse(pendingDataStr);
+      
+      // If the emails match, try to log in with the stored credentials
+      if (pendingData.email === email && pendingData.verificationCompleted) {
+        await get().login(pendingData.email, pendingData.password);
+        
+        // Clear the pending registration data
+        sessionStorage.removeItem('pendingRegistration');
+        set({ pendingRegistration: null });
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error completing registration after payment:", error);
+      return false;
     }
   },
 
   logout: async () => {
     try {
-      // Sett flagg for manuell utlogging
+      // Set flag for manual logout
       localStorage.setItem('manualLogout', 'true');
       
-      // Stopp token refresh-intervallet hvis det finnes
+      // Stop token refresh interval if it exists
       if (window.tokenRefreshInterval) {
         clearInterval(window.tokenRefreshInterval);
         (window as any).tokenRefreshInterval = undefined;
       }
       
-      // Kall utloggingsendepunktet
+      // Call logout endpoint
       await api.fetch('/logout', {
         method: 'POST',
       });
       
-      // Nullstill CSRF-token
+      // Reset CSRF token
       csrfService.resetToken();
       
-      // Fjern ALLE relaterte elementer fra localStorage
+      // Remove ALL related items from localStorage
       localStorage.removeItem('authUser');
       localStorage.removeItem('isAuthenticated');
+      sessionStorage.removeItem('pendingRegistration');
       
-      // Fjern evt cookies
+      // Remove cookies
       document.cookie.split(";").forEach(function(c) {
         document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
       
-      // Nullstill alle tilstander i auth-store
+      // Reset all auth store states
       get().setUser(null);
       set({
         isDemoMode: false,
         planType: null,
         tokens: 0,
-        isAuthenticated: false // Viktig å sette denne til false
+        isAuthenticated: false, // Important to set this to false
+        pendingRegistration: null
       });
       
-      // Tving en oppdatering av komponenter som er avhengige av autentiseringsstatus
+      // Force an update of components that depend on authentication status
       window.dispatchEvent(new Event('auth-changed'));
       
     } catch (error) {
@@ -284,6 +356,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Check for stored authentication data
     const storedAuth = localStorage.getItem('authUser');
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    
+    // Check for pending registration
+    const pendingRegistrationStr = sessionStorage.getItem('pendingRegistration');
+    if (pendingRegistrationStr) {
+      try {
+        const pendingData = JSON.parse(pendingRegistrationStr);
+        set({ pendingRegistration: pendingData });
+      } catch (e) {
+        console.warn('Failed to parse pending registration data', e);
+        sessionStorage.removeItem('pendingRegistration');
+      }
+    }
     
     if (storedAuth && isAuthenticated) {
       try {

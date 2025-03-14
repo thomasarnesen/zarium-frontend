@@ -22,17 +22,19 @@ export default function Register() {
   const [showVerification, setShowVerification] = useState(false);
   const [sentEmail, setSentEmail] = useState('');
   const [verificationError, setVerificationError] = useState('');
+  
   const navigate = useNavigate();
   const location = useLocation();
-  const register = useAuthStore((state) => state.register);
+  const { register, setPendingRegistration, markVerificationComplete } = useAuthStore();
 
-  
+  // Get parameters from location state
   const selectedPlan = location.state?.selectedPlan;
   const stripePriceId = location.state?.stripePriceId;
   const price = location.state?.price;
+  const isDemo = location.state?.isDemo;
 
   useEffect(() => {
-    
+    // Redirect to pricing if no plan is selected
     if (!selectedPlan) {
       navigate('/pricing');
     }
@@ -89,7 +91,7 @@ export default function Register() {
     try {
       // First check if email already exists
       try {
-        const checkResponse = await api.fetch('/register/check-email', {
+        const checkResponse = await api.fetch('/api/register/check-email', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -109,8 +111,11 @@ export default function Register() {
         console.warn('Email check failed, continuing with registration attempt:', checkError);
       }
       
+      // Important: Store the registration details in AuthStore first
+      await register(email, password, selectedPlan);
+      
       // Proceed with sending verification code
-      const verifyResponse = await api.fetch('/send-verification', {
+      const verifyResponse = await api.fetch('/api/send-verification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,91 +149,77 @@ export default function Register() {
     setVerificationError('');
     setLoading(true);
     
-    // Add retry logic
-    let attempts = 0;
-    const maxAttempts = 3;
-    let lastError = '';
-    
-    while (attempts < maxAttempts) {
-      try {
-        // Show feedback to the user about retry attempts
-        if (attempts > 0) {
-          setVerificationError(`Retrying... (Attempt ${attempts + 1}/${maxAttempts})`);
-        }
-        
-        const verifyResponse = await api.fetch('/verify-code', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: sentEmail,
-            code: verificationCode
-          }),
-        });
+    try {
+      // Single verification attempt
+      const verifyResponse = await api.fetch('/api/verify-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: sentEmail,
+          code: verificationCode
+        }),
+      });
 
-        if (verifyResponse.ok) {
-          // Success! Clear any error and continue with registration
-          setVerificationError('');
-          
-          // Register the user with the appropriate plan
-          const isDemo = location.state?.isDemo;
-          const planType = isDemo ? 'Demo' : selectedPlan;
-          await register(sentEmail, password, planType);
-          
-          // Bruk korrekte prisIDer fra location state eller hent fra API
-          const priceId = isDemo 
-            ? location.state?.demoPriceId  // Bruk prisen som ble sendt med via location state
-            : stripePriceId;
-            
-          const response = await api.fetch('/create-checkout-session', {
+      if (verifyResponse.ok) {
+        // Mark verification as complete in the store
+        markVerificationComplete();
+        
+        // Now create the checkout session which will eventually create the user
+        const priceId = isDemo 
+          ? location.state?.demoPriceId
+          : stripePriceId;
+        
+        console.log(`Creating checkout session with plan: ${selectedPlan}, price: ${priceId}`);
+        
+        try {
+          const response = await api.fetch('/api/create-checkout-session', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
             },
             body: JSON.stringify({
               priceId: priceId,
-              planName: planType,
-              successUrl: `${window.location.origin}/dashboard?success=true`,
+              planName: selectedPlan,
+              pendingUserEmail: sentEmail,
+              pendingUserPassword: password, // This will be hashed on the server
+              successUrl: `${window.location.origin}/dashboard?success=true&email=${encodeURIComponent(sentEmail)}`,
               cancelUrl: `${window.location.origin}/pricing?success=false`
             }),
           });
 
           if (!response.ok) {
-            throw new Error('Failed to create checkout session');
+            const errorData = await response.json();
+            console.error("Checkout error:", errorData);
+            throw new Error(errorData.error || 'Failed to create checkout session');
           }
 
           const { url } = await response.json();
           if (url) {
+            // Redirect to Stripe
             window.location.href = url;
+          } else {
+            throw new Error('No redirect URL returned from checkout session');
           }
-          
-          // Break out of retry loop since we succeeded
-          break;
-        } else {
-          // Get the error message from the response
-          const errorData = await verifyResponse.json();
-          lastError = errorData.error || 'Verification failed';
-          throw new Error(lastError);
+        } catch (error: any) {
+          console.error("Checkout session error:", error);
+          setVerificationError('Failed to process payment. Please try again.');
         }
-      } catch (error: any) {
-        attempts++;
-        lastError = error.message || 'Verification failed';
-        
-        if (attempts >= maxAttempts) {
-          // All retries failed
-          setVerificationError(`Verification failed after ${maxAttempts} attempts. Please check your code or request a new one.`);
-        } else {
-          // Wait before retrying (increased delay for each attempt)
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-          // Continue to next attempt (loop will continue)
+      } else {
+        // Get the error message from the response
+        try {
+          const errorData = await verifyResponse.json();
+          setVerificationError(errorData.error || 'Verification failed');
+        } catch (parseError) {
+          setVerificationError('Verification failed. Please check your code and try again.');
         }
       }
+    } catch (error: any) {
+      setVerificationError(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
-    
-    // Only reach here after all retries or successful verification
-    setLoading(false);
   };
   
   return (
@@ -244,7 +235,7 @@ export default function Register() {
             <div className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-emerald-100/80 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 mb-4">
               <Sparkles className="h-4 w-4 mr-2" />
               <span className="text-sm font-medium">
-                {selectedPlan} Plan - ${price}/month
+                {selectedPlan} Plan {price && `- $${price}/month`}
               </span>
             </div>
             <h2 className="text-3xl font-bold text-emerald-800 dark:text-emerald-200 mb-2">
@@ -286,7 +277,7 @@ export default function Register() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
-                    placeholder="Min 6 characters with 1 special character"
+                    placeholder="Enter your password"
                   />
                 </div>
 
@@ -305,7 +296,6 @@ export default function Register() {
                   />
                 </div>
 
-                
                 <div className="space-y-4">
                   <div className="flex items-start">
                     <div className="flex items-center h-5">
@@ -398,14 +388,13 @@ export default function Register() {
                       placeholder="Enter the 6-digit code"
                     />
                     
-                    {/* Add this after the verification code input */}
                     <div className="mt-2 text-right">
                       <button
                         type="button"
                         onClick={async () => {
                           try {
                             setVerificationError('');
-                            const response = await api.fetch('/send-verification', {
+                            const response = await api.fetch('/api/send-verification', {
                               method: 'POST',
                               headers: {
                                 'Content-Type': 'application/json',
@@ -443,7 +432,6 @@ export default function Register() {
         </div>
       </div>
 
-      
       <PolicyModal
         isOpen={showTerms}
         onClose={() => setShowTerms(false)}
