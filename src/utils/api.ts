@@ -27,10 +27,11 @@ const api = {
         }
         
         // Add authorization from localStorage if available
+        // IMPORTANT: Skip for checkout endpoint during registration
         const storedAuth = localStorage.getItem('authUser');
         let authHeaders = {};
         
-        if (storedAuth) {
+        if (storedAuth && !isCheckoutEndpoint) {
           try {
             const authData = JSON.parse(storedAuth);
             if (authData.token) {
@@ -228,69 +229,62 @@ const api = {
   },
   
   // Special method for handling registration flow
-  registerWithVerification: async (
-    email: string, 
-    password: string, 
+  createRegistrationCheckout: async (
+    email: string,
+    password: string,
     planType: string,
-    verificationCode: string
-  ): Promise<{ success: boolean, url?: string, error?: string }> => {
+    priceId: string
+  ): Promise<{ success: boolean; url?: string; error?: string }> => {
     try {
-      // Step 1: Verify the code
-      const verifyResponse = await api.fetch('/api/verify-code', {
+      const response = await fetch(`${config.apiUrl}/api/create-checkout-session`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: verificationCode })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          priceId: priceId,
+          planName: planType,
+          pendingUserEmail: email,
+          pendingUserPassword: password,
+          successUrl: `${window.location.origin}/dashboard?success=true&email=${encodeURIComponent(email)}`,
+          cancelUrl: `${window.location.origin}/pricing?success=false`
+        }),
       });
+
+      if (!response.ok) {
+        let errorMessage;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || `Error ${response.status}: ${response.statusText}`;
+        } catch (e) {
+          errorMessage = `Error ${response.status}: ${response.statusText}`;
+        }
+        console.error("Checkout creation failed:", errorMessage);
+        return {
+          success: false,
+          error: errorMessage
+        };
+      }
+
+      const data = await response.json();
       
-      if (!verifyResponse.ok) {
-        const errorData = await verifyResponse.json().catch(() => ({}));
-        return { 
-          success: false, 
-          error: errorData.error || 'Verification failed' 
+      if (!data.url) {
+        return {
+          success: false,
+          error: 'No redirect URL received from server'
         };
       }
       
-      // Step 2: Create checkout session
-      try {
-        const checkoutResponse = await api.fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            planName: planType,
-            pendingUserEmail: email,
-            pendingUserPassword: password,
-            successUrl: `${window.location.origin}/dashboard?success=true&email=${encodeURIComponent(email)}`,
-            cancelUrl: `${window.location.origin}/pricing?success=false`
-          })
-        });
-        
-        if (!checkoutResponse.ok) {
-          const errorData = await checkoutResponse.json().catch(() => ({}));
-          return { 
-            success: false, 
-            error: errorData.error || 'Failed to create checkout session' 
-          };
-        }
-        
-        const { url } = await checkoutResponse.json();
-        if (!url) {
-          return { 
-            success: false, 
-            error: 'No redirect URL received from server' 
-          };
-        }
-        
-        return { success: true, url };
-      } catch (error: any) {
-        return { 
-          success: false, 
-          error: error.message || 'Failed to process payment'
-        };
-      }
+      return {
+        success: true,
+        url: data.url
+      };
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Registration process failed'
+      console.error("Checkout creation exception:", error);
+      return {
+        success: false,
+        error: error.message || 'Unknown error creating checkout session'
       };
     }
   },

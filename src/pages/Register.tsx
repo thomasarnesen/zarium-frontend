@@ -150,7 +150,7 @@ export default function Register() {
     setLoading(true);
     
     try {
-      // Single verification attempt
+      // Verify the code first
       const verifyResponse = await api.fetch('/api/verify-code', {
         method: 'POST',
         headers: {
@@ -166,48 +166,31 @@ export default function Register() {
         // Mark verification as complete in the store
         markVerificationComplete();
         
-        // Now create the checkout session which will eventually create the user
+        // Get the price ID for this plan
         const priceId = isDemo 
           ? location.state?.demoPriceId
           : stripePriceId;
         
         console.log(`Creating checkout session with plan: ${selectedPlan}, price: ${priceId}`);
         
-        try {
-          const response = await api.fetch('/api/create-checkout-session', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              priceId: priceId,
-              planName: selectedPlan,
-              pendingUserEmail: sentEmail,
-              pendingUserPassword: password, // This will be hashed on the server
-              successUrl: `${window.location.origin}/dashboard?success=true&email=${encodeURIComponent(sentEmail)}`,
-              cancelUrl: `${window.location.origin}/pricing?success=false`
-            }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error("Checkout error:", errorData);
-            throw new Error(errorData.error || 'Failed to create checkout session');
-          }
-
-          const { url } = await response.json();
-          if (url) {
-            // Redirect to Stripe
-            window.location.href = url;
-          } else {
-            throw new Error('No redirect URL returned from checkout session');
-          }
-        } catch (error: any) {
-          console.error("Checkout session error:", error);
-          setVerificationError('Failed to process payment. Please try again.');
+        // Use the direct checkout method
+        const checkoutResult = await api.createRegistrationCheckout(
+          sentEmail,
+          password,
+          selectedPlan,
+          priceId
+        );
+        
+        if (checkoutResult.success && checkoutResult.url) {
+          // Redirect to Stripe checkout
+          window.location.href = checkoutResult.url;
+        } else {
+          // Handle checkout creation failure
+          console.error("Failed to create checkout session:", checkoutResult.error);
+          setVerificationError(checkoutResult.error || 'Failed to process payment. Please try again.');
         }
       } else {
-        // Get the error message from the response
+        // Handle verification failure
         try {
           const errorData = await verifyResponse.json();
           setVerificationError(errorData.error || 'Verification failed');
