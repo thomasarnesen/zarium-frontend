@@ -48,7 +48,7 @@ export default function Home() {
                   state: { 
                     selectedPlan: 'Demo', 
                     isDemo: true,
-                    demoPriceId: 'price_1Qxz36B9ONdEOi8LjjNoQUN3'  // Send med pris-ID for Demo
+                    demoPriceId: 'price_1R2isCB9ONdEOi8LoDv9vBTN'   // Send med pris-ID for Demo
                   } 
                 })}
                 className="px-8 py-3 rounded-lg text-base font-medium bg-white dark:bg-gray-800 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow-md border border-emerald-200 dark:border-emerald-800 flex items-center gap-2"
