@@ -39,7 +39,7 @@ export default function UserMenu() {
       icon: Coins,
       action: () => {
         if (user?.planType === 'Demo') {
-          navigate('/my-subscription');
+          navigate('/subscription');
         } else {
           navigate('/tokens');
         }
