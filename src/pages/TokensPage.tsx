@@ -92,16 +92,14 @@ export function TokensPage() {
       }
 
       console.log("Initiating token purchase...");
-      const response = await api.fetch('/create-checkout-session', {
+      const response = await api.fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user?.token}`,
         },
         body: JSON.stringify({
-          priceId: 'price_1Qxz59B9ONdEOi8L930qkATT',
           isTokenReload: true,
-          productId: 'prod_RriWWnZC08bsdS',
           amount: 1000000,
           successUrl: `${window.location.origin}/tokens?success=true&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/tokens?success=false`
