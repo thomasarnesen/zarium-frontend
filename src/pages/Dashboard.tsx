@@ -521,7 +521,7 @@ export default function Dashboard() {
             <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center">
               <Lock className="h-4 w-4 inline-block mr-2" />
               File upload is available in Plus and Pro plans. 
-              <a href="/MySubscription" className="underline ml-1">Upgrade now</a>
+              <a href="/my-subscription" className="underline ml-1">Upgrade now</a>
             </div>
           )}
         </div>
