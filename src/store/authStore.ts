@@ -4,7 +4,7 @@ import csrfService from './csrfService';
 
 declare global {
   interface Window {
-    tokenRefreshInterval?: number;
+    tokenRefreshInterval?: NodeJS.Timeout; // Updated to proper timeout type
   }
 }
 
@@ -39,6 +39,8 @@ interface AuthState {
   generationsCount: number;
   enhancedMode: boolean;
   pendingRegistration: PendingRegistration | null;
+  isRefreshing: boolean; // Added to track refresh state
+  lastRefreshTime: number; // Added to track timing
  
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, planType?: 'Demo' | 'Basic' | 'Plus' | 'Pro') => Promise<void>;
@@ -53,6 +55,7 @@ interface AuthState {
   toggleEnhancedMode: () => void;
   initialize: () => Promise<void>; 
   completeRegistrationAfterPayment: (email: string) => Promise<boolean>;
+  setupTokenRefreshInterval: () => void; // Added to interface
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -65,9 +68,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   generationsCount: 0,
   enhancedMode: false,
   pendingRegistration: null,
+  isRefreshing: false, // New state to prevent concurrent refreshes
+  lastRefreshTime: 0, // New state to track when refreshes happen
 
   refreshUserData: async () => {
+    // Prevent multiple concurrent refresh calls
+    if (get().isRefreshing) {
+      console.log("Already refreshing user data, skipping...");
+      return true;
+    }
+    
+    // Check if refresh was called too recently (minimum 3 seconds between refreshes)
+    const now = Date.now();
+    if (now - get().lastRefreshTime < 3000) {
+      console.log("Skipping refresh - too soon since last refresh");
+      return true;
+    }
+    
     try {
+      set({ isRefreshing: true, lastRefreshTime: now });
       console.log("Refreshing user data...");
       
       // First try refreshing the token to ensure we have a valid session
@@ -127,6 +146,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error('Error refreshing user data:', error);
       return false;
+    } finally {
+      set({ isRefreshing: false });
     }
   },
 
@@ -199,6 +220,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.removeItem('pendingRegistration');
       sessionStorage.removeItem('pendingRegistration');
       set({ pendingRegistration: null });
+      
+      // Set up token refresh interval if not already set
+      get().setupTokenRefreshInterval();
     } catch (error) {
       console.error('❌ Login error:', error);
       throw error;
@@ -290,7 +314,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Stop token refresh interval if it exists
       if (window.tokenRefreshInterval) {
         clearInterval(window.tokenRefreshInterval);
-        (window as any).tokenRefreshInterval = undefined;
+        window.tokenRefreshInterval = undefined;
       }
       
       // Call logout endpoint
@@ -352,6 +376,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   toggleEnhancedMode: () => set((state) => ({ enhancedMode: !state.enhancedMode })),
 
+  // New helper function to set up token refresh interval
+  setupTokenRefreshInterval: () => {
+    // Clear any existing interval first
+    if (window.tokenRefreshInterval) {
+      clearInterval(window.tokenRefreshInterval);
+    }
+    
+    // Set up a new interval (every 10 minutes)
+    window.tokenRefreshInterval = setInterval(() => {
+      // Only refresh if we're still authenticated
+      if (get().isAuthenticated) {
+        get().refreshUserData();
+      } else {
+        // Clear the interval if we're no longer authenticated
+        if (window.tokenRefreshInterval) {
+          clearInterval(window.tokenRefreshInterval);
+          window.tokenRefreshInterval = undefined;
+        }
+      }
+    }, 10 * 60 * 1000); // 10 minutes
+  },
+
   initialize: async () => {
     // Check for stored authentication data
     const storedAuth = localStorage.getItem('authUser');
@@ -382,7 +428,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isDemoUser: authData.planType === 'Demo'
         });
         
-        // Then try to verify and refresh the token
+        // Do a single refresh at startup
         try {
           const refreshResponse = await api.fetch('/refresh-token', {
             method: 'POST',
@@ -409,6 +455,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               });
             }
           }
+          
+          // Set up regular token refresh interval
+          get().setupTokenRefreshInterval();
+          
         } catch (error) {
           console.warn('Failed to refresh authentication on startup:', error);
           // Keep using stored data without refreshing
