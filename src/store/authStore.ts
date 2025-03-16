@@ -13,6 +13,7 @@ interface User {
   email: string;
   planType: 'Demo' | 'Basic' | 'Plus' | 'Pro';  
   tokens?: number;
+  isAdmin?: boolean; 
   token: string;
   subscription?: {
     plan_type: string;
@@ -114,6 +115,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const updatedUser = {
           ...userData,
           token: authUser.token || userData.token,
+          isAdmin: userData.isAdmin
         };
         
         localStorage.setItem('authUser', JSON.stringify(updatedUser));
@@ -159,6 +161,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         planType: user.planType,
         tokens: user.tokens,
         token: user.token,
+        isAdmin: user.isAdmin,
       };
       
       localStorage.setItem('authUser', JSON.stringify(authData));
@@ -212,6 +215,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   
       const userData = await response.json();
       console.log("✅ Login successful");
+      
+      
       
       get().setUser(userData);
       localStorage.removeItem('manualLogout'); // Clear any previous logout flag
@@ -447,7 +452,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               set({ 
                 user: {
                   ...userData,
-                  token: authData.token
+                  token: authData.token,
+                  isAdmin: userData.isAdmin
                 },
                 tokens: userData.tokens || 0,
                 planType: userData.planType,

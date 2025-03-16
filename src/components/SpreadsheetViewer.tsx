@@ -414,7 +414,7 @@ export function SpreadsheetViewer({
               className={`inline-flex items-center justify-center p-1.5 w-8 h-8 ${
                 !formatting?.downloadUrl
                   ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
-                  : 'bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer'
+                  : 'bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer download-button'
               } rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800 shadow-sm`}
               title={!formatting?.downloadUrl
                 ? 'Generate a spreadsheet first'

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FileSpreadsheet, Download, Sparkles, Upload, Lock, HelpCircle, ArrowRight } from 'lucide-react';
 import { SpreadsheetViewer } from '../components/SpreadsheetViewer';
@@ -47,6 +47,13 @@ export default function Dashboard() {
   const [generationStatus, setGenerationStatus] = useState<string>('');
   const [sessionId, setSessionId] = useState<string | null>(null);
 
+  // Admin automation state and refs
+  const [adminText, setAdminText] = useState('');
+  const [isAutomating, setIsAutomating] = useState(false);
+  const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const generateButtonRef = useRef<HTMLButtonElement>(null);
+  const cursorRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const success = queryParams.get('success');
@@ -71,8 +78,6 @@ export default function Dashboard() {
       setDocumentType(selectedType);
     }
   }, [selectedType]);
-
-
 
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
@@ -107,7 +112,7 @@ export default function Dashboard() {
         const timeout = setTimeout(() => {
           if (!isMounted) return;
           setGenerationStatus(message);
-        }, index * 6000); // Show each message for ~4 seconds
+        }, index * 6000); // Show each message for ~6 seconds
         
         timeouts.push(timeout);
       });
@@ -270,6 +275,96 @@ export default function Dashboard() {
     return Math.floor(Math.random() * (2000 - 500 + 1) + 500); 
   };
 
+  // Admin automation helper functions
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const animateCursor = async (cursor: HTMLDivElement, toX: number, toY: number) => {
+    const fromX = parseInt(cursor.style.left);
+    const fromY = parseInt(cursor.style.top);
+    const distance = Math.sqrt(Math.pow(toX - fromX, 2) + Math.pow(toY - fromY, 2));
+    const duration = Math.min(1000, distance * 1.5); // Faster for longer distances
+    const steps = 30;
+    
+    for (let i = 0; i <= steps; i++) {
+      const ratio = i / steps;
+      const x = fromX + (toX - fromX) * ratio;
+      const y = fromY + (toY - fromY) * ratio;
+      
+      cursor.style.left = `${x}px`;
+      cursor.style.top = `${y}px`;
+      
+      await sleep(duration / steps);
+    }
+  };
+
+  // Admin automation main function
+  const runAutomation = useCallback(async () => {
+    if (!adminText || !promptTextareaRef.current || !generateButtonRef.current || !cursorRef.current) return;
+    
+    setIsAutomating(true);
+    
+    // Create animated cursor element
+    const cursor = cursorRef.current;
+    cursor.style.display = 'block';
+    document.body.appendChild(cursor);
+    
+    // Set initial position (top of the screen)
+    cursor.style.top = '100px';
+    cursor.style.left = '50%';
+    
+    // First, move cursor to the textarea
+    const textareaRect = promptTextareaRef.current.getBoundingClientRect();
+    await animateCursor(cursor, textareaRect.left + 20, textareaRect.top + 20);
+    
+    // Click on the textarea
+    promptTextareaRef.current.focus();
+    await sleep(500);
+    
+    // Type text character by character
+    setPrompt(''); // Clear existing prompt
+    const typingDelay = Math.min(20, 2000 / adminText.length); // Adjust typing speed based on text length
+    
+    for (let i = 0; i < adminText.length; i++) {
+      setPrompt(prev => prev + adminText[i]);
+      await sleep(typingDelay);
+    }
+    
+    await sleep(500);
+    
+    // Move cursor to generate button
+    const buttonRect = generateButtonRef.current.getBoundingClientRect();
+    await animateCursor(cursor, buttonRect.left + buttonRect.width/2, buttonRect.top + buttonRect.height/2);
+    
+    // Click on generate button
+    await sleep(300);
+    generateButtonRef.current.click();
+    
+    // Set up an interval to check when the generation is complete
+    const checkInterval = setInterval(async () => {
+      if (!isGenerating && formatting?.downloadUrl) {
+        clearInterval(checkInterval);
+        
+        // Find the download button using DOM since it's in a different component
+        const downloadButton = document.querySelector('.download-button') as HTMLButtonElement;
+        if (downloadButton) {
+          const downloadRect = downloadButton.getBoundingClientRect();
+          await sleep(1000);
+          await animateCursor(cursor, downloadRect.left + downloadRect.width/2, downloadRect.top + downloadRect.height/2);
+          
+          // Click download button
+          await sleep(300);
+          downloadButton.click();
+          
+          // Clean up
+          await sleep(1000);
+          cursor.style.display = 'none';
+          setIsAutomating(false);
+        }
+      }
+    }, 1000);
+    
+  }, [adminText, isGenerating, formatting]);
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
   
@@ -278,7 +373,7 @@ export default function Dashboard() {
     setFormatting(null);
   
     try {
-      // Forny token før generering
+      // Refresh token before generation
       const tokenResponse = await api.fetch('/refresh-token', {
         method: 'POST',
         credentials: 'include'
@@ -343,7 +438,7 @@ export default function Dashboard() {
         setFormatting(result.formatting);
       }
 
-      // Refresh user data etter vellykket generering
+      // Refresh user data after successful generation
       await refreshUserData();
 
     } catch (error) {
@@ -365,7 +460,59 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
+      {/* Admin cursor element */}
+      {user?.isAdmin && (
+        <div 
+          ref={cursorRef}
+          style={{
+            position: 'fixed',
+            width: '24px',
+            height: '24px',
+            backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23000000\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z\'/%3E%3C/svg%3E")',
+            backgroundSize: 'contain',
+            zIndex: 10000,
+            pointerEvents: 'none',
+            display: 'none'
+          }}
+        />
+      )}
+      
       <div className="py-16">
+        {/* Admin panel */}
+        {user?.isAdmin && (
+          <div className="container mx-auto px-4 py-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg mb-8">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 mb-4">
+                Admin Automation 
+                <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 rounded-md text-xs font-medium">
+                  Admin Only
+                </span>
+              </h2>
+              <div className="flex space-x-4">
+                <input
+                  type="text"
+                  value={adminText}
+                  onChange={(e) => setAdminText(e.target.value)}
+                  placeholder="Enter text to automate..."
+                  className="flex-1 px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white"
+                  disabled={isAutomating}
+                />
+                <button
+                  onClick={runAutomation}
+                  disabled={isAutomating || !adminText.trim()}
+                  className={`px-4 py-2 rounded-lg ${
+                    isAutomating || !adminText.trim() 
+                      ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`}
+                >
+                  {isAutomating ? 'Running...' : 'Run Automation'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <div className="flex justify-center">
@@ -411,6 +558,7 @@ export default function Dashboard() {
               placeholder="E.g., Create a monthly budget tracker with income and expense categories..."
               className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white min-h-[120px] pb-14 resize-none outline-none focus:border-emerald-300 dark:focus:border-emerald-700"
               style={{ height: 'auto', minHeight: '120px' }}
+              ref={promptTextareaRef}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';
@@ -473,7 +621,7 @@ export default function Dashboard() {
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
                       {isBasicPlan 
                         ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans."
-                        : "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans.Uses more tokens per generation. Ideal for important projects where quality matters most."}
+                        : "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans. Uses more tokens per generation. Ideal for important projects where quality matters most."}
                     </div>
                   </div>
                 </div>
@@ -488,6 +636,7 @@ export default function Dashboard() {
                     : ''
                 }`}
                 aria-label="Generate Excel"
+                ref={generateButtonRef}
               >
                 <ArrowRight className="h-5 w-5 text-white" />
               </button>
@@ -539,6 +688,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-
-
