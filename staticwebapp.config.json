@@ -356,6 +356,9 @@
   "mimeTypes": {
     ".json": "text/json",
     ".xml": "application/xml",
-    ".txt": "text/plain"
+    ".txt": "text/plain",
+    ".webmanifest": "application/manifest+json",
+    ".ico": "image/x-icon",
+    ".png": "image/png"
   }
 }
