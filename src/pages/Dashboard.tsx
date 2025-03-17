@@ -178,6 +178,37 @@ export default function Dashboard() {
     }
   }, [previewImage]);
 
+
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = `
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+      }
+      
+      .cursor-element.pulse-effect {
+        animation: pulse 0.3s ease-in-out;
+      }
+      
+      .download-button:hover {
+        background-color: #f0fdf4 !important;
+        color: #047857 !important;
+      }
+      
+      .dark .download-button:hover {
+        background-color: rgba(6, 78, 59, 0.2) !important;
+        color: #34d399 !important;
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const currentPlanType = user?.planType;
     
@@ -329,9 +360,12 @@ export default function Dashboard() {
       // First part - typing the text and generating
       setAutomationStep('typing');
       
-      // Move cursor to the textarea
+      // Move cursor to the textarea - position it better in the center
       const textareaRect = promptTextareaRef.current.getBoundingClientRect();
-      await animateCursor(cursor, textareaRect.left + 20, textareaRect.top + 20);
+      // Calculate center of textarea with a slight offset toward the top-left
+      const textareaCenterX = textareaRect.left + textareaRect.width * 0.3;
+      const textareaCenterY = textareaRect.top + textareaRect.height * 0.3;
+      await animateCursor(cursor, textareaCenterX, textareaCenterY);
       
       // Click on the textarea
       promptTextareaRef.current.focus();
@@ -387,11 +421,28 @@ export default function Dashboard() {
           downloadRect.top + downloadRect.height/2
         );
         
+        // Simulate hover on the download button
+        const mouseoverEvent = new MouseEvent('mouseover', {
+          bubbles: true,
+          cancelable: true,
+          view: window
+        });
+        downloadButton.dispatchEvent(mouseoverEvent);
+        await sleep(300);
+        
         // Click the download button (only if not disabled)
         await sleep(500);
         if (!downloadButton.disabled) {
           console.log("Clicking download button");
+          
+          // Make the click visually obvious by adding a pulse effect to the cursor
+          cursor.classList.add('pulse-effect');
+          await sleep(200);
+          
           downloadButton.click();
+          
+          await sleep(300);
+          cursor.classList.remove('pulse-effect');
           
           // Wait for the download dialog to appear
           await sleep(1500);
@@ -413,9 +464,24 @@ export default function Dashboard() {
             buttonRect.top + buttonRect.height/2
           );
           
-          await sleep(500);
+          // Simulate hover
+          const mouseoverEvent = new MouseEvent('mouseover', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+          });
+          downloadIconButton.dispatchEvent(mouseoverEvent);
+          await sleep(300);
+          
+          // Add pulse effect
+          cursor.classList.add('pulse-effect');
+          await sleep(200);
+          
           console.log("Clicking download button (by icon)");
           (downloadIconButton as HTMLElement).click();
+          
+          await sleep(300);
+          cursor.classList.remove('pulse-effect');
           
           await sleep(1500);
         }
@@ -549,6 +615,7 @@ export default function Dashboard() {
             display: 'none',
             filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.5))'
           }}
+          className="cursor-element"
         />
       )}
       
