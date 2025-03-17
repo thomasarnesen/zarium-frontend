@@ -7,10 +7,9 @@ import { config } from '../config';
 import { Switch } from '../components/ui/switch';
 import api from '../utils/api';
 
-// Add at the top of your file
+// Define types for global window
 declare global {
   interface Window {
-    continueAutomation?: () => void;
     tokenRefreshInterval?: NodeJS.Timeout;
   }
 }
@@ -58,13 +57,11 @@ export default function Dashboard() {
   // Admin automation state and refs
   const [adminText, setAdminText] = useState('');
   const [isAutomating, setIsAutomating] = useState(false);
+  const [automationStep, setAutomationStep] = useState('idle');
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const generateButtonRef = useRef<HTMLButtonElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
-  
-  // 3. Add these state variables at the top of your component
-  const [automationStep, setAutomationStep] = useState('idle');
-  const automationSignalRef = useRef<{resolve: () => void} | null>(null);
+  const downloadSignalRef = useRef<{resolve: () => void} | null>(null);
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -279,18 +276,9 @@ export default function Dashboard() {
     e.preventDefault();
   };
 
-  const getRandomDuration = () => {
-    return Math.floor(Math.random() * (5000 - 2000 + 1) + 2000); 
-  };
-
-  const getRandomThinkingDuration = () => {
-    return Math.floor(Math.random() * (2000 - 500 + 1) + 500); 
-  };
-
   // Admin automation helper functions
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // 4. Define the improved animateCursor function with higher FPS
   const animateCursor = async (cursor: HTMLDivElement, toX: number, toY: number) => {
     const fromX = parseInt(cursor.style.left);
     const fromY = parseInt(cursor.style.top);
@@ -313,28 +301,16 @@ export default function Dashboard() {
     }
   };
 
-  // 5. Create a function to wait for the continue signal
-  const waitForContinue = async () => {
-    return new Promise<void>((resolve) => {
-      window.continueAutomation = () => {
-        resolve();
-        window.continueAutomation = undefined;
-      };
-      automationSignalRef.current = { resolve };
-    });
-  };
+  // Function to go directly to download
+  const goToDownload = useCallback(async () => {
+    if (downloadSignalRef.current) {
+      downloadSignalRef.current.resolve();
+    }
+  }, []);
 
-  // 6. Completely rewritten runAutomation function with the ability to continue
+  // Admin automation main function
   const runAutomation = useCallback(async () => {
     if (!adminText || !promptTextareaRef.current || !generateButtonRef.current || !cursorRef.current) return;
-    
-    // Save the current automation step
-    if (automationStep !== 'idle' && automationSignalRef.current) {
-      // Continue from where we left off
-      console.log(`Continuing from step: ${automationStep}`);
-      automationSignalRef.current.resolve();
-      return;
-    }
     
     setIsAutomating(true);
     setAutomationStep('starting');
@@ -384,69 +360,18 @@ export default function Dashboard() {
       console.log("Clicking generate button");
       generateButtonRef.current.click();
       
-      // Wait for the continue button to be clicked instead of waiting automatically
-      setAutomationStep('waitingForGeneration');
-      console.log("Waiting for generation and manual continue");
-      await waitForContinue();
+      // Wait for the download signal button to be clicked
+      setAutomationStep('waitingForDownloadSignal');
+      console.log("Waiting for 'Go to Download' button to be clicked");
       
-      // Second part - zoom slider
-      setAutomationStep('adjustingZoom');
-      console.log("Continuing with zoom adjustment");
+      // Create a promise that will resolve when the Go to Download button is clicked
+      await new Promise<void>((resolve) => {
+        downloadSignalRef.current = { resolve };
+      });
       
-      // Look for the zoom slider
-      console.log("Looking for zoom slider");
-      const zoomSlider = document.getElementById('zoom-slider') as HTMLInputElement;
-      if (zoomSlider) {
-        console.log("Found zoom slider, moving to it");
-        const zoomSliderRect = zoomSlider.getBoundingClientRect();
-        
-        // Get the center position of the slider
-        const sliderCenterX = zoomSliderRect.left + zoomSliderRect.width / 2;
-        const sliderCenterY = zoomSliderRect.top + zoomSliderRect.height / 2;
-        
-        // Move to center of the slider first
-        await animateCursor(cursor, sliderCenterX, sliderCenterY);
-        await sleep(500);
-        
-        // Now simulate a drag from right to left (higher to lower value)
-        // First move to the right side (higher value)
-        await animateCursor(
-          cursor, 
-          zoomSliderRect.right - 5, // Slightly inset from right edge
-          sliderCenterY
-        );
-        
-        await sleep(300);
-        
-        // Animate a smooth drag to 50% position
-        const steps = 20;
-        const targetPos = zoomSliderRect.left + (zoomSliderRect.width * 0.5);
-        
-        // Visual animation of dragging the slider
-        for (let i = 0; i <= steps; i++) {
-          const ratio = i / steps;
-          const x = zoomSliderRect.right - 5 - ((zoomSliderRect.right - 5 - targetPos) * ratio);
-          cursor.style.left = `${x}px`;
-          
-          // Gradually update the slider value
-          const newValue = 150 - (100 * ratio);
-          zoomSlider.value = String(Math.round(newValue));
-          
-          // Trigger change event
-          const event = new Event('change', { bubbles: true });
-          zoomSlider.dispatchEvent(event);
-          
-          await sleep(1000 / steps);
-        }
-        
-        console.log("Adjusted zoom to 50%");
-        await sleep(800);
-      } else {
-        console.log("Zoom slider not found");
-      }
-      
-      // Third part - downloading
+      // Once we get here, the download button was clicked
       setAutomationStep('downloading');
+      console.log("Going to download button");
       
       // Now, find the download button
       console.log("Looking for download button");
@@ -507,11 +432,10 @@ export default function Dashboard() {
       cursor.style.display = 'none';
       setIsAutomating(false);
       setAutomationStep('idle');
-      automationSignalRef.current = null;
-      window.continueAutomation = undefined;
+      downloadSignalRef.current = null;
     }
     
-  }, [adminText, automationStep]);
+  }, [adminText]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -616,7 +540,7 @@ export default function Dashboard() {
             position: 'fixed',
             width: '32px',
             height: '32px',
-            // New SVG with white fill
+            // White fill cursor
             backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\' viewBox=\'0 0 32 32\'%3E%3Cpath d=\'M8.5,2 L8.5,25 L13,20 L19,24 L19,19 L13,15 L8.5,20 Z\' fill=\'white\' stroke=\'black\' stroke-width=\'1\'/%3E%3C/svg%3E")',
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
@@ -639,33 +563,40 @@ export default function Dashboard() {
                   Admin Only
                 </span>
               </h2>
-              <div className="flex space-x-4">
-                <input
-                  type="text"
-                  value={adminText}
-                  onChange={(e) => setAdminText(e.target.value)}
-                  placeholder="Enter text to automate..."
-                  className="flex-1 px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white"
-                  disabled={isAutomating}
-                />
-                <button
-                  onClick={runAutomation}
-                  disabled={isAutomating || !adminText.trim()}
-                  className={`px-4 py-2 rounded-lg ${
-                    isAutomating || !adminText.trim() 
-                      ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
-                      : 'bg-red-600 hover:bg-red-700 text-white'
-                  }`}
-                >
-                  {isAutomating ? 'Running...' : 'Run Automation'}
-                </button>
-                {isAutomating && (
+              <div className="flex flex-col space-y-2">
+                <div className="flex space-x-4">
+                  <input
+                    type="text"
+                    value={adminText}
+                    onChange={(e) => setAdminText(e.target.value)}
+                    placeholder="Enter text to automate..."
+                    className="flex-1 px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white"
+                    disabled={isAutomating}
+                  />
                   <button
-                    onClick={() => window.continueAutomation?.()}
-                    className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white"
+                    onClick={runAutomation}
+                    disabled={isAutomating || !adminText.trim()}
+                    className={`px-4 py-2 rounded-lg ${
+                      isAutomating || !adminText.trim() 
+                        ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+                        : 'bg-red-600 hover:bg-red-700 text-white'
+                    }`}
                   >
-                    Continue →
+                    {isAutomating ? 'Running...' : 'Run Automation'}
                   </button>
+                  {isAutomating && (
+                    <button
+                      onClick={goToDownload}
+                      className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      Go to Download
+                    </button>
+                  )}
+                </div>
+                {automationStep !== 'idle' && (
+                  <div className="text-sm px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded-md">
+                    Current step: <span className="font-medium">{automationStep}</span>
+                  </div>
                 )}
               </div>
             </div>
