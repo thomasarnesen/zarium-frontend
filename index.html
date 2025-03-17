@@ -2,13 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Zarium AI - Automated Excel Generation Platform" />
+    
+    <!-- Primary Meta Tags -->
+    <title>Zarium | AI Excel Generator | Create Professional Spreadsheets Instantly</title>
+    <meta name="description" content="Transform your data into professional Excel spreadsheets with Zarium's AI-powered generator. Save hours of manual work with automated Excel creation." />
+    <meta name="keywords" content="AI Excel generator, automated spreadsheet creation, Excel automation, AI spreadsheet tool, Zarium, Excel AI" />
+    
+    <!-- Theme Color -->
     <meta name="theme-color" content="#059669" />
     <meta name="msapplication-navbutton-color" content="#059669" />
     <meta name="apple-mobile-web-app-status-bar-style" content="#059669" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://zarium.dev/" />
    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://zarium.dev/" />
+    <meta property="og:title" content="Zarium | AI Excel Generator | Create Spreadsheets Instantly" />
+    <meta property="og:description" content="Transform your data into professional Excel spreadsheets with Zarium's AI-powered generator. Save hours of manual work with automated Excel creation." />
+    <meta property="og:image" content="https://zarium.dev/og-image.png" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://zarium.dev/" />
+    <meta property="twitter:title" content="Zarium | AI Excel Generator | Create Spreadsheets Instantly" />
+    <meta property="twitter:description" content="Transform your data into professional Excel spreadsheets with Zarium's AI-powered generator. Save hours of manual work with automated Excel creation." />
+    <meta property="twitter:image" content="https://zarium.dev/twitter-image.png" />
+
     <!-- Security Headers -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
@@ -25,26 +48,37 @@
     <!-- Preload Critical Resources -->
     <link rel="preconnect" href="https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net" />
     <link rel="preconnect" href="https://js.stripe.com" crossorigin />
-   
+    
     <!-- Stripe Integration -->
     <script src="https://js.stripe.com/v3/" defer></script>
    
-    <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="Zarium AI" />
-    <meta property="og:description" content="Create professional Excel spreadsheets with AI" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://zarium-frontend-h3f6duewacdqeecb.westeurope-01.azurewebsites.net" />
-   
     <!-- Apple Touch Icon -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-   
-    <title>Zarium</title>
+    
+    <!-- Structured Data - JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Zarium",
+      "applicationCategory": "BusinessApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "operatingSystem": "Web",
+      "description": "AI-powered Excel spreadsheet generator that transforms your input into professional, downloadable Excel files."
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <noscript>
       <div style="padding: 20px; text-align: center;">
-        Please enable JavaScript to use Zarium AI.
+        <h1>Zarium AI Excel Generator</h1>
+        <p>Zarium is an AI-powered tool that helps you generate professional Excel spreadsheets instantly based on your input.</p>
+        <p>Please enable JavaScript to use Zarium AI.</p>
       </div>
     </noscript>
     <script type="module" src="/src/main.tsx"></script>

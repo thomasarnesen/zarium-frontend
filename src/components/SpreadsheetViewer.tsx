@@ -39,7 +39,7 @@ export function SpreadsheetViewer({
   const token = user?.token;
   const [imageError, setImageError] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [scale, setScale] = useState(0.85);
+  const [scale, setScale] = useState(0.65);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [startY, setStartY] = useState(0);

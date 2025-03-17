@@ -62,6 +62,11 @@ export default function Dashboard() {
   const generateButtonRef = useRef<HTMLButtonElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
   const downloadSignalRef = useRef<{resolve: () => void} | null>(null);
+  
+  // Screen recording state and refs
+  const [isRecording, setIsRecording] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -178,7 +183,7 @@ export default function Dashboard() {
     }
   }, [previewImage]);
 
-
+  // Add CSS for cursor and button effects
   useEffect(() => {
     const styleElement = document.createElement('style');
     styleElement.innerHTML = `
@@ -339,6 +344,66 @@ export default function Dashboard() {
     }
   }, []);
 
+  // Function to toggle screen recording
+  const toggleRecording = async () => {
+    if (isRecording) {
+      // Stop recording
+      if (recorderRef.current) {
+        recorderRef.current.stop();
+      }
+      return;
+    }
+
+    try {
+      // Start recording
+      const displayMediaOptions = {
+        video: {
+          width: 1920,
+          height: 1080,
+          frameRate: 30
+        },
+        audio: false
+      };
+
+      const stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+      const recorder = new MediaRecorder(stream);
+      
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        setIsRecording(false);
+        
+        // Create video file from recording
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create download link
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `excel-generator-recording-${new Date().toISOString()}.webm`;
+        a.click();
+        
+        // Clean up
+        URL.revokeObjectURL(url);
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      recorder.start();
+      recorderRef.current = recorder;
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Error starting screen recording:", error);
+      setIsRecording(false);
+    }
+  };
+
   // Admin automation main function
   const runAutomation = useCallback(async () => {
     if (!adminText || !promptTextareaRef.current || !generateButtonRef.current || !cursorRef.current) return;
@@ -362,9 +427,9 @@ export default function Dashboard() {
       
       // Move cursor to the textarea - position it better in the center
       const textareaRect = promptTextareaRef.current.getBoundingClientRect();
-      // Calculate center of textarea with a slight offset toward the top-left
+      // Calculate center of textarea with a slight offset toward the middle
       const textareaCenterX = textareaRect.left + textareaRect.width * 0.3;
-      const textareaCenterY = textareaRect.top + textareaRect.height * 0.3;
+      const textareaCenterY = textareaRect.top + textareaRect.height * 0.5; // Changed from 0.3 to 0.5
       await animateCursor(cursor, textareaCenterX, textareaCenterY);
       
       // Click on the textarea
@@ -421,28 +486,30 @@ export default function Dashboard() {
           downloadRect.top + downloadRect.height/2
         );
         
-        // Simulate hover on the download button
-        const mouseoverEvent = new MouseEvent('mouseover', {
-          bubbles: true,
-          cancelable: true,
-          view: window
-        });
-        downloadButton.dispatchEvent(mouseoverEvent);
+        // Manually change background color and color to show hover effect
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        downloadButton.style.backgroundColor = isDarkMode ? 'rgba(6, 78, 59, 0.2)' : '#f0fdf4';
+        downloadButton.style.color = isDarkMode ? '#34d399' : '#047857';
         await sleep(300);
         
-        // Click the download button (only if not disabled)
-        await sleep(500);
+        // Click effect
         if (!downloadButton.disabled) {
           console.log("Clicking download button");
           
-          // Make the click visually obvious by adding a pulse effect to the cursor
           cursor.classList.add('pulse-effect');
+          downloadButton.style.transform = 'scale(0.95)'; // Small click effect
           await sleep(200);
           
           downloadButton.click();
           
-          await sleep(300);
+          await sleep(200);
+          downloadButton.style.transform = '';
           cursor.classList.remove('pulse-effect');
+          
+          // Reset styles after click
+          await sleep(300);
+          downloadButton.style.backgroundColor = '';
+          downloadButton.style.color = '';
           
           // Wait for the download dialog to appear
           await sleep(1500);
@@ -475,12 +542,14 @@ export default function Dashboard() {
           
           // Add pulse effect
           cursor.classList.add('pulse-effect');
+          (downloadIconButton as HTMLElement).style.transform = 'scale(0.95)';
           await sleep(200);
           
           console.log("Clicking download button (by icon)");
           (downloadIconButton as HTMLElement).click();
           
-          await sleep(300);
+          await sleep(200);
+          (downloadIconButton as HTMLElement).style.transform = '';
           cursor.classList.remove('pulse-effect');
           
           await sleep(1500);
@@ -659,6 +728,16 @@ export default function Dashboard() {
                       Go to Download
                     </button>
                   )}
+                  <button
+                    onClick={toggleRecording}
+                    className={`px-4 py-2 rounded-lg ${
+                      isRecording 
+                        ? 'bg-red-600 text-white' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    {isRecording ? 'Stop Recording' : 'Record Screen (1080p)'}
+                  </button>
                 </div>
                 {automationStep !== 'idle' && (
                   <div className="text-sm px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded-md">

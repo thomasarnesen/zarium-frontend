@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import api from './utils/api';
 import { ThemeProvider } from './components/ThemeProvider';
 import toast from 'react-hot-toast';
+import { HelmetProvider } from 'react-helmet-async';
 
 // Import pages
 import Home from './pages/Home';
@@ -171,58 +172,60 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
-      <BrowserRouter>
-        <Toaster 
-          position="top-center" 
-          toastOptions={{
-            style: {
-              background: isDark ? '#1f2937' : '#ffffff',
-              color: isDark ? '#ffffff' : '#000000',
-            },
-          }}
-        />
-        {/* Add the PostPaymentHandler component */}
-        <PostPaymentHandler />
-        
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            {/* Public routes that don't require login */}
-            <Route index element={<Home />} />
-            <Route path="login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
-            <Route path="forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="reset-password" element={<ResetPasswordPage />} />
-            <Route path="pricing" element={<PricingPage />} />
-            <Route path="terms" element={<TermsOfService />} />
-            <Route path="privacy" element={<PrivacyPolicy />} />
-            <Route path="help" element={<HelpPage />} />
-            
-            {/* Protected routes */}
-            <Route path="dashboard" element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="subscription" element={
-              <ProtectedRoute>
-                <MySubscription />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="tokens" element={
-              <ProtectedRoute>
-                <TokensPage />
-              </ProtectedRoute>
-            } />
-            
-            {/* Catch all route */}
-            <Route path="*" element={<ErrorPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </ThemeProvider>
+    <HelmetProvider>
+      <ThemeProvider>
+        <BrowserRouter>
+          <Toaster 
+            position="top-center" 
+            toastOptions={{
+              style: {
+                background: isDark ? '#1f2937' : '#ffffff',
+                color: isDark ? '#ffffff' : '#000000',
+              },
+            }}
+          />
+          {/* Add the PostPaymentHandler component */}
+          <PostPaymentHandler />
+          
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              {/* Public routes that don't require login */}
+              <Route index element={<Home />} />
+              <Route path="login" element={<LoginPage />} />
+              <Route path="register" element={<RegisterPage />} />
+              <Route path="forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="reset-password" element={<ResetPasswordPage />} />
+              <Route path="pricing" element={<PricingPage />} />
+              <Route path="terms" element={<TermsOfService />} />
+              <Route path="privacy" element={<PrivacyPolicy />} />
+              <Route path="help" element={<HelpPage />} />
+              
+              {/* Protected routes */}
+              <Route path="dashboard" element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="subscription" element={
+                <ProtectedRoute>
+                  <MySubscription />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="tokens" element={
+                <ProtectedRoute>
+                  <TokensPage />
+                </ProtectedRoute>
+              } />
+              
+              {/* Catch all route */}
+              <Route path="*" element={<ErrorPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
+    </HelmetProvider>
   );
 }
 
