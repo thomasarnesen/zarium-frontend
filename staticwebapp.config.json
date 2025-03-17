@@ -339,6 +339,7 @@
   },
   "mimeTypes": {
     ".json": "text/json",
-    ".xml": "application/xml"
+    ".xml": "application/xml",
+    ".txt": "text/plain"
   }
 }
