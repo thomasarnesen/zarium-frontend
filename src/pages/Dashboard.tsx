@@ -7,6 +7,14 @@ import { config } from '../config';
 import { Switch } from '../components/ui/switch';
 import api from '../utils/api';
 
+// Add at the top of your file
+declare global {
+  interface Window {
+    continueAutomation?: () => void;
+    tokenRefreshInterval?: NodeJS.Timeout;
+  }
+}
+
 type DocumentType = 'excel';
 
 interface LocationState {
@@ -53,6 +61,10 @@ export default function Dashboard() {
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const generateButtonRef = useRef<HTMLButtonElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
+  
+  // 3. Add these state variables at the top of your component
+  const [automationStep, setAutomationStep] = useState('idle');
+  const automationSignalRef = useRef<{resolve: () => void} | null>(null);
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -278,17 +290,21 @@ export default function Dashboard() {
   // Admin automation helper functions
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+  // 4. Define the improved animateCursor function with higher FPS
   const animateCursor = async (cursor: HTMLDivElement, toX: number, toY: number) => {
     const fromX = parseInt(cursor.style.left);
     const fromY = parseInt(cursor.style.top);
     const distance = Math.sqrt(Math.pow(toX - fromX, 2) + Math.pow(toY - fromY, 2));
-    const duration = Math.min(1000, distance * 1.5); // Faster for longer distances
-    const steps = 30;
+    const duration = Math.min(800, distance * 1); // Faster for longer distances
+    const steps = 60; // Increased from 30 to 60 for smoother animation
     
     for (let i = 0; i <= steps; i++) {
       const ratio = i / steps;
-      const x = fromX + (toX - fromX) * ratio;
-      const y = fromY + (toY - fromY) * ratio;
+      // Use easeOutQuad for smoother start/stop
+      const easeRatio = ratio < 0.5 ? 2 * ratio * ratio : 1 - Math.pow(-2 * ratio + 2, 2) / 2;
+      
+      const x = fromX + (toX - fromX) * easeRatio;
+      const y = fromY + (toY - fromY) * easeRatio;
       
       cursor.style.left = `${x}px`;
       cursor.style.top = `${y}px`;
@@ -297,11 +313,31 @@ export default function Dashboard() {
     }
   };
 
-  // Admin automation main function
+  // 5. Create a function to wait for the continue signal
+  const waitForContinue = async () => {
+    return new Promise<void>((resolve) => {
+      window.continueAutomation = () => {
+        resolve();
+        window.continueAutomation = undefined;
+      };
+      automationSignalRef.current = { resolve };
+    });
+  };
+
+  // 6. Completely rewritten runAutomation function with the ability to continue
   const runAutomation = useCallback(async () => {
     if (!adminText || !promptTextareaRef.current || !generateButtonRef.current || !cursorRef.current) return;
     
+    // Save the current automation step
+    if (automationStep !== 'idle' && automationSignalRef.current) {
+      // Continue from where we left off
+      console.log(`Continuing from step: ${automationStep}`);
+      automationSignalRef.current.resolve();
+      return;
+    }
+    
     setIsAutomating(true);
+    setAutomationStep('starting');
     
     // Create animated cursor element
     const cursor = cursorRef.current;
@@ -314,7 +350,10 @@ export default function Dashboard() {
     try {
       console.log("Starting automation sequence");
       
-      // First, move cursor to the textarea
+      // First part - typing the text and generating
+      setAutomationStep('typing');
+      
+      // Move cursor to the textarea
       const textareaRect = promptTextareaRef.current.getBoundingClientRect();
       await animateCursor(cursor, textareaRect.left + 20, textareaRect.top + 20);
       
@@ -345,48 +384,14 @@ export default function Dashboard() {
       console.log("Clicking generate button");
       generateButtonRef.current.click();
       
-      // Wait for generation to complete with timeout
-      console.log("Waiting for generation to complete...");
-      console.log("Current state:", { isGenerating, formatting });
+      // Wait for the continue button to be clicked instead of waiting automatically
+      setAutomationStep('waitingForGeneration');
+      console.log("Waiting for generation and manual continue");
+      await waitForContinue();
       
-      let generationComplete = false;
-      
-      try {
-        // Wait for generation to complete with a maximum of 60 seconds
-        await Promise.race([
-          new Promise<void>((resolve) => {
-            const checkInterval = setInterval(() => {
-              console.log("Checking generation status:", { isGenerating, hasFormatting: !!formatting, hasDownloadUrl: !!formatting?.downloadUrl });
-              
-              // Check if we have a preview image and are not generating anymore
-              if (!isGenerating && formatting?.downloadUrl) {
-                clearInterval(checkInterval);
-                console.log("Generation complete, preview available");
-                generationComplete = true;
-                resolve();
-              }
-            }, 1000);
-          }),
-          new Promise<void>((resolve) => {
-            // Timeout after 60 seconds
-            setTimeout(() => {
-              console.log("Reached timeout waiting for generation");
-              resolve();
-            }, 120000);
-          })
-        ]);
-      } catch (error) {
-        console.error("Error waiting for generation:", error);
-      }
-      
-      // Force continue after 3 seconds regardless of generation state
-      console.log("Waiting an additional 3 seconds before continuing");
-      await sleep(3000);
-      
-      console.log("Continuing with automation, generation complete:", generationComplete);
-      
-      // Give a moment for any animation to settle
-      await sleep(1500);
+      // Second part - zoom slider
+      setAutomationStep('adjustingZoom');
+      console.log("Continuing with zoom adjustment");
       
       // Look for the zoom slider
       console.log("Looking for zoom slider");
@@ -395,49 +400,56 @@ export default function Dashboard() {
         console.log("Found zoom slider, moving to it");
         const zoomSliderRect = zoomSlider.getBoundingClientRect();
         
-        // Move to the zoom slider
-        await animateCursor(
-          cursor, 
-          zoomSliderRect.left + zoomSliderRect.width * 0.8, // Move to right side (higher value)
-          zoomSliderRect.top + zoomSliderRect.height/2
-        );
+        // Get the center position of the slider
+        const sliderCenterX = zoomSliderRect.left + zoomSliderRect.width / 2;
+        const sliderCenterY = zoomSliderRect.top + zoomSliderRect.height / 2;
         
-        // Click and drag the slider to 50%
+        // Move to center of the slider first
+        await animateCursor(cursor, sliderCenterX, sliderCenterY);
         await sleep(500);
         
-        // Simulate dragging to 50% by moving cursor to the middle position
+        // Now simulate a drag from right to left (higher to lower value)
+        // First move to the right side (higher value)
         await animateCursor(
           cursor, 
-          zoomSliderRect.left + zoomSliderRect.width * 0.4, // Move to about 50% position
-          zoomSliderRect.top + zoomSliderRect.height/2
+          zoomSliderRect.right - 5, // Slightly inset from right edge
+          sliderCenterY
         );
         
-        // Update the slider value programmatically
-        if (zoomSlider.value !== '50') {
-          const originalValue = zoomSlider.value;
-          zoomSlider.value = '50';
+        await sleep(300);
+        
+        // Animate a smooth drag to 50% position
+        const steps = 20;
+        const targetPos = zoomSliderRect.left + (zoomSliderRect.width * 0.5);
+        
+        // Visual animation of dragging the slider
+        for (let i = 0; i <= steps; i++) {
+          const ratio = i / steps;
+          const x = zoomSliderRect.right - 5 - ((zoomSliderRect.right - 5 - targetPos) * ratio);
+          cursor.style.left = `${x}px`;
+          
+          // Gradually update the slider value
+          const newValue = 150 - (100 * ratio);
+          zoomSlider.value = String(Math.round(newValue));
           
           // Trigger change event
           const event = new Event('change', { bubbles: true });
           zoomSlider.dispatchEvent(event);
           
-          console.log(`Changed zoom from ${originalValue} to 50%`);
+          await sleep(1000 / steps);
         }
         
+        console.log("Adjusted zoom to 50%");
         await sleep(800);
       } else {
         console.log("Zoom slider not found");
       }
       
+      // Third part - downloading
+      setAutomationStep('downloading');
+      
       // Now, find the download button
       console.log("Looking for download button");
-      const allButtons = document.querySelectorAll('button');
-      console.log("Found", allButtons.length, "buttons on the page");
-      
-      allButtons.forEach((button, index) => {
-        console.log(`Button ${index}:`, button.className, button.disabled);
-      });
-      
       const downloadButton = document.querySelector('.download-button') as HTMLButtonElement;
       if (downloadButton) {
         console.log("Found download button, disabled:", downloadButton.disabled);
@@ -494,9 +506,13 @@ export default function Dashboard() {
       await sleep(1000);
       cursor.style.display = 'none';
       setIsAutomating(false);
+      setAutomationStep('idle');
+      automationSignalRef.current = null;
+      window.continueAutomation = undefined;
     }
     
-  }, [adminText, isGenerating, formatting]);
+  }, [adminText, automationStep]);
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
   
@@ -600,11 +616,14 @@ export default function Dashboard() {
             position: 'fixed',
             width: '32px',
             height: '32px',
+            // New SVG with white fill
             backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\' viewBox=\'0 0 32 32\'%3E%3Cpath d=\'M8.5,2 L8.5,25 L13,20 L19,24 L19,19 L13,15 L8.5,20 Z\' fill=\'white\' stroke=\'black\' stroke-width=\'1\'/%3E%3C/svg%3E")',
             backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
             zIndex: 10000,
             pointerEvents: 'none',
-            display: 'none'
+            display: 'none',
+            filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.5))'
           }}
         />
       )}
@@ -640,6 +659,14 @@ export default function Dashboard() {
                 >
                   {isAutomating ? 'Running...' : 'Run Automation'}
                 </button>
+                {isAutomating && (
+                  <button
+                    onClick={() => window.continueAutomation?.()}
+                    className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Continue →
+                  </button>
+                )}
               </div>
             </div>
           </div>
