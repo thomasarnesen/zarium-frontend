@@ -338,6 +338,7 @@
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
   },
   "mimeTypes": {
-    ".json": "text/json"
+    ".json": "text/json",
+    ".xml": "application/xml"
   }
 }
