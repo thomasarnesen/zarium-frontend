@@ -1,6 +1,22 @@
 {
   "routes": [
     {
+      "route": "/robots.txt",
+      "serve": "/robots.txt",
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": "text/plain"
+      }
+    },
+    {
+      "route": "/sitemap.xml",
+      "serve": "/sitemap.xml",
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": "application/xml"
+      }
+    },
+    {
       "route": "/login",
       "methods": ["POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
@@ -320,7 +336,7 @@
   ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/images/*.{png,jpg,gif}", "/css/*", "/assets/*"]
+    "exclude": ["/images/*.{png,jpg,gif}", "/css/*", "/assets/*", "/*.txt", "/*.xml"]
   },
   "responseOverrides": {
     "404": {
