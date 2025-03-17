@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32">
+  <!-- Background -->
+  <rect x="10" y="10" width="80" height="80" rx="8" fill="#059669" />
+  
+  <!-- Spreadsheet grid lines -->
+  <line x1="25" y1="30" x2="75" y2="30" stroke="white" stroke-width="2" />
+  <line x1="25" y1="50" x2="75" y2="50" stroke="white" stroke-width="2" />
+  <line x1="25" y1="70" x2="75" y2="70" stroke="white" stroke-width="2" />
+  <line x1="42" y1="30" x2="42" y2="70" stroke="white" stroke-width="2" />
+  <line x1="59" y1="30" x2="59" y2="70" stroke="white" stroke-width="2" />
+  
+  <!-- "Z" Letter -->
+  <path d="M35 20 L65 20 L35 25 L65 25" stroke="white" stroke-width="3" fill="none" />
+  
+  <!-- AI sparkle -->
+  <circle cx="75" cy="25" r="3" fill="white" />
+  <path d="M75 18 L75 22 M71 25 L79 25 M72 22 L78 28 M72 28 L78 22" stroke="white" stroke-width="1.5" />
+</svg>
