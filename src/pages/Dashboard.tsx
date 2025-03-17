@@ -306,62 +306,131 @@ export default function Dashboard() {
     // Create animated cursor element
     const cursor = cursorRef.current;
     cursor.style.display = 'block';
-    document.body.appendChild(cursor);
     
     // Set initial position (top of the screen)
     cursor.style.top = '100px';
     cursor.style.left = '50%';
     
-    // First, move cursor to the textarea
-    const textareaRect = promptTextareaRef.current.getBoundingClientRect();
-    await animateCursor(cursor, textareaRect.left + 20, textareaRect.top + 20);
-    
-    // Click on the textarea
-    promptTextareaRef.current.focus();
-    await sleep(500);
-    
-    // Type text character by character
-    setPrompt(''); // Clear existing prompt
-    const typingDelay = Math.min(20, 2000 / adminText.length); // Adjust typing speed based on text length
-    
-    for (let i = 0; i < adminText.length; i++) {
-      setPrompt(prev => prev + adminText[i]);
-      await sleep(typingDelay);
-    }
-    
-    await sleep(500);
-    
-    // Move cursor to generate button
-    const buttonRect = generateButtonRef.current.getBoundingClientRect();
-    await animateCursor(cursor, buttonRect.left + buttonRect.width/2, buttonRect.top + buttonRect.height/2);
-    
-    // Click on generate button
-    await sleep(300);
-    generateButtonRef.current.click();
-    
-    // Set up an interval to check when the generation is complete
-    const checkInterval = setInterval(async () => {
-      if (!isGenerating && formatting?.downloadUrl) {
-        clearInterval(checkInterval);
-        
-        // Find the download button using DOM since it's in a different component
-        const downloadButton = document.querySelector('.download-button') as HTMLButtonElement;
-        if (downloadButton) {
-          const downloadRect = downloadButton.getBoundingClientRect();
-          await sleep(1000);
-          await animateCursor(cursor, downloadRect.left + downloadRect.width/2, downloadRect.top + downloadRect.height/2);
-          
-          // Click download button
-          await sleep(300);
-          downloadButton.click();
-          
-          // Clean up
-          await sleep(1000);
-          cursor.style.display = 'none';
-          setIsAutomating(false);
-        }
+    try {
+      // First, move cursor to the textarea
+      const textareaRect = promptTextareaRef.current.getBoundingClientRect();
+      await animateCursor(cursor, textareaRect.left + 20, textareaRect.top + 20);
+      
+      // Click on the textarea
+      promptTextareaRef.current.focus();
+      await sleep(500);
+      
+      // Type text character by character
+      setPrompt(''); // Clear existing prompt
+      const typingDelay = Math.min(20, 2000 / adminText.length); // Adjust typing speed based on text length
+      
+      for (let i = 0; i < adminText.length; i++) {
+        setPrompt(prev => prev + adminText[i]);
+        await sleep(typingDelay);
       }
-    }, 1000);
+      
+      await sleep(500);
+      
+      // Move cursor to generate button
+      const buttonRect = generateButtonRef.current.getBoundingClientRect();
+      await animateCursor(cursor, buttonRect.left + buttonRect.width/2, buttonRect.top + buttonRect.height/2);
+      
+      // Click on generate button
+      await sleep(300);
+      generateButtonRef.current.click();
+      
+      // Wait for generation to complete
+      console.log("Waiting for generation to complete...");
+      
+      await new Promise<void>((resolve) => {
+        // Check every 1 second if generation is complete and we have a preview image
+        const checkInterval = setInterval(() => {
+          if (!isGenerating && formatting?.downloadUrl) {
+            clearInterval(checkInterval);
+            console.log("Generation complete, preview available");
+            resolve();
+          }
+        }, 1000);
+      });
+      
+      console.log("Generation finished, continuing with automation");
+      
+      // Give a moment for any animation to settle
+      await sleep(1500);
+      
+      // Look for the zoom slider
+      const zoomSlider = document.getElementById('zoom-slider') as HTMLInputElement;
+      if (zoomSlider) {
+        console.log("Found zoom slider, moving to it");
+        const zoomSliderRect = zoomSlider.getBoundingClientRect();
+        
+        // Move to the zoom slider
+        await animateCursor(
+          cursor, 
+          zoomSliderRect.left + zoomSliderRect.width * 0.8, // Move to right side (higher value)
+          zoomSliderRect.top + zoomSliderRect.height/2
+        );
+        
+        // Click and drag the slider to 50%
+        await sleep(500);
+        
+        // Simulate dragging to 50% by moving cursor to the middle position
+        await animateCursor(
+          cursor, 
+          zoomSliderRect.left + zoomSliderRect.width * 0.4, // Move to about 50% position
+          zoomSliderRect.top + zoomSliderRect.height/2
+        );
+        
+        // Update the slider value programmatically
+        if (zoomSlider.value !== '50') {
+          const originalValue = zoomSlider.value;
+          zoomSlider.value = '50';
+          
+          // Trigger change event
+          const event = new Event('change', { bubbles: true });
+          zoomSlider.dispatchEvent(event);
+          
+          console.log(`Changed zoom from ${originalValue} to 50%`);
+        }
+        
+        await sleep(800);
+      }
+      
+      // Now, find the download button
+      const downloadButton = document.querySelector('.download-button') as HTMLButtonElement;
+      if (downloadButton && !downloadButton.disabled) {
+        console.log("Found download button, moving to it");
+        const downloadRect = downloadButton.getBoundingClientRect();
+        
+        // Move to the download button
+        await animateCursor(
+          cursor, 
+          downloadRect.left + downloadRect.width/2, 
+          downloadRect.top + downloadRect.height/2
+        );
+        
+        // Click the download button
+        await sleep(500);
+        downloadButton.click();
+        
+        console.log("Clicked download button");
+        // Wait for the download dialog to appear
+        await sleep(1500);
+      } else {
+        console.log("Download button not found or disabled", downloadButton);
+      }
+      
+      // Complete automation
+      console.log("Automation complete");
+      
+    } catch (error) {
+      console.error("Automation error:", error);
+    } finally {
+      // Clean up regardless of success or error
+      await sleep(1000);
+      cursor.style.display = 'none';
+      setIsAutomating(false);
+    }
     
   }, [adminText, isGenerating, formatting]);
 
@@ -466,9 +535,9 @@ export default function Dashboard() {
           ref={cursorRef}
           style={{
             position: 'fixed',
-            width: '24px',
-            height: '24px',
-            backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23000000\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z\'/%3E%3C/svg%3E")',
+            width: '32px',
+            height: '32px',
+            backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\' viewBox=\'0 0 32 32\'%3E%3Cpath d=\'M8.5,2 L8.5,25 L13,20 L19,24 L19,19 L13,15 L8.5,20 Z\' fill=\'white\' stroke=\'black\' stroke-width=\'1\'/%3E%3C/svg%3E")',
             backgroundSize: 'contain',
             zIndex: 10000,
             pointerEvents: 'none',
