@@ -312,22 +312,27 @@ export default function Dashboard() {
     cursor.style.left = '50%';
     
     try {
+      console.log("Starting automation sequence");
+      
       // First, move cursor to the textarea
       const textareaRect = promptTextareaRef.current.getBoundingClientRect();
       await animateCursor(cursor, textareaRect.left + 20, textareaRect.top + 20);
       
       // Click on the textarea
       promptTextareaRef.current.focus();
+      console.log("Focused on textarea");
       await sleep(500);
       
       // Type text character by character
       setPrompt(''); // Clear existing prompt
       const typingDelay = Math.min(20, 2000 / adminText.length); // Adjust typing speed based on text length
       
+      console.log("Starting to type text");
       for (let i = 0; i < adminText.length; i++) {
         setPrompt(prev => prev + adminText[i]);
         await sleep(typingDelay);
       }
+      console.log("Finished typing text");
       
       await sleep(500);
       
@@ -337,28 +342,54 @@ export default function Dashboard() {
       
       // Click on generate button
       await sleep(300);
+      console.log("Clicking generate button");
       generateButtonRef.current.click();
       
-      // Wait for generation to complete
+      // Wait for generation to complete with timeout
       console.log("Waiting for generation to complete...");
+      console.log("Current state:", { isGenerating, formatting });
       
-      await new Promise<void>((resolve) => {
-        // Check every 1 second if generation is complete and we have a preview image
-        const checkInterval = setInterval(() => {
-          if (!isGenerating && formatting?.downloadUrl) {
-            clearInterval(checkInterval);
-            console.log("Generation complete, preview available");
-            resolve();
-          }
-        }, 1000);
-      });
+      let generationComplete = false;
       
-      console.log("Generation finished, continuing with automation");
+      try {
+        // Wait for generation to complete with a maximum of 60 seconds
+        await Promise.race([
+          new Promise<void>((resolve) => {
+            const checkInterval = setInterval(() => {
+              console.log("Checking generation status:", { isGenerating, hasFormatting: !!formatting, hasDownloadUrl: !!formatting?.downloadUrl });
+              
+              // Check if we have a preview image and are not generating anymore
+              if (!isGenerating && formatting?.downloadUrl) {
+                clearInterval(checkInterval);
+                console.log("Generation complete, preview available");
+                generationComplete = true;
+                resolve();
+              }
+            }, 1000);
+          }),
+          new Promise<void>((resolve) => {
+            // Timeout after 60 seconds
+            setTimeout(() => {
+              console.log("Reached timeout waiting for generation");
+              resolve();
+            }, 120000);
+          })
+        ]);
+      } catch (error) {
+        console.error("Error waiting for generation:", error);
+      }
+      
+      // Force continue after 3 seconds regardless of generation state
+      console.log("Waiting an additional 3 seconds before continuing");
+      await sleep(3000);
+      
+      console.log("Continuing with automation, generation complete:", generationComplete);
       
       // Give a moment for any animation to settle
       await sleep(1500);
       
       // Look for the zoom slider
+      console.log("Looking for zoom slider");
       const zoomSlider = document.getElementById('zoom-slider') as HTMLInputElement;
       if (zoomSlider) {
         console.log("Found zoom slider, moving to it");
@@ -394,12 +425,22 @@ export default function Dashboard() {
         }
         
         await sleep(800);
+      } else {
+        console.log("Zoom slider not found");
       }
       
       // Now, find the download button
+      console.log("Looking for download button");
+      const allButtons = document.querySelectorAll('button');
+      console.log("Found", allButtons.length, "buttons on the page");
+      
+      allButtons.forEach((button, index) => {
+        console.log(`Button ${index}:`, button.className, button.disabled);
+      });
+      
       const downloadButton = document.querySelector('.download-button') as HTMLButtonElement;
-      if (downloadButton && !downloadButton.disabled) {
-        console.log("Found download button, moving to it");
+      if (downloadButton) {
+        console.log("Found download button, disabled:", downloadButton.disabled);
         const downloadRect = downloadButton.getBoundingClientRect();
         
         // Move to the download button
@@ -409,19 +450,42 @@ export default function Dashboard() {
           downloadRect.top + downloadRect.height/2
         );
         
-        // Click the download button
+        // Click the download button (only if not disabled)
         await sleep(500);
-        downloadButton.click();
-        
-        console.log("Clicked download button");
-        // Wait for the download dialog to appear
-        await sleep(1500);
+        if (!downloadButton.disabled) {
+          console.log("Clicking download button");
+          downloadButton.click();
+          
+          // Wait for the download dialog to appear
+          await sleep(1500);
+        } else {
+          console.log("Download button is disabled, cannot click");
+        }
       } else {
-        console.log("Download button not found or disabled", downloadButton);
+        console.log("Download button not found");
+        
+        // Try a more generic selector as fallback
+        const downloadIconButton = document.querySelector('button:has(.lucide-download)');
+        if (downloadIconButton) {
+          console.log("Found download button by icon");
+          const buttonRect = (downloadIconButton as HTMLElement).getBoundingClientRect();
+          
+          await animateCursor(
+            cursor,
+            buttonRect.left + buttonRect.width/2,
+            buttonRect.top + buttonRect.height/2
+          );
+          
+          await sleep(500);
+          console.log("Clicking download button (by icon)");
+          (downloadIconButton as HTMLElement).click();
+          
+          await sleep(1500);
+        }
       }
       
       // Complete automation
-      console.log("Automation complete");
+      console.log("Automation sequence complete");
       
     } catch (error) {
       console.error("Automation error:", error);
@@ -433,7 +497,6 @@ export default function Dashboard() {
     }
     
   }, [adminText, isGenerating, formatting]);
-
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
   
