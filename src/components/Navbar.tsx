@@ -17,7 +17,7 @@ export default function Navbar() {
               <div className="font-sans text-3xl font-bold tracking-tight flex items-center">
                 <span className="relative flex items-baseline logo-text">
                   <span className="inline-block logo-letter">Z</span>
-                  <span className="logo-word">arium.dev</span>
+                  <span className="logo-word">arium</span>
                 </span>
               </div>
             </div>
