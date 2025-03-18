@@ -1,77 +1,236 @@
 import React from 'react';
 
-export function TermsContent() {
+export function TermsOfService() {
   return (
-    <div className="prose dark:prose-invert prose-emerald max-w-none">
-      <p className="text-lg text-emerald-800 dark:text-emerald-200 mb-8">
-        <strong>Last Updated:</strong> February 12, 2025
-      </p>
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto px-6 py-16">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold mb-8 text-emerald-900 dark:text-emerald-100">
+            Terms of Service
+          </h1>
 
-      <h2 className="text-3xl font-semibold mb-6 text-emerald-800 dark:text-emerald-200">
-        Introduction and Acceptance of Terms
-      </h2>
-      <p>
-      Welcome to Zarium Excel Generator, your premier solution for automated Excel file generation. These Terms of Service ("Terms") constitute a legally binding agreement between you and Zarium Excel Generator ("Zarium," "we," "our," or "us") governing your access to and use of our Excel generation service, website, and related features (collectively, the "Service"). By accessing or using our Service, you acknowledge that you have read, understood, and agree to be bound by these Terms in their entirety.
-Our commitment to providing exceptional Excel generation capabilities is matched by our expectation that users will engage with our Service responsibly and in accordance with these Terms. If you do not agree with any part of these Terms, you should not access or use our Service. We recommend reviewing these Terms periodically, as they may be updated to reflect improvements in our Service and evolving business practices.
-Service Description and Capabilities
-Zarium Excel Generator provides sophisticated Excel file generation services powered by advanced technology. Our Service enables users to create professional-grade Excel spreadsheets through an intuitive interface that transforms your requirements into meticulously formatted files. The Service includes various features designed to enhance your productivity, including custom formatting options, advanced formula generation, and professional template creation.
-Our platform operates on a token-based system that provides flexible access to our generation capabilities. Each successful file generation requires a specific number of tokens, which are allocated based on your subscription plan and any additional token purchases you make. This system ensures fair resource allocation while providing you with the freedom to generate Excel files according to your specific needs.
-Account Registration and Security
-When you register for a Zarium Excel Generator account, you gain access to our full range of Excel generation capabilities. Your account serves as your personal gateway to our Service, allowing you to manage your generations, track token usage, and maintain your preferences. The registration process requires you to provide accurate and complete information, including a valid email address that will serve as your primary means of account identification and communication with our Service.
-Account Security and User Responsibilities
-The security of your Zarium Excel Generator account begins with your commitment to maintaining strong access credentials. Upon creating your account, you will establish a password that meets our robust security requirements. This password, combined with your registered email address, provides secure access to your account and all associated features. You acknowledge and agree that you are solely responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.
-We strongly advise against sharing your account credentials with any third parties, as this could compromise both your account security and the integrity of your generated Excel files. Should you detect or suspect any unauthorized access to your account, you must notify us immediately through our designated support channels. While we implement comprehensive security measures to protect your account, we cannot guarantee absolute security if you fail to maintain proper account security practices.
-Subscription Plans and Payment Terms
-Zarium Excel Generator offers various subscription plans designed to accommodate different user needs and Excel generation requirements. Each plan provides a specific allocation of tokens that refresh on a monthly basis, along with access to different feature sets and capabilities. Our Basic, Plus, and Pro plans each offer increasing levels of functionality and token allowances, allowing you to choose the option that best suits your requirements.
-When you subscribe to our Service, you agree to pay all applicable fees associated with your chosen subscription plan. All payments are processed securely through our trusted payment provider, with recurring charges being automatically applied to your designated payment method at the start of each billing cycle. Subscription fees are non-refundable except where required by applicable law, and partial months of service are not eligible for refunds upon cancellation.
-            Token Usage and Service Limitations
-Every Excel file generation through our Service requires a specified number of tokens, which are deducted from your account balance upon successful completion. Token consumption varies based on the complexity and specifications of your requested generations, with more sophisticated files requiring additional tokens. Your monthly token allocation is automatically credited to your account at the beginning of each billing cycle, and unused tokens do not carry over to subsequent months unless explicitly stated in your subscription plan details.
-Our service maintains certain limitations to ensure optimal performance and fair resource allocation among all users. These limitations may include restrictions on file sizes, generation frequency, and the complexity of Excel files that can be generated within a specific timeframe. While we strive to accommodate all legitimate usage patterns, we reserve the right to implement additional limitations if necessary to maintain service quality and prevent system abuse.
-Service Availability and Performance
-While we are committed to maintaining consistent service availability, you acknowledge that our Service may occasionally experience temporary interruptions due to maintenance, updates, or technical issues beyond our control. These interruptions are typically brief and scheduled during periods of lowest usage to minimize impact on our users. We work diligently to resolve any unplanned disruptions promptly and keep you informed of any maintenance that might affect your ability to generate Excel files.
-Our commitment to delivering exceptional performance means that we continuously monitor and optimize our generation systems. Each Excel file is created with precision and attention to detail, ensuring that your specifications are accurately reflected in the final output. While we strive to process all generation requests as quickly as possible, processing times may vary based on file complexity and current system load.
-Intellectual Property Rights and Content Ownership
-When you generate Excel files through our Service, you retain full ownership rights to the content and data within those files. The unique specifications, formulas, and data structures you create using our Service belong entirely to you. However, the underlying technology, algorithms, and systems that power our Excel generation capabilities remain the exclusive property of Zarium Excel Generator. This includes our proprietary generation engine, user interface elements, and all associated software components.
-Our Service incorporates various proprietary technologies and methodologies that are protected by intellectual property laws. By using our Service, you acknowledge that you are granted a limited, non-exclusive license to utilize these technologies solely for the purpose of generating Excel files through our platform. This license is personal to you and cannot be transferred, assigned, or sublicensed to any other party without our explicit written consent.
-Acceptable Use and Conduct
-Your use of Zarium Excel Generator must comply with all applicable laws, regulations, and professional standards. We trust our users to generate Excel files that serve legitimate business or personal purposes. Our Service is designed to support productive and ethical use cases, and we expect all users to respect these principles. You agree to use our Service in a manner that does not infringe upon the rights of others or compromise the integrity of our platform.
-We maintain a strong commitment to preventing any misuse of our Service. This includes but is not limited to generating Excel files containing malicious content, attempting to circumvent our token system, or using our Service in ways that could harm other users or our infrastructure. While we respect your privacy and do not actively monitor the content of generated files, we reserve the right to investigate and address any reported violations of these Terms.
-Service Modifications and Updates
-As part of our ongoing commitment to excellence, we continuously enhance and refine our Excel generation capabilities. These improvements may include the introduction of new features, optimization of existing functionality, or modifications to our user interface. We carefully implement these changes to ensure they enhance your experience without disrupting your established workflows. While we strive to provide advance notice of significant changes, we reserve the right to modify, suspend, or discontinue any aspect of our Service at our discretion.
-Our evolution as a service is guided by our understanding of user needs and technological advancements in the field of automated Excel generation. When we introduce new features or capabilities, they become immediately available to users based on their subscription plan level. These updates may occasionally require adjustments to our token consumption rates or generation parameters, which we will communicate clearly through our established channels.
-Service Communications and Notifications
-We maintain various channels of communication to keep you informed about your account status, service updates, and important announcements. These communications are an essential part of our Service and may include information about your token balance, successful generations, subscription status, and system updates. By using our Service, you consent to receive these essential communications, which are designed to enhance your experience and keep you informed about matters affecting your use of our platform.
-Our commitment to transparent communication extends to how we notify you about changes to these Terms or our Service capabilities. Significant modifications will be announced through direct communications and notices within our platform interface. Your continued use of our Service following such notifications constitutes acceptance of any modified terms or conditions.
-Subscription Management and Cancellation
-You have complete control over your subscription status and can modify or cancel your plan at any time through your account dashboard. When upgrading your subscription, the change takes effect immediately, providing instant access to additional features and token allocations. For subscription downgrades or cancellations, the change becomes effective at the end of your current billing cycle, allowing you to continue using your current plan's features until that time.
-Liability Limitations and Warranties
-Our dedication to providing reliable Excel generation capabilities is reflected in the robust infrastructure and advanced technologies we employ. However, while we strive for excellence in all aspects of our Service, we provide our platform "as is" and make no express warranties about the completeness, reliability, or uninterrupted availability of our Service. We work diligently to maintain high standards of performance and accuracy in file generation, but we cannot guarantee that our Service will always be error-free or meet every specific requirement you may have.
-In using our Service, you acknowledge that certain factors beyond our control may affect our ability to deliver Excel files, including internet connectivity issues, hardware limitations, or other technical constraints. We take extensive precautions to protect against service interruptions and data loss, but we cannot be held liable for any damages or losses resulting from such occurrences. This includes any direct, indirect, incidental, special, or consequential damages arising from your use of our Service or any generated Excel files.
-Dispute Resolution and Governing Law
-In the unlikely event of a dispute arising from your use of our Service, we encourage open communication and amicable resolution. Should any disagreement occur, you agree to first attempt to resolve it informally by contacting our support team. We will work with you in good faith to address your concerns and find a satisfactory solution. This approach has proven highly effective in maintaining positive relationships with our users while ensuring their concerns are properly addressed.
-Any formal dispute that cannot be resolved through informal communication shall be settled through arbitration, in accordance with the applicable laws. This ensures a fair and efficient resolution process while avoiding the costs and complexities of traditional litigation. The arbitration shall be conducted in English, and all proceedings shall remain confidential.
-Service Termination and Account Closure
-While we value every user of our Service, we reserve the right to suspend or terminate accounts that violate these Terms or engage in activities that could harm our platform or other users. If we need to take such action, we will typically provide notice and an opportunity to address any concerns, except in cases where immediate action is necessary to protect our Service or comply with legal requirements.
-Data Retention and Service Discontinuation
-In the event of account closure, whether initiated by you or us, we maintain a structured approach to handling your data and generated files. Our standard practice involves retaining basic account information for a limited period following closure, primarily to comply with legal obligations and to assist with any post-closure inquiries you may have. Access to previously generated Excel files remains available for a reasonable download period after account closure, ensuring you can retrieve any important documents you've created through our Service.
-We understand that circumstances may lead you to discontinue your use of our Service, and we respect your right to make this decision. Should you choose to close your account, we provide a straightforward process that ensures your subscription is properly terminated and any outstanding matters are resolved. While we hope you'll continue to find value in our Service, we are committed to making the account closure process as smooth as possible when you decide to end your relationship with our platform.
-Miscellaneous Provisions
-Throughout your use of our Service, you agree that any rights not expressly granted to you in these Terms are reserved by Zarium Excel Generator. Our failure to enforce any right or provision of these Terms shall not be considered a waiver of such right or provision. If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions will continue in full effect, and an enforceable provision that most closely matches the intent of the invalid provision will be substituted.
-These Terms represent the entire agreement between you and Zarium Excel Generator regarding your use of our Service, superseding any prior agreements or understandings, whether written or oral. No amendment to these Terms will be effective unless made in writing and signed by authorized representatives of both parties. Your rights under these Terms are personal to you and may not be assigned or transferred to any third party without our express written consent.
-Final Provisions and Acknowledgment
-We value the trust you place in Zarium Excel Generator by choosing our Service for your Excel file generation needs. These Terms are designed to ensure a clear understanding between us and to maintain the high standards of service you expect. As our Service continues to evolve and improve, we remain committed to maintaining transparent communication and upholding the principles outlined in these Terms. Your success with our platform is fundamental to our mission, and we strive to provide the support and capabilities you need to achieve your objectives.
-The relationship between Zarium Excel Generator and our users is built on mutual respect and understanding. We take pride in providing a service that not only meets but exceeds your expectations for professional Excel file generation. Your continued use of our Service indicates your ongoing acceptance of these Terms and your trust in our commitment to maintaining exceptional service standards. We are honored to be your chosen provider for Excel generation needs and look forward to supporting your success.
-Contact and Support Information
-Should you have any questions, concerns, or require clarification about any aspect of these Terms, our dedicated support team is available to assist you. You can reach us through multiple channels:
-Email Support: For general inquiries and support requests, please contact us at support@zarium.com. Our team typically responds within one business day, ensuring you receive the assistance you need in a timely manner.
-Billing Questions: For matters related to your subscription, payments, or token purchases, please direct your inquiries to billing@zarium.com. Our billing specialists are ready to help resolve any payment-related concerns you may have.
-Technical Assistance: For specific technical questions about our Excel generation capabilities or if you need guidance on utilizing our Service more effectively, our technical support team is available at technical@zarium.com.
-Future Updates and Modifications
-These Terms of Service are a living document that may evolve as our Service grows and improves. We encourage you to periodically review these Terms to stay informed about any updates or changes. Your continued use of our Service following any modifications to these Terms constitutes your acceptance of such changes. We remain committed to providing advance notice of any significant modifications that might affect your use of our Service.
-This version of the Terms of Service became effective on February 12, 2025, and supersedes all previous versions. We thank you for being part of the Zarium Excel Generator community and for your trust in our Service.
-      </p>
+          <div className="prose prose-emerald dark:prose-invert max-w-none">
+            <p className="text-lg text-emerald-800 dark:text-emerald-200 mb-8">
+              <strong>Last Updated:</strong> February 12, 2025
+            </p>
 
-      
+            {/* Table of Contents */}
+            <div className="mb-10 p-6 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
+              <h2 className="text-xl font-semibold mb-4 text-emerald-800 dark:text-emerald-200">Table of Contents</h2>
+              <ul className="space-y-1 text-emerald-700 dark:text-emerald-300">
+                <li><a href="#introduction" className="hover:text-emerald-500 dark:hover:text-emerald-400">1. Introduction and Acceptance of Terms</a></li>
+                <li><a href="#service-description" className="hover:text-emerald-500 dark:hover:text-emerald-400">2. Service Description and Capabilities</a></li>
+                <li><a href="#account-registration" className="hover:text-emerald-500 dark:hover:text-emerald-400">3. Account Registration and Security</a></li>
+                <li><a href="#subscription-plans" className="hover:text-emerald-500 dark:hover:text-emerald-400">4. Subscription Plans and Payment Terms</a></li>
+                <li><a href="#token-usage" className="hover:text-emerald-500 dark:hover:text-emerald-400">5. Token Usage and Service Limitations</a></li>
+                <li><a href="#service-availability" className="hover:text-emerald-500 dark:hover:text-emerald-400">6. Service Availability and Performance</a></li>
+                <li><a href="#intellectual-property" className="hover:text-emerald-500 dark:hover:text-emerald-400">7. Intellectual Property Rights</a></li>
+                <li><a href="#acceptable-use" className="hover:text-emerald-500 dark:hover:text-emerald-400">8. Acceptable Use and Conduct</a></li>
+                <li><a href="#service-modifications" className="hover:text-emerald-500 dark:hover:text-emerald-400">9. Service Modifications and Updates</a></li>
+                <li><a href="#liability-limitations" className="hover:text-emerald-500 dark:hover:text-emerald-400">10. Liability Limitations and Warranties</a></li>
+                <li><a href="#contact-support" className="hover:text-emerald-500 dark:hover:text-emerald-400">11. Contact and Support Information</a></li>
+              </ul>
+            </div>
+
+            <section id="introduction">
+              <h2 className="text-3xl font-semibold mb-6 text-emerald-800 dark:text-emerald-200">
+                1. Introduction and Acceptance of Terms
+              </h2>
+              <p className="mb-4">
+                Welcome to Zarium Excel Generator, your premier solution for automated Excel file generation. These Terms of Service ("Terms") constitute a legally binding agreement between you and Zarium Excel Generator ("Zarium," "we," "our," or "us") governing your access to and use of our Excel generation service, website, and related features (collectively, the "Service").
+              </p>
+              <p className="mb-4">
+                By accessing or using our Service, you acknowledge that you have read, understood, and agree to be bound by these Terms in their entirety. Our commitment to providing exceptional Excel generation capabilities is matched by our expectation that users will engage with our Service responsibly and in accordance with these Terms.
+              </p>
+              <p className="mb-4">
+                If you do not agree with any part of these Terms, you should not access or use our Service. We recommend reviewing these Terms periodically, as they may be updated to reflect improvements in our Service and evolving business practices.
+              </p>
+            </section>
+
+            <section id="service-description">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                2. Service Description and Capabilities
+              </h2>
+              <p className="mb-4">
+                Zarium Excel Generator provides sophisticated Excel file generation services powered by advanced technology. Our Service enables users to create professional-grade Excel spreadsheets through an intuitive interface that transforms your requirements into meticulously formatted files.
+              </p>
+              <p className="mb-4">
+                The Service includes various features designed to enhance your productivity, including custom formatting options, advanced formula generation, and professional template creation.
+              </p>
+              <p className="mb-4">
+                Our platform operates on a token-based system that provides flexible access to our generation capabilities. Each successful file generation requires a specific number of tokens, which are allocated based on your subscription plan and any additional token purchases you make. This system ensures fair resource allocation while providing you with the freedom to generate Excel files according to your specific needs.
+              </p>
+            </section>
+
+            <section id="account-registration">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                3. Account Registration and Security
+              </h2>
+              <p className="mb-4">
+                When you register for a Zarium Excel Generator account, you gain access to our full range of Excel generation capabilities. Your account serves as your personal gateway to our Service, allowing you to manage your generations, track token usage, and maintain your preferences.
+              </p>
+              <p className="mb-4">
+                The registration process requires you to provide accurate and complete information, including a valid email address that will serve as your primary means of account identification and communication with our Service.
+              </p>
+              <h3 className="text-2xl font-semibold mt-6 mb-4 text-emerald-700 dark:text-emerald-300">
+                Account Security and User Responsibilities
+              </h3>
+              <p className="mb-4">
+                The security of your Zarium Excel Generator account begins with your commitment to maintaining strong access credentials. Upon creating your account, you will establish a password that meets our robust security requirements.
+              </p>
+              <p className="mb-4">
+                You acknowledge and agree that you are solely responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. We strongly advise against sharing your account credentials with any third parties.
+              </p>
+              <p className="mb-4">
+                Should you detect or suspect any unauthorized access to your account, you must notify us immediately through our designated support channels.
+              </p>
+            </section>
+
+            <section id="subscription-plans">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                4. Subscription Plans and Payment Terms
+              </h2>
+              <p className="mb-4">
+                Zarium Excel Generator offers various subscription plans designed to accommodate different user needs and Excel generation requirements. Each plan provides a specific allocation of tokens that refresh on a monthly basis, along with access to different feature sets and capabilities.
+              </p>
+              <p className="mb-4">
+                Our Basic, Plus, and Pro plans each offer increasing levels of functionality and token allowances, allowing you to choose the option that best suits your requirements.
+              </p>
+              <p className="mb-4">
+                When you subscribe to our Service, you agree to pay all applicable fees associated with your chosen subscription plan. All payments are processed securely through our trusted payment provider, with recurring charges being automatically applied to your designated payment method at the start of each billing cycle.
+              </p>
+              <p className="mb-4">
+                Subscription fees are non-refundable except where required by applicable law, and partial months of service are not eligible for refunds upon cancellation.
+              </p>
+            </section>
+
+            <section id="token-usage">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                5. Token Usage and Service Limitations
+              </h2>
+              <p className="mb-4">
+                Every Excel file generation through our Service requires a specified number of tokens, which are deducted from your account balance upon successful completion. Token consumption varies based on the complexity and specifications of your requested generations, with more sophisticated files requiring additional tokens.
+              </p>
+              <p className="mb-4">
+                Your monthly token allocation is automatically credited to your account at the beginning of each billing cycle, and unused tokens do not carry over to subsequent months unless explicitly stated in your subscription plan details.
+              </p>
+              <p className="mb-4">
+                Our service maintains certain limitations to ensure optimal performance and fair resource allocation among all users. These limitations may include restrictions on file sizes, generation frequency, and the complexity of Excel files that can be generated within a specific timeframe.
+              </p>
+              <p className="mb-4">
+                While we strive to accommodate all legitimate usage patterns, we reserve the right to implement additional limitations if necessary to maintain service quality and prevent system abuse.
+              </p>
+            </section>
+
+            <section id="service-availability">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                6. Service Availability and Performance
+              </h2>
+              <p className="mb-4">
+                While we are committed to maintaining consistent service availability, you acknowledge that our Service may occasionally experience temporary interruptions due to maintenance, updates, or technical issues beyond our control.
+              </p>
+              <p className="mb-4">
+                These interruptions are typically brief and scheduled during periods of lowest usage to minimize impact on our users. We work diligently to resolve any unplanned disruptions promptly and keep you informed of any maintenance that might affect your ability to generate Excel files.
+              </p>
+              <p className="mb-4">
+                Our commitment to delivering exceptional performance means that we continuously monitor and optimize our generation systems. Each Excel file is created with precision and attention to detail, ensuring that your specifications are accurately reflected in the final output.
+              </p>
+              <p className="mb-4">
+                While we strive to process all generation requests as quickly as possible, processing times may vary based on file complexity and current system load.
+              </p>
+            </section>
+
+            <section id="intellectual-property">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                7. Intellectual Property Rights
+              </h2>
+              <p className="mb-4">
+                When you generate Excel files through our Service, you retain full ownership rights to the content and data within those files. The unique specifications, formulas, and data structures you create using our Service belong entirely to you.
+              </p>
+              <p className="mb-4">
+                However, the underlying technology, algorithms, and systems that power our Excel generation capabilities remain the exclusive property of Zarium Excel Generator. This includes our proprietary generation engine, user interface elements, and all associated software components.
+              </p>
+              <p className="mb-4">
+                Our Service incorporates various proprietary technologies and methodologies that are protected by intellectual property laws. By using our Service, you acknowledge that you are granted a limited, non-exclusive license to utilize these technologies solely for the purpose of generating Excel files through our platform.
+              </p>
+              <p className="mb-4">
+                This license is personal to you and cannot be transferred, assigned, or sublicensed to any other party without our explicit written consent.
+              </p>
+            </section>
+
+            <section id="acceptable-use">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                8. Acceptable Use and Conduct
+              </h2>
+              <p className="mb-4">
+                Your use of Zarium Excel Generator must comply with all applicable laws, regulations, and professional standards. We trust our users to generate Excel files that serve legitimate business or personal purposes.
+              </p>
+              <p className="mb-4">
+                Our Service is designed to support productive and ethical use cases, and we expect all users to respect these principles. You agree to use our Service in a manner that does not infringe upon the rights of others or compromise the integrity of our platform.
+              </p>
+              <p className="mb-4">
+                We maintain a strong commitment to preventing any misuse of our Service. This includes but is not limited to generating Excel files containing malicious content, attempting to circumvent our token system, or using our Service in ways that could harm other users or our infrastructure.
+              </p>
+              <p className="mb-4">
+                While we respect your privacy and do not actively monitor the content of generated files, we reserve the right to investigate and address any reported violations of these Terms.
+              </p>
+            </section>
+
+            <section id="service-modifications">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                9. Service Modifications and Updates
+              </h2>
+              <p className="mb-4">
+                As part of our ongoing commitment to excellence, we continuously enhance and refine our Excel generation capabilities. These improvements may include the introduction of new features, optimization of existing functionality, or modifications to our user interface.
+              </p>
+              <p className="mb-4">
+                We carefully implement these changes to ensure they enhance your experience without disrupting your established workflows. While we strive to provide advance notice of significant changes, we reserve the right to modify, suspend, or discontinue any aspect of our Service at our discretion.
+              </p>
+              <p className="mb-4">
+                Our evolution as a service is guided by our understanding of user needs and technological advancements in the field of automated Excel generation. When we introduce new features or capabilities, they become immediately available to users based on their subscription plan level.
+              </p>
+              <p className="mb-4">
+                These updates may occasionally require adjustments to our token consumption rates or generation parameters, which we will communicate clearly through our established channels.
+              </p>
+            </section>
+
+            <section id="liability-limitations">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                10. Liability Limitations and Warranties
+              </h2>
+              <p className="mb-4">
+                Our dedication to providing reliable Excel generation capabilities is reflected in the robust infrastructure and advanced technologies we employ. However, while we strive for excellence in all aspects of our Service, we provide our platform "as is" and make no express warranties about the completeness, reliability, or uninterrupted availability of our Service.
+              </p>
+              <p className="mb-4">
+                We work diligently to maintain high standards of performance and accuracy in file generation, but we cannot guarantee that our Service will always be error-free or meet every specific requirement you may have.
+              </p>
+              <p className="mb-4">
+                In using our Service, you acknowledge that certain factors beyond our control may affect our ability to deliver Excel files, including internet connectivity issues, hardware limitations, or other technical constraints.
+              </p>
+              <p className="mb-4">
+                We take extensive precautions to protect against service interruptions and data loss, but we cannot be held liable for any damages or losses resulting from such occurrences. This includes any direct, indirect, incidental, special, or consequential damages arising from your use of our Service or any generated Excel files.
+              </p>
+            </section>
+
+            <section id="contact-support">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                11. Contact and Support Information
+              </h2>
+              <p className="mb-4">
+                Should you have any questions, concerns, or require clarification about any aspect of these Terms, our dedicated support team is available to assist you. You can reach us through multiple channels:
+              </p>
+              <ul className="list-disc pl-8 mb-4 space-y-2">
+                <li><strong>Email Support:</strong> For general inquiries and support requests, please contact us at <a href="mailto:support@zarium.com" className="text-emerald-600 dark:text-emerald-400 hover:underline">support@zarium.com</a>. Our team typically responds within one business day.</li>
+                <li><strong>Billing Questions:</strong> For matters related to your subscription, payments, or token purchases, please direct your inquiries to <a href="mailto:billing@zarium.com" className="text-emerald-600 dark:text-emerald-400 hover:underline">billing@zarium.com</a>.</li>
+                <li><strong>Technical Assistance:</strong> For specific technical questions about our Excel generation capabilities, our technical support team is available at <a href="mailto:technical@zarium.com" className="text-emerald-600 dark:text-emerald-400 hover:underline">technical@zarium.com</a>.</li>
+              </ul>
+              <p className="mb-4">
+                This version of the Terms of Service became effective on February 12, 2025, and supersedes all previous versions. We thank you for being part of the Zarium Excel Generator community and for your trust in our Service.
+              </p>
+            </section>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,85 +1,262 @@
 import React from 'react';
 
-export function PrivacyContent() {
+export function PrivacyPolicy() {
   return (
-    <div className="prose dark:prose-invert prose-emerald max-w-none">
-      <p className="text-lg text-emerald-800 dark:text-emerald-200 mb-8">
-        <strong>Last Updated:</strong> February 12, 2025
-      </p>
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto px-6 py-16">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold mb-8 text-emerald-900 dark:text-emerald-100">
+            Privacy Policy
+          </h1>
 
-      <h2 className="text-3xl font-semibold mb-6 text-emerald-800 dark:text-emerald-200">
-        Introduction
-      </h2>
-      <p>
-      This Privacy Policy describes how Zarium Excel Generator ("we," "our," or "us") collects, uses, and discloses your personal information when you use our Excel generation service, website, and related services (collectively referred to as the "Service"). At Zarium, we prioritize your trust and confidence by implementing state-of-the-art security measures that exceed industry standards. This document outlines how we handle your data with the utmost care and precision, ensuring your privacy remains protected at all times.
-By accessing or using our Service, you become part of a community that values privacy and security above all else. Your trust in our Service motivates us to continuously enhance our privacy measures and maintain the highest standards of data protection. We recommend reviewing this policy periodically to stay informed about how we protect your information and your rights as a valued user of our Service.
-Information Collection and Processing
-When you create an account with Zarium Excel Generator, we collect only essential information necessary to provide you with our premium Excel generation service. Your email address serves as your unique identifier, allowing us to deliver a personalized experience tailored to your needs. We utilize advanced encryption technologies to protect your password, ensuring that your account remains completely secure and private.
-For our valued subscribers and token purchasers, we have partnered with Stripe, the world's leading payment processor, to ensure your payment information is handled with the highest level of security. This partnership allows us to focus on delivering exceptional Excel generation services while leaving payment security to certified experts. Your financial information is processed through Stripe's secure infrastructure, which maintains rigorous security certifications and compliance with global standards.
-As you use our Service, we collect information about your preferences and usage patterns solely to enhance your experience. This includes understanding how you prefer your Excel files to be generated, remembering your favorite formats, and optimizing our service to match your working style. Every piece of information we collect serves a specific purpose in making your experience more efficient and enjoyable.
-Service Enhancement and User Experience
-Every aspect of your interaction with Zarium Excel Generator contributes to making the service more intuitive and powerful. When you generate Excel files through our platform, we carefully analyze the success of each generation to ensure our service consistently meets your expectations. This continuous improvement process allows us to refine our understanding of your needs and deliver Excel files that perfectly match your requirements. Your satisfaction with each generated file helps us maintain our position as the leading Excel generation service.
-Through your usage of our platform, we gain valuable insights that enable us to streamline the file generation process. Our advanced algorithms learn from successful generations to provide even better results in future sessions. This means that the more you use our service, the more it adapts to your specific needs and preferences, creating a truly personalized experience. Every feature we develop and every improvement we make is driven by our commitment to providing you with the most sophisticated Excel generation capabilities available.
-Communication and Support
-We believe in maintaining open and transparent communication with our users while respecting their privacy preferences. When you interact with our service, we may send you essential updates about your account, important service announcements, and information about new features that could enhance your experience. These communications are designed to keep you informed about ways to maximize the value you receive from our service. Our support team is always ready to assist you with any questions or concerns, ensuring you have the best possible experience with our platform.
-Your generated Excel files receive our utmost attention and care during their creation and temporary storage. We maintain these files only for the time necessary to ensure successful delivery to you, after which they are automatically removed from our system. This approach ensures that your work remains private and secure while allowing us to maintain optimal service performance. Our temporary storage system is designed to provide you with the flexibility to download your files when convenient while maintaining the highest standards of data privacy.
-File Generation and Processing
-When you create Excel files through our service, our advanced generation system works diligently to translate your requirements into perfectly formatted spreadsheets. Each file is created in an isolated environment, ensuring that your specifications and data remain completely separate from other users' generations. Our system processes your requests with exceptional speed and precision, delivering professional-grade Excel files that meet your exact specifications. The generation process is optimized to provide you with the highest quality results while maintaining complete confidentiality of your work.
-User Control and Preferences
-At Zarium Excel Generator, we believe in giving you complete control over your experience with our service. Your account dashboard serves as your personal command center, where you can easily manage all aspects of your Excel generation preferences. Through this intuitive interface, you can customize how your files are generated, set your preferred formats, and adjust your notification settings to match your working style. These personalization options ensure that our service adapts to your needs, rather than requiring you to adapt to ours.
-We understand that your needs may evolve over time, which is why we've made it effortless to modify your preferences at any time. Whether you're adjusting your token usage strategies, updating your subscription preferences, or fine-tuning your Excel generation settings, our platform provides seamless control over every aspect of your account. Your choices are immediately reflected across our service, ensuring a consistent and personalized experience every time you generate an Excel file.
-Token System and Subscription Management
-Our token-based system has been thoughtfully designed to provide you with flexibility and control over your Excel generation resources. As a subscriber, you receive a generous allocation of tokens each month, allowing you to create sophisticated Excel files whenever you need them. Your token balance is automatically refreshed at the beginning of each billing cycle, ensuring uninterrupted access to our premium generation capabilities. This system allows you to plan your usage effectively while maintaining the freedom to generate additional files as your needs grow.
-We've created a transparent and straightforward subscription management system that puts you in control of your account. Your subscription status, token balance, and usage history are always readily available through your dashboard, allowing you to make informed decisions about your service utilization. When you choose to enhance your subscription or purchase additional tokens, the process is seamless and immediate, ensuring you never experience interruptions in your Excel generation capabilities.
-Service Improvements and Updates
-Our commitment to excellence drives us to continuously enhance our Excel generation capabilities. Through careful analysis of successful generations and user satisfaction, we regularly introduce new features and improvements that make our service even more valuable to you. These updates are carefully implemented to ensure they enhance your experience without disrupting your established workflows. Each improvement we make is guided by our understanding of your needs and our dedication to providing the most advanced Excel generation service available.
-Service Reliability and Quality Assurance
-Your ability to generate high-quality Excel files whenever you need them is our top priority. Our service operates on enterprise-grade infrastructure, ensuring consistent availability and exceptional performance. Every Excel file you generate receives comprehensive quality checks before delivery, guaranteeing that your spreadsheets meet the highest standards of professional excellence. This commitment to quality means you can confidently use our service for all your Excel generation needs, from simple spreadsheets to complex financial models.
-The reliability of our service is enhanced by our advanced generation algorithms, which consistently produce precise and well-structured Excel files. These algorithms have been refined through extensive development and testing to ensure they capture every detail of your requirements. When you provide specifications for an Excel file, our system carefully processes each element to create exactly what you need. This attention to detail results in professionally formatted spreadsheets that are ready to use immediately upon generation.
-User Community and Feedback
-As a valued member of the Zarium Excel Generator community, your experience contributes to the continuous evolution of our service. We carefully consider all user feedback to identify opportunities for enhancement and innovation. This collaborative approach has helped us develop features that truly serve your needs and improve the overall quality of our Excel generation capabilities. Your success with our service drives our commitment to maintaining the highest standards of excellence in everything we do.
-The strong relationship we maintain with our user community helps us understand emerging needs and preferences in Excel file generation. This understanding guides our development priorities and ensures that new features align perfectly with your requirements. When we introduce improvements to our service, they reflect the real-world needs expressed by users like you who rely on our platform for their Excel generation needs.
-Future Developments and Innovation
-Looking ahead, we remain dedicated to advancing the capabilities of our Excel generation service. Our development roadmap is focused on introducing innovative features that will make your experience even more productive and enjoyable. These planned improvements will expand the possibilities for what you can achieve with our service while maintaining the simplicity and reliability you've come to expect from Zarium Excel Generator.
-Conclusion and Final Provisions
-Our dedication to providing an exceptional Excel generation service extends to every aspect of your experience with Zarium. As technology continues to evolve, we remain committed to incorporating advancements that enhance our service while maintaining the highest standards of excellence. Your decision to use Zarium Excel Generator reflects a choice to partner with a service that values innovation, quality, and user satisfaction above all else. We look forward to continuing to serve your Excel generation needs and exceeding your expectations with every file we create.
-We believe that clear communication strengthens our relationship with users like you who rely on our service. While this Privacy Policy provides comprehensive information about how we operate, we encourage you to reach out if you have any questions or need clarification about any aspect of our service. Your understanding and comfort with how we handle your information and deliver our service are paramount to us.
-Contact Information and Support
-We take pride in being accessible and responsive to our users' needs. If you have any questions about this Privacy Policy or our service in general, our dedicated support team is ready to assist you. You can reach us at support@zarium.com, and we will respond promptly to your inquiry. For specific account-related questions or technical support, you can also access our comprehensive help center through your account dashboard, where you'll find detailed guides and resources designed to help you make the most of our service.
-Future Updates to This Policy
-We may occasionally update this Privacy Policy to reflect improvements in our service and evolving best practices in privacy protection. When we make changes, we will update the "Last Updated" date at the top of this Policy. While we will notify you of any significant changes, we encourage you to review this Policy periodically to stay informed about how we continue to protect your information and enhance your experience with Zarium Excel Generator.
-Final Acknowledgment
-Thank you for choosing Zarium Excel Generator as your trusted Excel file generation service. Your confidence in our platform drives us to maintain the highest standards of service quality and user satisfaction. We look forward to continuing to serve your Excel generation needs and being part of your professional success story.
-This Privacy Policy was last updated on February 12, 2025, and supersedes any previous versions of our privacy policy. By continuing to use our service after the effective date of any updates to this Policy, you acknowledge and agree to the updated terms.
-Security Policy for Zarium Excel Generator
-Last Updated: February 12, 2025
-Introduction and Commitment to Security
-At Zarium Excel Generator, we understand that the security of your data and Excel files is paramount. Our commitment to security is woven into every aspect of our service, from the moment you create an account to each Excel file you generate. This Security Policy outlines our comprehensive approach to protecting your information and ensuring the integrity of our service. We have established robust security measures that reflect the latest advancements in digital protection while maintaining the seamless experience you expect from our platform.
-Our security framework has been carefully designed to protect your interests while enabling the powerful Excel generation capabilities you rely on. Every feature and function within our service operates within this secure environment, ensuring that your data and generated files remain protected at all times. We maintain this high level of security through continuous monitoring, regular updates, and proactive measures that anticipate and prevent potential security challenges.
-Service Protection and Monitoring
-The security of our service begins with continuous monitoring and proactive protection measures. Our advanced monitoring systems operate around the clock, analyzing service patterns and identifying potential security concerns before they can affect your experience. This vigilant approach allows us to maintain optimal service performance while ensuring that your account and generated files remain secure. Our monitoring systems adapt to emerging security challenges, providing dynamic protection that evolves with the digital landscape.
-By implementing sophisticated security algorithms and monitoring protocols, we maintain a secure environment for all Excel generation activities. These systems work silently in the background, allowing you to focus on creating the Excel files you need while we handle the complex task of maintaining service security. Our approach combines automated security measures with human expertise, ensuring comprehensive protection that addresses both known and emerging security challenges.
-Data Protection and Secure File Generation
-Your experience with Zarium Excel Generator takes place within a carefully controlled environment where every Excel file generation is handled with the utmost care and protection. Each time you initiate a file generation, our system creates a secure processing environment specifically for your request. This individualized approach ensures that your specifications and data remain completely isolated throughout the generation process. Our advanced file handling system maintains this secure environment from the moment your generation begins until the completed Excel file is safely delivered to you.
-The generation of your Excel files involves sophisticated processes that maintain security without compromising performance. Every aspect of file creation occurs within our secure infrastructure, utilizing advanced technologies that ensure the integrity of your generated files. This secure generation process allows you to confidently create Excel files containing your important information, knowing that every step is protected by multiple layers of security measures. Our system is designed to handle your file generations with both speed and security, delivering professional-quality Excel files while maintaining strict security standards.
-Secure Access and Authentication
-We recognize that secure access to your account is the foundation of a protected service experience. Our authentication system employs advanced security protocols that verify your identity while maintaining a smooth and efficient login process. This balanced approach ensures that only you can access your account and initiate Excel file generations, while avoiding cumbersome security procedures that might impede your productivity. The authentication process adapts to your usage patterns while maintaining consistent security standards that protect your account.
-Every session with our service is established through secure channels that maintain protection throughout your interaction with our platform. These secure connections ensure that your activities, from managing your account to generating Excel files, remain protected at all times. Our session management system maintains security while allowing you to work efficiently, automatically handling security requirements in the background so you can focus on creating the Excel files you need.
-System Integrity and Continuous Improvement
-Our commitment to maintaining a secure service extends to every component of our Excel generation platform. We regularly enhance our security measures through carefully planned updates that strengthen our protective capabilities while ensuring uninterrupted service. These improvements are implemented seamlessly, allowing you to continue generating Excel files without disruption while benefiting from enhanced security features. Our systematic approach to updates ensures that our service remains at the forefront of security technology while maintaining the reliable performance you expect.
-The integrity of our service is maintained through comprehensive system checks that verify the proper operation of all security measures. These regular assessments ensure that every component of our platform continues to meet our high security standards. By continuously monitoring system performance and security effectiveness, we can identify and address potential concerns before they affect your service experience. This proactive approach to system integrity allows us to maintain consistent protection while delivering exceptional Excel generation capabilities.
-Account Protection and User Preferences
-Your account settings and preferences are maintained within a secure environment that preserves your chosen configurations while protecting against unauthorized changes. This secure storage ensures that your Excel generation preferences remain exactly as you set them, providing consistent results with every file you create. The security of your account settings is maintained through the same robust measures that protect all aspects of our service, ensuring that your personalized experience remains both secure and reliable.
-We understand that your needs may evolve, which is why we've designed our security systems to accommodate changes while maintaining protection. Whether you're adjusting your generation preferences or updating your account settings, every modification is handled through secure channels that verify your authority to make changes. This flexible yet secure approach allows you to customize your experience while maintaining the integrity of your account protection.
-Secure File Delivery and Intelligent Storage
-Our approach to file delivery ensures that your generated Excel files reach you through secure channels that maintain protection throughout the transfer process. When your Excel file is ready, our system provides access through encrypted connections that ensure safe delivery to your device. This secure delivery system operates efficiently while maintaining the confidentiality of your files, allowing you to receive your generated Excel documents quickly and securely. Every file transfer is monitored to ensure successful and protected delivery, giving you confidence that your Excel files arrive exactly as intended.
-The temporary storage of your generated files is handled through intelligent systems that maintain security while ensuring convenient access. Our storage solution automatically manages your generated Excel files, keeping them available for a limited time while maintaining strict security measures. This temporary availability allows you to download your files at your convenience while ensuring that they don't remain in storage longer than necessary. The system automatically removes files after a set period, maintaining a clean and secure environment while providing flexibility in accessing your generated documents.
-Service Reliability and Performance
-The reliability of our service is enhanced by security measures that protect against disruptions while maintaining consistent performance. Our infrastructure is designed to handle high volumes of Excel file generations while maintaining security for every request. This robust system ensures that you can generate Excel files whenever needed, with security measures working seamlessly alongside performance optimizations. The balance between security and performance allows us to deliver a service that is both protected and efficient, meeting your Excel generation needs without compromise.
-Each component of our service operates within a protected environment that maintains security without impacting responsiveness. This integrated approach ensures that security measures enhance rather than hinder your experience with our platform. By carefully optimizing both security and performance, we provide a service that delivers excellence in both areas. Your ability to generate Excel files quickly and securely is the result of this thoughtful integration of security and performance considerations.
-      </p>
+          <div className="prose prose-emerald dark:prose-invert max-w-none">
+            <p className="text-lg text-emerald-800 dark:text-emerald-200 mb-8">
+              <strong>Last Updated:</strong> March 18, 2025
+            </p>
 
-      {/* Fortsett med resten av personvernerklæringen... */}
+            {/* Table of Contents */}
+            <div className="mb-10 p-6 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
+              <h2 className="text-xl font-semibold mb-4 text-emerald-800 dark:text-emerald-200">Table of Contents</h2>
+              <ul className="space-y-1 text-emerald-700 dark:text-emerald-300">
+                <li><a href="#introduction" className="hover:text-emerald-500 dark:hover:text-emerald-400">1. Introduction</a></li>
+                <li><a href="#information-collection" className="hover:text-emerald-500 dark:hover:text-emerald-400">2. Information We Collect</a></li>
+                <li><a href="#information-use" className="hover:text-emerald-500 dark:hover:text-emerald-400">3. How We Use the Information</a></li>
+                <li><a href="#storage-security" className="hover:text-emerald-500 dark:hover:text-emerald-400">4. Storage and Security</a></li>
+                <li><a href="#information-sharing" className="hover:text-emerald-500 dark:hover:text-emerald-400">5. Sharing of Information</a></li>
+                <li><a href="#your-rights" className="hover:text-emerald-500 dark:hover:text-emerald-400">6. Your Rights</a></li>
+                <li><a href="#cookies" className="hover:text-emerald-500 dark:hover:text-emerald-400">7. Cookies</a></li>
+                <li><a href="#children" className="hover:text-emerald-500 dark:hover:text-emerald-400">8. Children</a></li>
+                <li><a href="#policy-changes" className="hover:text-emerald-500 dark:hover:text-emerald-400">9. Changes to the Privacy Policy</a></li>
+                <li><a href="#contact-info" className="hover:text-emerald-500 dark:hover:text-emerald-400">10. Contact Information</a></li>
+              </ul>
+            </div>
+
+            <section id="introduction">
+              <h2 className="text-3xl font-semibold mb-6 text-emerald-800 dark:text-emerald-200">
+                1. Introduction
+              </h2>
+              <p className="mb-4">
+                This Privacy Policy describes how Zarium Excel Generator ("we," "our," or "us") collects, uses, stores, and protects your personal information when you use our Excel generation service, website, and related services (collectively referred to as the "Service").
+              </p>
+              <p className="mb-4">
+                We respect your privacy and are committed to protecting your personal information. We encourage you to read this Privacy Policy carefully to understand how we handle your data and what rights you have regarding this information.
+              </p>
+            </section>
+
+            <section id="information-collection">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                2. Information We Collect
+              </h2>
+              
+              <h3 className="text-2xl font-semibold mt-6 mb-4 text-emerald-700 dark:text-emerald-300">
+                2.1 Account Information
+              </h3>
+              <p className="mb-4">
+                When you create an account with Zarium Excel Generator, we collect:
+              </p>
+              <ul className="list-disc pl-8 mb-4 space-y-1">
+                <li>Email address</li>
+                <li>Password (stored in encrypted form)</li>
+                <li>Plan type (Demo, Basic, Plus, Pro)</li>
+                <li>Information about when the account was created</li>
+              </ul>
+
+              <h3 className="text-2xl font-semibold mt-6 mb-4 text-emerald-700 dark:text-emerald-300">
+                2.2 Usage Data
+              </h3>
+              <p className="mb-4">
+                We collect data about how you use the service, including:
+              </p>
+              <ul className="list-disc pl-8 mb-4 space-y-1">
+                <li>Submitted requests for Excel generation</li>
+                <li>Tokens used per generation</li>
+                <li>Timestamps of generations</li>
+              </ul>
+
+              <h3 className="text-2xl font-semibold mt-6 mb-4 text-emerald-700 dark:text-emerald-300">
+                2.3 Temporary Storage
+              </h3>
+              <p className="mb-4">
+                We temporarily store the following for a maximum of 12 hours:
+              </p>
+              <ul className="list-disc pl-8 mb-4 space-y-1">
+                <li>Generated Excel files (to enable user downloads)</li>
+                <li>Requests and prompts submitted for generation</li>
+                <li>Any uploaded content needed for processing your requests</li>
+              </ul>
+              <p className="mb-4">
+                This temporary data is only accessible to Zarium systems and authorized personnel for the sole purpose of providing our service. It is automatically deleted after 12 hours and is not used for any other purposes.
+              </p>
+
+              <h3 className="text-2xl font-semibold mt-6 mb-4 text-emerald-700 dark:text-emerald-300">
+                2.4 Payment Information
+              </h3>
+              <p className="mb-4">
+                For paid subscriptions and token purchases, our payment processor Stripe processes the following information:
+              </p>
+              <ul className="list-disc pl-8 mb-4 space-y-1">
+                <li>Payment card details</li>
+                <li>Billing address</li>
+                <li>Purchase history</li>
+                <li>Stripe customer identifier</li>
+              </ul>
+              <p className="mb-4">
+                We do not store your complete payment card details, as these are handled directly by Stripe.
+              </p>
+
+              <h3 className="text-2xl font-semibold mt-6 mb-4 text-emerald-700 dark:text-emerald-300">
+                2.5 Technical Data
+              </h3>
+              <p className="mb-4">
+                When you use our service, we may collect technical information including:
+              </p>
+              <ul className="list-disc pl-8 mb-4 space-y-1">
+                <li>IP address</li>
+                <li>Browser type and version</li>
+                <li>Operating system</li>
+                <li>Referral source</li>
+                <li>Time of visit</li>
+                <li>Device identifiers</li>
+              </ul>
+            </section>
+
+            <section id="information-use">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                3. How We Use the Information
+              </h2>
+              <p className="mb-4">
+                We use the collected information for the following purposes:
+              </p>
+              <ul className="list-disc pl-8 mb-6 space-y-2">
+                <li>Providing, maintaining, and improving our Excel generation service</li>
+                <li>Processing payments and managing subscriptions</li>
+                <li>Tracking token usage and managing account privileges</li>
+                <li>Generating Excel files based on your specifications</li>
+                <li>Communicating with you about your account, new features, and system updates</li>
+                <li>Preventing fraud and unauthorized use of the service</li>
+                <li>Analyzing usage patterns to improve the service</li>
+                <li>Complying with legal obligations</li>
+              </ul>
+            </section>
+
+            <section id="storage-security">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                4. Storage and Security
+              </h2>
+              
+              <h3 className="text-2xl font-semibold mt-6 mb-4 text-emerald-700 dark:text-emerald-300">
+                4.1 Storage Period
+              </h3>
+              <p className="mb-4">
+                We store your personal information only as long as necessary to fulfill the purposes described in this Privacy Policy. Generated Excel files, uploaded content, and requests are automatically deleted after 12 hours. Account information is retained as long as you have an active account, and for up to 12 months after account termination to comply with legal obligations and resolve any disputes.
+              </p>
+
+              <h3 className="text-2xl font-semibold mt-6 mb-4 text-emerald-700 dark:text-emerald-300">
+                4.2 Security Measures
+              </h3>
+              <p className="mb-4">
+                We use industry standards to protect your personal information, including:
+              </p>
+              <ul className="list-disc pl-8 mb-4 space-y-1">
+                <li>Password encryption</li>
+                <li>JSON Web Tokens (JWT) for secure authentication</li>
+                <li>Separation of user data in isolated environments</li>
+                <li>Regular security reviews of the system</li>
+                <li>Access control for database access</li>
+              </ul>
+            </section>
+
+            <section id="information-sharing">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                5. Sharing of Information
+              </h2>
+              <p className="mb-4">
+                We share your personal information only in the following cases:
+              </p>
+              <ul className="list-disc pl-8 mb-6 space-y-2">
+                <li><strong>Payment Processors:</strong> We share necessary information with Stripe to process payments and manage subscriptions.</li>
+                <li><strong>AI Services:</strong> We use third-party AI services to generate Excel code, but only share anonymized requests without identifying user information. These AI services do not store your data or use it for any purpose other than fulfilling your specific request.</li>
+                <li><strong>Hosting Providers:</strong> Azure and other providers that host our servers and services have access to system logs, but we limit access to personal information.</li>
+                <li><strong>Legal Requirements:</strong> We may share data if required by law or in connection with legal proceedings.</li>
+              </ul>
+              <p className="mb-4">
+                We never sell or rent your personal information to third parties for marketing purposes.
+              </p>
+            </section>
+
+            <section id="your-rights">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                6. Your Rights
+              </h2>
+              <p className="mb-4">
+                According to GDPR and other privacy laws, you have the following rights:
+              </p>
+              <ul className="list-disc pl-8 mb-6 space-y-2">
+                <li><strong>Right of Access:</strong> You can request a copy of the personal information we have about you.</li>
+                <li><strong>Right to Rectification:</strong> You can ask us to correct inaccurate or incomplete personal information.</li>
+                <li><strong>Right to Erasure:</strong> You can ask us to delete your personal information under certain circumstances.</li>
+                <li><strong>Right to Restriction of Processing:</strong> You can ask us to restrict the processing of your personal information.</li>
+                <li><strong>Right to Data Portability:</strong> You can request to receive your data in a structured, commonly used, and machine-readable format for transfer to another service provider.</li>
+                <li><strong>Right to Object:</strong> You can object to the processing of your personal information under certain circumstances.</li>
+              </ul>
+              <p className="mb-4">
+                To exercise any of these rights, please contact us at <strong className="text-emerald-600 dark:text-emerald-400">support@zarium.com</strong>.
+              </p>
+            </section>
+
+            <section id="cookies">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                7. Cookies
+              </h2>
+              <p className="mb-4">
+                We use cookies to improve usability and collect analytical information. This includes:
+              </p>
+              <ul className="list-disc pl-8 mb-4 space-y-1">
+                <li><strong>Necessary Cookies:</strong> To enable basic functions such as authentication and security</li>
+                <li><strong>Preference Cookies:</strong> To remember your settings such as theme and language</li>
+                <li><strong>Analytical Cookies:</strong> To understand how users navigate our website</li>
+              </ul>
+              <p className="mb-4">
+                You can control the use of non-essential cookies through your browser settings.
+              </p>
+            </section>
+
+            <section id="children">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                8. Children
+              </h2>
+              <p className="mb-4">
+                Our services are not directed at persons under the age of 16, and we do not knowingly collect personal information from children under 16. If you are a parent or guardian and believe that your child has provided us with personal information, please contact us and we will delete the information.
+              </p>
+            </section>
+
+            <section id="policy-changes">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                9. Changes to the Privacy Policy
+              </h2>
+              <p className="mb-4">
+                We may update this Privacy Policy from time to time. We will inform you of significant changes by posting the new Privacy Policy on this page and notifying you via email or through a message on our service.
+              </p>
+            </section>
+
+            <section id="contact-info">
+              <h2 className="text-3xl font-semibold mt-10 mb-6 text-emerald-800 dark:text-emerald-200">
+                10. Contact Information
+              </h2>
+              <p className="mb-4">
+                If you have questions, concerns, or wish to exercise your rights regarding this Privacy Policy, please contact us at:
+              </p>
+              <p className="mb-8 text-emerald-700 dark:text-emerald-300">
+                <strong>Email:</strong> <a href="mailto:support@zarium.com" className="text-emerald-600 dark:text-emerald-400 hover:underline">support@zarium.com</a>
+              </p>
+
+              <p className="mt-10 text-emerald-700 dark:text-emerald-300 italic">
+                Thank you for choosing Zarium Excel Generator as your preferred Excel file generation service.
+              </p>
+            </section>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
