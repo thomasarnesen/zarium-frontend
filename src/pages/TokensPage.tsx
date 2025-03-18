@@ -188,7 +188,7 @@ export function TokensPage() {
               }`}
             >
               <CreditCard className="h-5 w-5" />
-              Buy Token Reload
+              Buy 1M Token Reload
             </button>
           </div>
 
