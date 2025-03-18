@@ -359,7 +359,8 @@ export function MySubscription() {
               </span>
               <button
                 onClick={handleBuyTokens}
-                className="flex items-center gap-2 py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-medium transition-all shadow-sm hover:shadow-md border border-emerald-700 dark:border-emerald-500"
+                className={`px-6 py-2 bg-emerald-800 dark:bg-emerald-700 text-white rounded-lg hover:bg-emerald-900 dark:hover:bg-emerald-600 transition-colors flex items-center gap-2`}
+  
               >
                 <Coins className="h-4 w-4" />
                 Buy 1M Token Reload
