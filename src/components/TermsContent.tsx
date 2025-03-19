@@ -217,13 +217,13 @@ export function TermsContent() {
                 11. Contact and Support Information
               </h2>
               <p className="mb-4">
-                Should you have any questions, concerns, or require clarification about any aspect of these Terms, our dedicated support team is available to assist you. You can reach us through multiple channels:
+                Should you have any questions, concerns, or require clarification about any aspect of these Terms, our dedicated support team is available to assist you.
               </p>
-              <ul className="list-disc pl-8 mb-4 space-y-2">
-                <li><strong>Email Support:</strong> For general inquiries and support requests, please contact us at <a href="mailto:support@zarium.com" className="text-emerald-600 dark:text-emerald-400 hover:underline">support@zarium.com</a>. Our team typically responds within one business day.</li>
-                <li><strong>Billing Questions:</strong> For matters related to your subscription, payments, or token purchases, please direct your inquiries to <a href="mailto:billing@zarium.com" className="text-emerald-600 dark:text-emerald-400 hover:underline">billing@zarium.com</a>.</li>
-                <li><strong>Technical Assistance:</strong> For specific technical questions about our Excel generation capabilities, our technical support team is available at <a href="mailto:technical@zarium.com" className="text-emerald-600 dark:text-emerald-400 hover:underline">technical@zarium.com</a>.</li>
-              </ul>
+              <p className="mb-6">
+                For all inquiries including general support, billing questions, and technical assistance, 
+                please contact us at <a href="mailto:support@zarium.dev" className="text-emerald-600 dark:text-emerald-400 hover:underline">support@zarium.dev</a>.
+                Our team typically responds within one business day.
+              </p>
               <p className="mb-4">
                 This version of the Terms of Service became effective on February 12, 2025, and supersedes all previous versions. We thank you for being part of the Zarium Excel Generator community and for your trust in our Service.
               </p>
