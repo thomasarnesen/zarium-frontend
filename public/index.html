@@ -2,22 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Remove or comment out the old favicon links -->
+    <!-- Remove or comment out the old favicon link -->
     <!-- <link rel="icon" type="image/svg+xml" href="/favicon.svg" /> -->
-    <!-- <link rel="icon" type="image/x-icon" href="/favicon.ico" /> -->
-    <!-- <link rel="apple-touch-icon" href="/apple-touch-icon.png" /> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- Favicon and App Icons -->
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-    <link rel="icon" type="image/x-icon" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/x-icon" sizes="16x16" href="favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="manifest" href="/site.webmanifest">
     
     <!-- Primary Meta Tags -->
     <title>Zarium | AI Excel Generator | Create Professional Spreadsheets Instantly</title>
-    <meta name="description" content="Transform your data into professional Excel spreadsheets with 3D graphs in seconds. Upload existing files for AI enhancement or create new ones from scratch." />
+    <meta name="description" content="Transform your data into professional Excel spreadsheets with Zarium's AI-powered generator. Save hours of manual work with automated Excel creation." />
     <meta name="keywords" content="AI Excel generator, automated spreadsheet creation, Excel automation, AI spreadsheet tool, Zarium, Excel AI" />
     
     <!-- Theme Color -->
@@ -42,6 +40,26 @@
     <meta property="twitter:description" content="Transform your data into professional Excel spreadsheets with Zarium's AI-powered generator. Save hours of manual work with automated Excel creation." />
     <meta property="twitter:image" content="https://zarium.dev/twitter-image.png" />
 
+    <!-- Security Headers - Updated to allow TikTok -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network https://m.stripe.com https://analytics.tiktok.com 'sha256-5DA+a07wxWmEka9IdoWjSPVHb17Cp5284/lJzfbl8KA=' 'sha256-/5Guo2nzv5n/w6ukZpOBZOtTJBJPSkJ6mhHpnBgm3Ls=';
+      connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network https://m.stripe.com https://*.azurestaticapps.net https://analytics.tiktok.com;
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: https:;
+      frame-src https://js.stripe.com https://m.stripe.network https://hooks.stripe.com https://m.stripe.com;
+      form-action 'self';
+      worker-src 'self' blob:;
+      font-src 'self' data: https://fonts.gstatic.com;
+    " />
+   
+    <!-- Preload Critical Resources -->
+    <link rel="preconnect" href="https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net" />
+    <link rel="preconnect" href="https://js.stripe.com" crossorigin />
+    
+    <!-- Stripe Integration -->
+    <script src="https://js.stripe.com/v3/" defer></script>
+    
     <!-- Structured Data - JSON-LD -->
     <script type="application/ld+json">
     {
@@ -52,24 +70,18 @@
       "offers": {
         "@type": "Offer",
         "price": "0",
-        "priceCurrency": "USD",
-        "description": "Free trial available"
+        "priceCurrency": "USD"
       },
       "operatingSystem": "Web",
-      "description": "AI-powered Excel generator that creates complete spreadsheets with 3D graphs in seconds or enhances your existing Excel files."
+      "description": "AI-powered Excel spreadsheet generator that transforms your input into professional, downloadable Excel files."
     }
     </script>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "Zarium",
-      "url": "https://zarium.dev/",
-      "logo": "https://zarium.dev/favicon-32x32.png"
-        
-    }
+    
+    <!-- TikTok Pixel Code Start -->
+    <script>
+    !function (w, d, t) { w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for( var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script") ;n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)}; ttq.load('CVDIA9JC77U30UV9B9Q0'); ttq.page(); }(window, document, 'ttq');
     </script>
-
+    <!-- TikTok Pixel Code End -->
   </head>
   <body>
     <div id="root"></div>
@@ -80,9 +92,6 @@
         <p>Please enable JavaScript to use Zarium AI.</p>
       </div>
     </noscript>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
