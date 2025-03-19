@@ -247,13 +247,21 @@ export default function Home() {
                 Join professionals who save hours every week with Zarium's AI Excel generator. Create complete spreadsheets in seconds or enhance your existing Excel files.
               </p>
               <button
-                onClick={() => navigate('/register', { 
-                  state: { 
-                    selectedPlan: 'Demo', 
-                    isDemo: true,
-                    demoPriceId: 'price_1R2isCB9ONdEOi8LoDv9vBTN'
-                  } 
-                })}
+                onClick={() => {
+                  if (isLoggedIn) {
+                    // If user is logged in, navigate to dashboard
+                    navigate('/dashboard');
+                  } else {
+                    // If not logged in, go to registration with demo plan
+                    navigate('/register', { 
+                      state: { 
+                        selectedPlan: 'Demo', 
+                        isDemo: true,
+                        demoPriceId: 'price_1R2isCB9ONdEOi8LoDv9vBTN'
+                      } 
+                    });
+                  }
+                }}
                 className="px-8 py-3 rounded-lg text-base font-medium bg-white text-emerald-900 hover:bg-emerald-100 transition-all shadow-sm hover:shadow-md"
               >
                 {isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}
