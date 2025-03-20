@@ -8,6 +8,7 @@ import { ThemeProvider } from './components/ThemeProvider';
 import toast from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
 import LoadingSpinner from './components/LoadingSpinner';
+import csrfService from './store/csrfService';
 
 // Import pages
 import Home from './pages/Home';
@@ -155,6 +156,50 @@ function App() {
       }
     }
   }, [isAuthenticated, initialize]);
+
+  // Automatisk retry ved sikkerhetsrelaterte feil
+  useEffect(() => {
+    // Lytt etter sikkerhetsfeil-meldinger i DOM
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.addedNodes.length) {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const element = node as Element;
+              
+              // Check for various security-related error messages
+              if (
+                element.textContent?.includes('sikkerhetskonfigurasjonen') || 
+                element.textContent?.includes('security configuration') ||
+                element.textContent?.includes('CSRF token') ||
+                element.textContent?.includes('security token') ||
+                element.textContent?.includes('sikkerhetstoken') ||
+                element.textContent?.includes('Kunne ikke hente sikkerhetstoken')
+              ) {
+                console.log('Security-related error message detected - retrying');
+                
+                // Reset CSRF token
+                try {
+                  csrfService.resetToken();
+                  
+                  // Wait 1 second, then reload page
+                  setTimeout(() => window.location.reload(), 1000);
+                } catch (error) {
+                  console.warn('Could not reset CSRF token:', error);
+                  // If something goes wrong, still try to reload
+                  setTimeout(() => window.location.reload(), 1000);
+                }
+              }
+            }
+          });
+        }
+      });
+    });
+    
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    return () => observer.disconnect();
+  }, []);
 
   // Viser loading-spinner mens app initialiseres
   if (isLoading) {

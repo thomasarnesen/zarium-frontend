@@ -112,7 +112,7 @@
 
     <!-- Fallback script to handle blank screen edge case -->
     <script>
-      // Hvis siden er blank etter 15 sekunder, vis en feilmelding
+      // If the page is blank after 15 seconds, show an error message
       window.addEventListener('DOMContentLoaded', function() {
         var timeout = setTimeout(function() {
           var root = document.getElementById('root');
@@ -121,10 +121,10 @@
             root.innerHTML = `
               <div class="initial-loader">
                 <div class="initial-loader-content">
-                  <h1>Oops! Noe gikk galt</h1>
-                  <p>Vi kunne ikke laste applikasjonen. Dette kan skyldes nettverksproblemer.</p>
+                  <h1>Oops! Something went wrong</h1>
+                  <p>We couldn't load the application. This might be due to network issues.</p>
                   <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;margin-top:16px;">
-                    Last inn på nytt
+                    Reload page
                   </button>
                 </div>
               </div>
@@ -132,7 +132,7 @@
           }
         }, 15000);
         
-        // Hvis appen laster riktig, fjern timeout
+        // If the app loads correctly, clear timeout
         var observer = new MutationObserver(function(mutations) {
           if (document.getElementById('root').children.length > 0) {
             clearTimeout(timeout);
@@ -146,20 +146,20 @@
   </head>
   <body>
     <div id="root">
-      <!-- Initial loading state som vises mens React laster -->
+      <!-- Initial loading state shown while React loads -->
       <div class="initial-loader">
         <div class="initial-loader-content">
           <h1>Zarium</h1>
           <div class="spinner"></div>
-          <p>Laster applikasjonen...</p>
+          <p>Loading application...</p>
         </div>
       </div>
     </div>
     <noscript>
       <div style="padding: 20px; text-align: center;">
         <h1>Zarium AI Excel Generator</h1>
-        <p>Zarium er et AI-drevet verktøy som hjelper deg med å generere profesjonelle Excel-regneark.</p>
-        <p>Vennligst aktiver JavaScript for å bruke Zarium AI.</p>
+        <p>Zarium is an AI-powered tool that helps you generate professional Excel spreadsheets.</p>
+        <p>Please enable JavaScript to use Zarium AI.</p>
       </div>
     </noscript>
     <script type="module" src="/src/main.tsx"></script>
