@@ -1,61 +1,79 @@
-// Updated Login.tsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { FileSpreadsheet, Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { FileSpreadsheet, Sparkles } from 'lucide-react';
+import csrfService from '../store/csrfService';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [csrfLoading, setCsrfLoading] = useState(true);
   const navigate = useNavigate();
-  
-  const handleHardReset = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    document.cookie.split(';').forEach(c => {
-      document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
-    });
-    window.location.href = '/';
-  };
+  const login = useAuthStore((state) => state.login);
+  const location = useLocation();
+
+  // Hent CSRF-token ved innlasting av komponenten
+  useEffect(() => {
+    const fetchCsrfToken = async () => {
+      try {
+        setCsrfLoading(true);
+        await csrfService.getToken();
+        console.log("CSRF token hentet ved start av Login-komponenten");
+      } catch (error) {
+        console.error("Kunne ikke hente CSRF token:", error);
+        setError("Det oppstod et problem med sikkerhetskonfigurasjonen. Prøv å laste siden på nytt.");
+      } finally {
+        setCsrfLoading(false);
+      }
+    };
+    
+    fetchCsrfToken();
+  }, []);
+
+  useEffect(() => {
+    // Check for session expiry or network error parameters
+    const queryParams = new URLSearchParams(location.search);
+    const sessionExpired = queryParams.get('session_expired');
+    const networkError = queryParams.get('network_error');
+    
+    if (sessionExpired) {
+      setError("Your session has expired. Please log in again.");
+    } else if (networkError) {
+      setError("Connection issue detected. Please log in again.");
+    }
+    
+    // Clean up URL parameters after we've used them
+    if (sessionExpired || networkError) {
+      window.history.replaceState({}, document.title, '/login');
+    }
+  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-  
+
     try {
-      // Direct API approach without relying on CSRF token
-      const response = await fetch('https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Authentication failed" }));
-        throw new Error(errorData.error || "Authentication failed");
+      // Dobbeltsjekk at vi har CSRF-token
+      if (!csrfService._token) {
+        try {
+          await csrfService.getToken();
+        } catch (csrfError) {
+          throw new Error("Kunne ikke hente sikkerhetstoken. Prøv å laste siden på nytt.");
+        }
       }
       
-      const userData = await response.json();
-      
-      // Update auth state manually
-      localStorage.setItem('authUser', JSON.stringify(userData));
-      localStorage.setItem('isAuthenticated', 'true');
-      
-      // Update auth store state
-      useAuthStore.getState().setUser(userData);
-      
-      // Navigate to dashboard
+      await login(email, password);
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
-      setError(error.message || 'Authentication failed');
+      if (error.message?.includes("403")) {
+        setError("Innlogging feilet på grunn av manglende sikkerhetstoken. Prøv å laste siden på nytt.");
+      } else {
+        setError(error.message || 'Feil e-post eller passord');
+      }
     } finally {
       setLoading(false);
     }
@@ -89,9 +107,14 @@ export default function Login() {
           <div className="bg-white/60 dark:bg-gray-800/50 rounded-xl border border-emerald-100 dark:border-emerald-800 p-8">
             <form className="space-y-6" onSubmit={handleSubmit}>
               {error && (
-                <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-200 px-4 py-3 rounded-lg text-center flex items-center justify-center">
-                  <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
-                  <span>{error}</span>
+                <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-200 px-4 py-3 rounded-lg text-center">
+                  {error}
+                </div>
+              )}
+              
+              {csrfLoading && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 text-yellow-600 dark:text-yellow-200 px-4 py-3 rounded-lg text-center">
+                  Forbereder sikker innlogging...
                 </div>
               )}
               
@@ -106,7 +129,6 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
-                  autoComplete="email"
                 />
               </div>
 
@@ -121,39 +143,21 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
-                  autoComplete="current-password"
                 />
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full py-2 px-4 rounded-lg bg-emerald-800 dark:bg-emerald-700 text-white hover:bg-emerald-900 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition-colors border border-emerald-900 dark:border-emerald-600 flex items-center justify-center"
+                disabled={loading || csrfLoading}
+                className="w-full py-2 px-4 rounded-lg bg-emerald-800 dark:bg-emerald-700 text-white hover:bg-emerald-900 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition-colors border border-emerald-900 dark:border-emerald-600"
               >
-                {loading ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign in'
-                )}
+                {loading ? 'Signing in...' : (csrfLoading ? 'Preparing...' : 'Sign in')}
               </button>
               
               <div className="mt-4 text-center">
                 <Link to="/forgot-password" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
                   Forgot your password?
                 </Link>
-              </div>
-
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <button
-                  type="button"
-                  onClick={handleHardReset}
-                  className="w-full text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                >
-                  Having trouble? Clear browser data
-                </button>
               </div>
             </form>
           </div>
