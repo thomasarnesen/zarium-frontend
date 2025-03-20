@@ -4,9 +4,7 @@ import csrfService from './csrfService';
 
 declare global {
   interface Window {
-    tokenRefreshInterval?: NodeJS.Timeout;
-    lastAuthError?: string;
-    lastTokenRefresh?: number;
+    tokenRefreshInterval?: NodeJS.Timeout; // Updated to proper timeout type
   }
 }
 
@@ -30,7 +28,6 @@ interface PendingRegistration {
   password: string;
   planType: 'Demo' | 'Basic' | 'Plus' | 'Pro';
   verificationCompleted: boolean;
-  createdAt?: number; // Timestamp when registration was created
 }
 
 interface AuthState {
@@ -43,10 +40,8 @@ interface AuthState {
   generationsCount: number;
   enhancedMode: boolean;
   pendingRegistration: PendingRegistration | null;
-  isRefreshing: boolean;
-  lastRefreshTime: number;
-  isLoading: boolean;
-  lastError: string | null; // Track the last error for better user feedback
+  isRefreshing: boolean; // Added to track refresh state
+  lastRefreshTime: number; // Added to track timing
  
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, planType?: 'Demo' | 'Basic' | 'Plus' | 'Pro') => Promise<void>;
@@ -58,12 +53,10 @@ interface AuthState {
   useTokens: (amount: number) => boolean;
   setUser: (user: User | null) => void;
   refreshUserData: () => Promise<boolean>;
-  forceRefreshUserData: () => Promise<boolean>; // New method to force a refresh regardless of timing
   toggleEnhancedMode: () => void;
-  initialize: () => Promise<void>;
+  initialize: () => Promise<void>; 
   completeRegistrationAfterPayment: (email: string) => Promise<boolean>;
-  setupTokenRefreshInterval: () => void;
-  clearError: () => void; // Method to clear last error
+  setupTokenRefreshInterval: () => void; // Added to interface
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -76,15 +69,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   generationsCount: 0,
   enhancedMode: false,
   pendingRegistration: null,
-  isRefreshing: false,
-  lastRefreshTime: 0,
-  isLoading: true,
-  lastError: null,
-
-  clearError: () => {
-    set({ lastError: null });
-    window.lastAuthError = undefined;
-  },
+  isRefreshing: false, // New state to prevent concurrent refreshes
+  lastRefreshTime: 0, // New state to track when refreshes happen
 
   refreshUserData: async () => {
     // Prevent multiple concurrent refresh calls
@@ -99,35 +85,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log("Skipping refresh - too soon since last refresh");
       return true;
     }
-
-    return get().forceRefreshUserData();
-  },
-
-  forceRefreshUserData: async () => {
-    const now = Date.now();
+    
     try {
       set({ isRefreshing: true, lastRefreshTime: now });
       console.log("Refreshing user data...");
-      
-      // Store the time of last refresh attempt globally
-      window.lastTokenRefresh = now;
       
       // First try refreshing the token to ensure we have a valid session
       try {
         await api.fetch('/refresh-token', {
           method: 'POST',
           credentials: 'include',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          }
         });
       } catch (error) {
         console.warn('Token refresh during data refresh failed:', error);
         // Continue anyway to try to get data
       }
 
-      // Use Promise.allSettled to handle failures gracefully
       const [tokenResponse, tokenInfoResponse] = await Promise.allSettled([
         api.fetch('/verify-token'),
         api.fetch('/user/tokens')
@@ -157,8 +130,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isAuthenticated: true,
             tokens: tokenData.current_tokens || userData.tokens || 0,
             planType: userData.planType,
-            isDemoUser: userData.planType === 'Demo',
-            lastError: null // Clear any previous error
+            isDemoUser: userData.planType === 'Demo'
           });
         } else {
           set({ 
@@ -166,23 +138,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isAuthenticated: true,
             tokens: userData.tokens || 0,
             planType: userData.planType,
-            isDemoUser: userData.planType === 'Demo',
-            lastError: null // Clear any previous error
+            isDemoUser: userData.planType === 'Demo'
           });
         }
         
         return true;
       }
-      
-      // If we reach here, we couldn't get user data
       return false;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error refreshing user data:', error);
-      
-      // Store the error for potential display
-      set({ lastError: error.message || 'Failed to refresh user data' });
-      window.lastAuthError = error.message || 'Failed to refresh user data';
-      
       return false;
     } finally {
       set({ isRefreshing: false });
@@ -200,19 +164,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAdmin: user.isAdmin,
       };
       
-      try {
-        localStorage.setItem('authUser', JSON.stringify(authData));
-        localStorage.setItem('isAuthenticated', 'true');
-      } catch (e) {
-        console.error('Error saving auth data to localStorage:', e);
-      }
+      localStorage.setItem('authUser', JSON.stringify(authData));
+      localStorage.setItem('isAuthenticated', 'true');
     } else {
-      try {
-        localStorage.removeItem('authUser');
-        localStorage.removeItem('isAuthenticated');
-      } catch (e) {
-        console.error('Error clearing auth data from localStorage:', e);
-      }
+      localStorage.removeItem('authUser');
+      localStorage.removeItem('isAuthenticated');
     }
     
     set({
@@ -220,18 +176,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isAuthenticated: !!user,
       planType: user?.planType || null,
       tokens: user?.tokens || 0,
-      isDemoUser: user?.planType === 'Demo',
-      lastError: null // Clear any error on successful user update
+      isDemoUser: user?.planType === 'Demo'
     });
   },
 
   login: async (email: string, password: string) => {
     try {
-      set({ isLoading: true }); // Start loading
       console.log("🔄 Starting login process...");
-      
-      // Clear any previous errors
-      set({ lastError: null });
       
       // Ensure we have a CSRF token before proceeding
       let csrfHeaders;
@@ -242,15 +193,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const token = await csrfService.getToken();
         csrfHeaders = { 'X-CSRF-Token': token };
         console.log("🔑 CSRF token obtained successfully");
-      } catch (csrfError: any) {
+      } catch (csrfError) {
         console.error("❌ Failed to obtain CSRF token:", csrfError);
-        
-        // Store error for potential display
-        const errorMsg = "Unable to secure your login. Please refresh the page and try again.";
-        set({ lastError: errorMsg });
-        window.lastAuthError = errorMsg;
-        
-        throw new Error(errorMsg);
+        throw new Error("Unable to secure your login. Please refresh the page and try again.");
       }
       
       console.log("📤 Sending login request with CSRF protection...");
@@ -258,31 +203,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         method: 'POST',
         headers: {
           ...csrfHeaders,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ email, password }),
       });
   
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Authentication failed" }));
-        const errorMsg = errorData.error || "Authentication failed";
-        
-        // Store error for potential display
-        set({ lastError: errorMsg });
-        window.lastAuthError = errorMsg;
-        
-        throw new Error(errorMsg);
+        throw new Error(errorData.error || "Authentication failed");
       }
   
       const userData = await response.json();
       console.log("✅ Login successful");
       
-      // Set user data
-      get().setUser(userData);
       
-      // Clear flags and reset state
+      
+      get().setUser(userData);
       localStorage.removeItem('manualLogout'); // Clear any previous logout flag
       
       // Clear any pending registration since we're now logged in
@@ -292,70 +228,44 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       // Set up token refresh interval if not already set
       get().setupTokenRefreshInterval();
-      set({ isLoading: false }); // End loading
-    } catch (error: any) {
-      set({ isLoading: false }); // End loading on error
+    } catch (error) {
       console.error('❌ Login error:', error);
-      
-      // Ensure the error is available for components
-      if (!get().lastError) {
-        set({ lastError: error.message || 'Authentication failed' });
-        window.lastAuthError = error.message || 'Authentication failed';
-      }
-      
       throw error;
     }
   },
 
   register: async (email: string, password: string, planType = 'Basic') => {
     try {
-      set({ lastError: null }); // Clear any previous errors
+      // IMPORTANT CHANGE: We're now storing the registration data instead of
+      // immediately creating the user. The user will be created in the webhook
+      // after the Stripe payment is confirmed.
       
-      const pendingData: PendingRegistration = {
+      const pendingData = {
         email,
         password,
         planType,
-        verificationCompleted: false,
-        createdAt: Date.now() // Add timestamp
+        verificationCompleted: false
       };
       
       // Store in both sessionStorage and state
-      try {
-        sessionStorage.setItem('pendingRegistration', JSON.stringify(pendingData));
-      } catch (e) {
-        console.warn('Failed to store registration data in sessionStorage:', e);
-      }
+      sessionStorage.setItem('pendingRegistration', JSON.stringify(pendingData));
       
       set({ pendingRegistration: pendingData });
       
       console.log("📝 Registration data stored pending verification and payment");
       return;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Registration preparation error:', error);
-      
-      // Store error for potential display
-      set({ lastError: error.message || 'Failed to prepare registration' });
-      window.lastAuthError = error.message || 'Failed to prepare registration';
-      
       throw error;
     }
   },
   
   setPendingRegistration: (data) => {
     if (data) {
-      try {
-        sessionStorage.setItem('pendingRegistration', JSON.stringify(data));
-      } catch (e) {
-        console.warn('Failed to store registration data in sessionStorage:', e);
-      }
+      sessionStorage.setItem('pendingRegistration', JSON.stringify(data));
     } else {
-      try {
-        sessionStorage.removeItem('pendingRegistration');
-      } catch (e) {
-        console.warn('Failed to remove registration data from sessionStorage:', e);
-      }
+      sessionStorage.removeItem('pendingRegistration');
     }
-    
     set({ pendingRegistration: data });
   },
   
@@ -363,45 +273,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const current = get().pendingRegistration;
     if (current) {
       const updated = { ...current, verificationCompleted: true };
-      
-      try {
-        sessionStorage.setItem('pendingRegistration', JSON.stringify(updated));
-      } catch (e) {
-        console.warn('Failed to update registration data in sessionStorage:', e);
-      }
-      
+      sessionStorage.setItem('pendingRegistration', JSON.stringify(updated));
       set({ pendingRegistration: updated });
     }
   },
   
   completeRegistrationAfterPayment: async (email: string) => {
-    let pendingData: PendingRegistration | null = null;
+    // This function will be called after successful payment
+    // At this point, the user should already be created by the webhook
+    // We just need to log them in
     
     try {
-      set({ lastError: null }); // Clear previous errors
-      
       // Try to get the pending registration data
-      try {
-        const pendingDataStr = sessionStorage.getItem('pendingRegistration');
-        if (pendingDataStr) {
-          pendingData = JSON.parse(pendingDataStr);
-        }
-      } catch (e) {
-        console.warn('Failed to parse pending registration data:', e);
-      }
-      
-      if (!pendingData) {
+      const pendingDataStr = sessionStorage.getItem('pendingRegistration');
+      if (!pendingDataStr) {
         console.warn("No pending registration found");
         return false;
       }
       
-      // Check for stale registration data (older than 1 hour)
-      if (pendingData.createdAt && Date.now() - pendingData.createdAt > 3600000) {
-        console.warn("Pending registration is stale (older than 1 hour)");
-        set({ pendingRegistration: null });
-        sessionStorage.removeItem('pendingRegistration');
-        return false;
-      }
+      const pendingData = JSON.parse(pendingDataStr);
       
       // If the emails match, try to log in with the stored credentials
       if (pendingData.email === email && pendingData.verificationCompleted) {
@@ -415,21 +305,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
       
       return false;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error completing registration after payment:", error);
-      
-      // Store error for potential display
-      set({ lastError: error.message || 'Failed to complete registration' });
-      window.lastAuthError = error.message || 'Failed to complete registration';
-      
       return false;
     }
   },
 
   logout: async () => {
     try {
-      set({ isLoading: true }); // Start loading
-      
       // Set flag for manual logout
       localStorage.setItem('manualLogout', 'true');
       
@@ -439,38 +322,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         window.tokenRefreshInterval = undefined;
       }
       
-      
-      let logoutSuccess = false;
-      try {
-        const response = await api.fetch('/logout', {
-          method: 'POST',
-        });
-        logoutSuccess = response.ok;
-      } catch (error) {
-        console.warn('Logout API call failed:', error);
-        // Continue with local logout even if API call fails
-      }
+      // Call logout endpoint
+      await api.fetch('/logout', {
+        method: 'POST',
+      });
       
       // Reset CSRF token
       csrfService.resetToken();
       
       // Remove ALL related items from localStorage
-      try {
-        localStorage.removeItem('authUser');
-        localStorage.removeItem('isAuthenticated');
-        sessionStorage.removeItem('pendingRegistration');
-      } catch (e) {
-        console.warn('Failed to clear storage during logout:', e);
-      }
+      localStorage.removeItem('authUser');
+      localStorage.removeItem('isAuthenticated');
+      sessionStorage.removeItem('pendingRegistration');
       
-      // Remove cookies - with better error handling
-      try {
-        document.cookie.split(";").forEach(function(c) {
-          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-        });
-      } catch (e) {
-        console.warn('Failed to clear cookies during logout:', e);
-      }
+      // Remove cookies
+      document.cookie.split(";").forEach(function(c) {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
       
       // Reset all auth store states
       get().setUser(null);
@@ -478,38 +346,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isDemoMode: false,
         planType: null,
         tokens: 0,
-        isAuthenticated: false,
-        pendingRegistration: null,
-        isLoading: false,
-        lastError: null // Clear any previous errors
+        isAuthenticated: false, // Important to set this to false
+        pendingRegistration: null
       });
       
       // Force an update of components that depend on authentication status
-      try {
-        window.dispatchEvent(new Event('auth-changed'));
-      } catch (e) {
-        console.warn('Failed to dispatch auth-changed event:', e);
-      }
+      window.dispatchEvent(new Event('auth-changed'));
       
-      return; // Successfully logged out
-    } catch (error: any) {
-      set({ isLoading: false }); // End loading on error
+    } catch (error) {
       console.error('Logout error:', error);
-      
-      // Store error for potential display
-      set({ lastError: error.message || 'Failed to log out' });
-      window.lastAuthError = error.message || 'Failed to log out';
-      
-      // Even if there's an error, ensure the user is logged out locally
-      get().setUser(null);
-      set({
-        isDemoMode: false,
-        planType: null,
-        tokens: 0,
-        isAuthenticated: false,
-        pendingRegistration: null,
-        isLoading: false
-      });
     }
   },
  
@@ -536,26 +381,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   toggleEnhancedMode: () => set((state) => ({ enhancedMode: !state.enhancedMode })),
 
+  // New helper function to set up token refresh interval
   setupTokenRefreshInterval: () => {
     // Clear any existing interval first
     if (window.tokenRefreshInterval) {
       clearInterval(window.tokenRefreshInterval);
-      window.tokenRefreshInterval = undefined;
     }
     
     // Set up a new interval (every 10 minutes)
     window.tokenRefreshInterval = setInterval(() => {
       // Only refresh if we're still authenticated
       if (get().isAuthenticated) {
-        // Check if a refresh has already happened recently from somewhere else
-        const lastRefresh = window.lastTokenRefresh || 0;
-        const now = Date.now();
-        
-        if (now - lastRefresh > 60000) { // Only refresh if it's been at least 1 minute
-          get().refreshUserData();
-        } else {
-          console.log('Skipping scheduled refresh - a refresh happened recently');
-        }
+        get().refreshUserData();
       } else {
         // Clear the interval if we're no longer authenticated
         if (window.tokenRefreshInterval) {
@@ -567,129 +404,76 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   initialize: async () => {
-    try {
-      set({ isLoading: true, lastError: null }); // Clear previous errors
-      
-      // Check for stored authentication data
-      let storedAuth;
-      let isAuthenticated = false;
-      
+    // Check for stored authentication data
+    const storedAuth = localStorage.getItem('authUser');
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    
+    // Check for pending registration
+    const pendingRegistrationStr = sessionStorage.getItem('pendingRegistration');
+    if (pendingRegistrationStr) {
       try {
-        storedAuth = localStorage.getItem('authUser');
-        isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+        const pendingData = JSON.parse(pendingRegistrationStr);
+        set({ pendingRegistration: pendingData });
       } catch (e) {
-        console.warn('Failed to read from localStorage during initialization:', e);
+        console.warn('Failed to parse pending registration data', e);
+        sessionStorage.removeItem('pendingRegistration');
       }
-      
-      // Check for pending registration
+    }
+    
+    if (storedAuth && isAuthenticated) {
       try {
-        const pendingRegistrationStr = sessionStorage.getItem('pendingRegistration');
-        if (pendingRegistrationStr) {
-          const pendingData = JSON.parse(pendingRegistrationStr);
-          
-          // Check if registration data is stale (older than 1 hour)
-          if (pendingData.createdAt && Date.now() - pendingData.createdAt > 3600000) {
-            console.warn("Removing stale pending registration");
-            sessionStorage.removeItem('pendingRegistration');
-          } else {
-            set({ pendingRegistration: pendingData });
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to parse pending registration data:', e);
+        const authData = JSON.parse(storedAuth);
+        
+        // Set initial user data from localStorage
+        set({
+          user: authData,
+          isAuthenticated: true,
+          planType: authData.planType,
+          tokens: authData.tokens || 0,
+          isDemoUser: authData.planType === 'Demo'
+        });
+        
+        // Do a single refresh at startup
         try {
-          sessionStorage.removeItem('pendingRegistration');
-        } catch (e2) {
-          console.warn('Failed to remove invalid pending registration data:', e2);
-        }
-      }
-      
-      if (storedAuth && isAuthenticated) {
-        try {
-          const authData = JSON.parse(storedAuth);
-          
-          // Set initial user data from localStorage
-          set({
-            user: authData,
-            isAuthenticated: true,
-            planType: authData.planType,
-            tokens: authData.tokens || 0,
-            isDemoUser: authData.planType === 'Demo'
+          const refreshResponse = await api.fetch('/refresh-token', {
+            method: 'POST',
+            credentials: 'include'
           });
           
-          // Do a single refresh at startup
-          try {
-            const refreshResponse = await api.fetch('/refresh-token', {
-              method: 'POST',
-              credentials: 'include',
-              headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache'
-              }
-            });
+          if (refreshResponse.ok) {
+            console.log("✅ Token refreshed on app start");
             
-            if (refreshResponse.ok) {
-              console.log("✅ Token refreshed on app start");
-              window.lastTokenRefresh = Date.now();
+            // Now get updated user data
+            const response = await api.fetch('/verify-token');
+            if (response.ok) {
+              const userData = await response.json();
               
-              // Now get updated user data
-              const response = await api.fetch('/verify-token');
-              if (response.ok) {
-                const userData = await response.json();
-                
-                // Update with fresh data but keep token
-                set({ 
-                  user: {
-                    ...userData,
-                    token: authData.token,
-                    isAdmin: userData.isAdmin
-                  },
-                  tokens: userData.tokens || 0,
-                  planType: userData.planType,
-                  isDemoUser: userData.planType === 'Demo'
-                });
-              }
-              
-              // Set up regular token refresh interval
-              get().setupTokenRefreshInterval();
-            } else {
-              console.warn("❌ Token refresh failed on app start");
-              // If token refresh fails but we have stored auth data, 
-              // still set up refresh interval to try again later
-              get().setupTokenRefreshInterval();
+              // Update with fresh data but keep token
+              set({ 
+                user: {
+                  ...userData,
+                  token: authData.token,
+                  isAdmin: userData.isAdmin
+                },
+                tokens: userData.tokens || 0,
+                planType: userData.planType,
+                isDemoUser: userData.planType === 'Demo'
+              });
             }
-          } catch (error) {
-            console.warn('Failed to refresh authentication on startup:', error);
-            // Keep using stored data without refreshing
-            // Still set up refresh interval to try again later
-            get().setupTokenRefreshInterval();
           }
-        } catch (error) {
-          console.error('Failed to parse stored authentication data:', error);
           
-          // Clear invalid data
-          try {
-            localStorage.removeItem('authUser');
-            localStorage.removeItem('isAuthenticated');
-          } catch (e) {
-            console.warn('Failed to clear invalid auth data:', e);
-          }
+          // Set up regular token refresh interval
+          get().setupTokenRefreshInterval();
+          
+        } catch (error) {
+          console.warn('Failed to refresh authentication on startup:', error);
+          // Keep using stored data without refreshing
         }
+      } catch (error) {
+        console.error('Failed to parse stored authentication data:', error);
+        localStorage.removeItem('authUser');
+        localStorage.removeItem('isAuthenticated');
       }
-      
-      set({ isLoading: false }); // Set isLoading to false when we're done
-    } catch (error: any) {
-      console.error('Error initializing auth state:', error);
-      
-      // Store error for potential display
-      set({ 
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        lastError: error.message || 'Failed to initialize authentication'
-      });
-      
-      window.lastAuthError = error.message || 'Failed to initialize authentication';
     }
   }
 }));

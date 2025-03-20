@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { FileSpreadsheet, Sparkles } from 'lucide-react';
 import csrfService from '../store/csrfService';
@@ -10,24 +10,9 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [csrfLoading, setCsrfLoading] = useState(true);
-  const [csrfError, setCsrfError] = useState(false);
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
-
-  // Method to manually reset session if needed
-  const handleHardReset = () => {
-    // Clear all storage
-    localStorage.clear();
-    sessionStorage.clear();
-    
-    // Clear all cookies
-    document.cookie.split(';').forEach(c => {
-      document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
-    });
-    
-    // Reload the application
-    window.location.href = '/';
-  };
+  const location = useLocation();
 
   // Hent CSRF-token ved innlasting av komponenten
   useEffect(() => {
@@ -47,32 +32,23 @@ export default function Login() {
     fetchCsrfToken();
   }, []);
 
-  // Add special handling for CSRF token errors
   useEffect(() => {
-    const checkForErrors = () => {
-      const errorMessages = document.querySelectorAll('div');
-      for (let i = 0; i < errorMessages.length; i++) {
-        const el = errorMessages[i];
-        if (
-          el.textContent?.includes('CSRF token') || 
-          el.textContent?.includes('security token') ||
-          el.textContent?.includes('sikkerhetstoken')
-        ) {
-          setCsrfError(true);
-          break;
-        }
-      }
-    };
+    // Check for session expiry or network error parameters
+    const queryParams = new URLSearchParams(location.search);
+    const sessionExpired = queryParams.get('session_expired');
+    const networkError = queryParams.get('network_error');
     
-    // Check for errors when component mounts
-    checkForErrors();
+    if (sessionExpired) {
+      setError("Your session has expired. Please log in again.");
+    } else if (networkError) {
+      setError("Connection issue detected. Please log in again.");
+    }
     
-    // Also set up listener for new errors
-    const observer = new MutationObserver(checkForErrors);
-    observer.observe(document.body, { childList: true, subtree: true });
-    
-    return () => observer.disconnect();
-  }, []);
+    // Clean up URL parameters after we've used them
+    if (sessionExpired || networkError) {
+      window.history.replaceState({}, document.title, '/login');
+    }
+  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,33 +78,6 @@ export default function Login() {
       setLoading(false);
     }
   };
-
-  if (csrfError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Security Error</h2>
-          <p className="mb-4 text-gray-700">
-            We're having trouble with your session's security verification. This usually happens when cookies are blocked or corrupted.
-          </p>
-          <div className="space-y-4">
-            <button
-              onClick={handleHardReset}
-              className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
-            >
-              Clear Session & Restart
-            </button>
-            <a
-              href="/"
-              className="block w-full py-2 px-4 bg-gray-200 hover:bg-gray-300 text-center text-gray-700 rounded-lg transition-colors"
-            >
-              Return to Home
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
