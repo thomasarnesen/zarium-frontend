@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Consent Manager -->
+    <script type="text/javascript" data-cmp-ab="1" src="https://cdn.consentmanager.net/delivery/autoblocking/baf364933221c.js" data-cmp-host="b.delivery.consentmanager.net" data-cmp-cdn="cdn.consentmanager.net" data-cmp-codesrc="16"></script>
+    
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-5CQ9BRYE2B"></script>
     <script>
@@ -92,14 +95,14 @@
     <meta property="twitter:description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
     <meta property="twitter:image" content="https://zarium.dev/twitter-image.png" />
 
-    <!-- Security Headers - Updated to allow Google Analytics -->
+    <!-- Security Headers - Updated to allow Consent Manager -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network https://m.stripe.com https://www.googletagmanager.com https://www.google-analytics.com 'sha256-5DA+a07wxWmEka9IdoWjSPVHb17Cp5284/lJzfbl8KA=' 'sha256-/5Guo2nzv5n/w6ukZpOBZOtTJBJPSkJ6mhHpnBgm3Ls=';
-      connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network https://m.stripe.com https://*.azurestaticapps.net https://www.google-analytics.com;
-      style-src 'self' 'unsafe-inline';
-      img-src 'self' data: https: https://www.google-analytics.com;
-      frame-src https://js.stripe.com https://m.stripe.network https://hooks.stripe.com https://m.stripe.com;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network https://m.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://cdn.consentmanager.net https://*.consentmanager.net 'sha256-5DA+a07wxWmEka9IdoWjSPVHb17Cp5284/lJzfbl8KA=' 'sha256-/5Guo2nzv5n/w6ukZpOBZOtTJBJPSkJ6mhHpnBgm3Ls=';
+      connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network https://m.stripe.com https://*.azurestaticapps.net https://www.google-analytics.com https://*.consentmanager.net;
+      style-src 'self' 'unsafe-inline' https://cdn.consentmanager.net;
+      img-src 'self' data: https: https://www.google-analytics.com https://*.consentmanager.net;
+      frame-src https://js.stripe.com https://m.stripe.network https://hooks.stripe.com https://m.stripe.com https://*.consentmanager.net;
       form-action 'self';
       worker-src 'self' blob:;
       font-src 'self' data: https://fonts.gstatic.com;
