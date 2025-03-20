@@ -17,11 +17,6 @@
       }
     },
     {
-      "route": "/app/healthcheck.sh",
-      "serve": "/api/health",
-      "statusCode": 200
-    },
-    {
       "route": "/login",
       "methods": ["POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
