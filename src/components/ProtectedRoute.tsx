@@ -1,23 +1,23 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import LoadingSpinner from './LoadingSpinner'; // Importer LoadingSpinner-komponenten
+import LoadingSpinner from './LoadingSpinner'; // Import LoadingSpinner component
 
-// Komponent for å beskytte ruter som krever innlogging
+// Component to protect routes that require login
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuthStore();
   
-  // Viser lastespinner mens autentiseringsstatus sjekkes
+  // Show loading spinner while authentication status is checked
   if (isLoading) {
     return <LoadingSpinner />;
   }
   
-  // Omdirigerer til login-siden hvis brukeren ikke er autentisert
+  // Redirect to login page if user is not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // Returnerer barna hvis brukeren er autentisert
+  // Return children if user is authenticated
   return <>{children}</>;
 };
 

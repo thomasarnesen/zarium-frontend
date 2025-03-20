@@ -157,9 +157,14 @@ function App() {
     }
   }, [isAuthenticated, initialize]);
 
-  // Automatisk retry ved sikkerhetsrelaterte feil
+  // Improved error detection to prevent infinite refresh loops
   useEffect(() => {
-    // Lytt etter sikkerhetsfeil-meldinger i DOM
+    let consecutiveErrors = 0;
+    let lastErrorTime = 0;
+    const maxConsecutiveErrors = 3; // Max number of retries before giving up
+    const errorTimeWindow = 10000; // 10 seconds
+    
+    // Listen for security-related error messages in DOM
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.addedNodes.length) {
@@ -167,27 +172,62 @@ function App() {
             if (node.nodeType === Node.ELEMENT_NODE) {
               const element = node as Element;
               
-              // Check for various security-related error messages
+              // Check for various security-related error messages - update to include translated versions
               if (
-                element.textContent?.includes('sikkerhetskonfigurasjonen') || 
                 element.textContent?.includes('security configuration') ||
                 element.textContent?.includes('CSRF token') ||
                 element.textContent?.includes('security token') ||
-                element.textContent?.includes('sikkerhetstoken') ||
-                element.textContent?.includes('Kunne ikke hente sikkerhetstoken')
+                element.textContent?.includes('Could not retrieve security token') || // Translated from "Kunne ikke hente sikkerhetstoken"
+                // Keep the Norwegian versions for backward compatibility, but eventually they can be removed
+                element.textContent?.includes('sikkerhetskonfigurasjonen') || 
+                element.textContent?.includes('sikkerhetstoken')
               ) {
-                console.log('Security-related error message detected - retrying');
+                const now = Date.now();
+                
+                // Check if we're in an error loop
+                if (now - lastErrorTime < errorTimeWindow) {
+                  consecutiveErrors++;
+                } else {
+                  // Reset counter if errors are not consecutive
+                  consecutiveErrors = 1;
+                }
+                
+                lastErrorTime = now;
+                
+                // If too many consecutive errors, don't retry
+                if (consecutiveErrors > maxConsecutiveErrors) {
+                  console.error('Too many consecutive security errors - stopping automatic retry');
+                  // Show a helpful error to the user instead of looping
+                  document.body.innerHTML = `
+                    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;">
+                      <div style="max-width:500px;padding:20px;background-color:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);text-align:center;">
+                        <h1 style="font-size:24px;color:#ef4444;margin-bottom:16px;">Security Error Detected</h1>
+                        <p style="margin-bottom:16px;">We're having trouble with the security verification. Please try clearing your cookies or use a different browser.</p>
+                        <div style="margin-bottom:16px;display:flex;justify-content:center;gap:10px;">
+                          <button onclick="localStorage.clear(); sessionStorage.clear(); document.cookie.split(';').forEach(c => document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')); window.location.href='/';" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;">
+                            Clear Data & Restart
+                          </button>
+                          <button onclick="window.location.href='/'" style="padding:8px 16px;background-color:#f3f4f6;color:#1f2937;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">
+                            Go to Homepage
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                  return;
+                }
+                
+                console.log('Security-related error message detected - retrying (' + consecutiveErrors + '/' + maxConsecutiveErrors + ')');
                 
                 // Reset CSRF token
                 try {
                   csrfService.resetToken();
                   
-                  // Wait 1 second, then reload page
-                  setTimeout(() => window.location.reload(), 1000);
+                  // Wait a progressive amount of time before reload (1s, 2s, 3s)
+                  setTimeout(() => window.location.reload(), consecutiveErrors * 1000);
                 } catch (error) {
                   console.warn('Could not reset CSRF token:', error);
-                  // If something goes wrong, still try to reload
-                  setTimeout(() => window.location.reload(), 1000);
+                  setTimeout(() => window.location.reload(), consecutiveErrors * 1000);
                 }
               }
             }
@@ -201,7 +241,7 @@ function App() {
     return () => observer.disconnect();
   }, []);
 
-  // Viser loading-spinner mens app initialiseres
+  // Show loading spinner while app initializes - update comment to English
   if (isLoading) {
     return <LoadingSpinner />;
   }

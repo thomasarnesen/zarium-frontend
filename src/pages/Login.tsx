@@ -10,8 +10,24 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [csrfLoading, setCsrfLoading] = useState(true);
+  const [csrfError, setCsrfError] = useState(false);
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
+
+  // Method to manually reset session if needed
+  const handleHardReset = () => {
+    // Clear all storage
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear all cookies
+    document.cookie.split(';').forEach(c => {
+      document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
+    });
+    
+    // Reload the application
+    window.location.href = '/';
+  };
 
   // Hent CSRF-token ved innlasting av komponenten
   useEffect(() => {
@@ -29,6 +45,33 @@ export default function Login() {
     };
     
     fetchCsrfToken();
+  }, []);
+
+  // Add special handling for CSRF token errors
+  useEffect(() => {
+    const checkForErrors = () => {
+      const errorMessages = document.querySelectorAll('div');
+      for (let i = 0; i < errorMessages.length; i++) {
+        const el = errorMessages[i];
+        if (
+          el.textContent?.includes('CSRF token') || 
+          el.textContent?.includes('security token') ||
+          el.textContent?.includes('sikkerhetstoken')
+        ) {
+          setCsrfError(true);
+          break;
+        }
+      }
+    };
+    
+    // Check for errors when component mounts
+    checkForErrors();
+    
+    // Also set up listener for new errors
+    const observer = new MutationObserver(checkForErrors);
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    return () => observer.disconnect();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,6 +102,33 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  if (csrfError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Security Error</h2>
+          <p className="mb-4 text-gray-700">
+            We're having trouble with your session's security verification. This usually happens when cookies are blocked or corrupted.
+          </p>
+          <div className="space-y-4">
+            <button
+              onClick={handleHardReset}
+              className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+            >
+              Clear Session & Restart
+            </button>
+            <a
+              href="/"
+              className="block w-full py-2 px-4 bg-gray-200 hover:bg-gray-300 text-center text-gray-700 rounded-lg transition-colors"
+            >
+              Return to Home
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">

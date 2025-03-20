@@ -42,7 +42,7 @@ interface AuthState {
   pendingRegistration: PendingRegistration | null;
   isRefreshing: boolean; // Added to track refresh state
   lastRefreshTime: number; // Added to track timing
-  isLoading: boolean; // Legg til isLoading-tilstand
+  isLoading: boolean; // Set initial state to true while checking authentication
  
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, planType?: 'Demo' | 'Basic' | 'Plus' | 'Pro') => Promise<void>;
@@ -72,7 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   pendingRegistration: null,
   isRefreshing: false, // New state to prevent concurrent refreshes
   lastRefreshTime: 0, // New state to track when refreshes happen
-  isLoading: true, // Sett initial state til true mens vi sjekker autentisering
+  isLoading: true, // Set initial state to true while checking authentication
 
   refreshUserData: async () => {
     // Prevent multiple concurrent refresh calls
@@ -413,7 +413,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     try {
-      set({ isLoading: true }); // Sett isLoading til true når vi starter initialiseringen
+      set({ isLoading: true }); // Set isLoading to true when we start initialization
       // Check for stored authentication data
       const storedAuth = localStorage.getItem('authUser');
       const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
@@ -485,13 +485,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           localStorage.removeItem('isAuthenticated');
         }
       }
-      set({ isLoading: false }); // Sett isLoading til false når vi er ferdig
+      set({ isLoading: false }); // Set isLoading to false when we're done
     } catch (error) {
       console.error('Error initializing auth state:', error);
       set({ 
         user: null,
         isAuthenticated: false,
-        isLoading: false // Sett isLoading til false ved feil
+        isLoading: false // Set isLoading to false when error occurs
       });
     }
   }

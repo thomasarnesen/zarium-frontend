@@ -62,16 +62,16 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
-// Forbedret feilhåndtering i initialisering
+// Improved error handling in initialization
 const initializeApp = async () => {
   try {
-    // Legg til en konsoll-logg for å se at initialisering starter
-    console.log('Starter app-initialisering');
+    // Add a console log to see that initialization is starting
+    console.log('Starting app initialization');
     
     const initialize = useAuthStore.getState().initialize;
     await initialize();
     
-    console.log('Initialisering fullført, rendrer app');
+    console.log('Initialization complete, rendering app');
     
     root.render(
       <React.StrictMode>
@@ -83,7 +83,7 @@ const initializeApp = async () => {
       </React.StrictMode>
     );
   } catch (error) {
-    console.error('Feil ved initialisering av appen:', error);
+    console.error('Error initializing the app:', error);
     
     // Render a simple error message without using components
     const errorDiv = document.createElement('div');
@@ -98,7 +98,7 @@ const initializeApp = async () => {
       </div>
     `;
     
-    // Fjern eventuelle tidligere innhold og sett inn feilmeldingen
+    // Remove any previous content and insert the error message
     const rootElement = document.getElementById('root');
     if (rootElement) {
       rootElement.innerHTML = '';
@@ -107,11 +107,11 @@ const initializeApp = async () => {
   }
 };
 
-// Legg til en 10-sekunders timeout som en sikkerhetsmekanisme
+// Add a 10-second timeout as a safety mechanism
 const initTimeout = setTimeout(() => {
   const rootElement = document.getElementById('root');
   if (rootElement && rootElement.childElementCount === 0) {
-    console.error('App-initialisering tok for lang tid eller låste seg');
+    console.error('App initialization took too long or stalled');
     rootElement.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;">
         <div style="max-width:500px;padding:20px;background-color:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);text-align:center;">
@@ -126,5 +126,5 @@ const initTimeout = setTimeout(() => {
   }
 }, 10000);
 
-// Kjør initialisering
+// Start initialization
 initializeApp().finally(() => clearTimeout(initTimeout));

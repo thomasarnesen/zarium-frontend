@@ -21,18 +21,67 @@ const csrfService = {
         return tokenFetchPromise;
       }
 
+      // Check if we're in a refresh loop by tracking attempts in sessionStorage
+      const now = Date.now();
+      const lastAttempt = sessionStorage.getItem('lastCsrfAttempt');
+      const attemptCount = parseInt(sessionStorage.getItem('csrfAttemptCount') || '0');
+      
+      if (lastAttempt && (now - parseInt(lastAttempt)) < 5000 && attemptCount > 3) {
+        // If we've tried more than 3 times in 5 seconds, throw immediately
+        console.error('Detected CSRF token fetch loop - aborting');
+        throw new Error('CSRF token fetch loop detected. Please try again later.');
+      }
+      
+      // Update attempt tracking
+      sessionStorage.setItem('lastCsrfAttempt', now.toString());
+      sessionStorage.setItem('csrfAttemptCount', (attemptCount + 1).toString());
+
       // Start a new fetch
       console.log("Initiating CSRF token fetch");
       tokenFetchPromise = new Promise(async (resolve, reject) => {
         try {
-          const response = await fetch(`${config.apiUrl}/csrf-token`, {
+          // Try fetching from multiple endpoints if needed
+          let response;
+          
+          // First try the main endpoint
+          response = await fetch(`${config.apiUrl}/csrf-token`, {
             method: 'GET',
             credentials: 'include',
+            headers: {
+              'Accept': 'application/json',
+              'Cache-Control': 'no-cache, no-store',
+            }
           });
+          
+          // If that fails, try the API endpoint version
+          if (!response.ok) {
+            console.warn(`First CSRF endpoint failed with status ${response.status}, trying API path`);
+            
+            response = await fetch(`${config.apiUrl}/api/csrf-token`, {
+              method: 'GET',
+              credentials: 'include',
+              headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache, no-store',
+              }
+            });
+          }
           
           if (!response.ok) {
             const errorText = await response.text();
             console.error("CSRF token response error:", response.status, errorText);
+            
+            // Handle 400 errors by clearing session data to allow a fresh start
+            if (response.status === 400) {
+              // Clear session - likely corrupted
+              this.resetToken();
+              localStorage.removeItem('authUser');
+              localStorage.removeItem('isAuthenticated');
+              document.cookie.split(";").forEach(c => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+              });
+            }
+            
             throw new Error(`Failed to fetch CSRF token: ${response.status}`);
           }
           
@@ -45,6 +94,11 @@ const csrfService = {
           
           console.log("CSRF token fetched successfully");
           this._token = data.token;
+          
+          // Reset attempt counter on success
+          sessionStorage.removeItem('csrfAttemptCount');
+          sessionStorage.removeItem('lastCsrfAttempt');
+          
           resolve(this._token);
         } catch (error) {
           console.error('Error fetching CSRF token:', error);
