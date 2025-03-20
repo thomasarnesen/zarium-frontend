@@ -1,27 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-5CQ9BRYE2B"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-5CQ9BRYE2B');
+    </script>
+    
     <meta charset="UTF-8" />
-    <!-- Remove or comment out the old favicon link -->
-    <!-- <link rel="icon" type="image/svg+xml" href="/favicon.svg" /> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- Favicon and App Icons -->
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-    <link rel="icon" href="favicon.ico?v=2" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link rel="manifest" href="/site.webmanifest">
+    <meta name="msapplication-TileImage" content="/mstile-144x144.png">
+    <meta name="msapplication-config" content="/browserconfig.xml">
+    
+    <!-- Improved styling for loading state -->
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      }
+      .initial-loader {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background-color: #f8fafc;
+        flex-direction: column;
+        text-align: center;
+      }
+      .initial-loader-content {
+        padding: 20px;
+        max-width: 500px;
+      }
+      .initial-loader h1 {
+        font-size: 24px;
+        color: #059669;
+        margin-bottom: 16px;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        margin: 20px auto;
+        border: 4px solid rgba(5, 150, 105, 0.2);
+        border-radius: 50%;
+        border-top-color: #059669;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
     
     <!-- Primary Meta Tags -->
-    <title>Zarium | AI Excel Generator | Create Professional Spreadsheets Instantly</title>
-    <meta name="description" content="Transform your data into professional Excel spreadsheets with Zarium's AI-powered generator. Save hours of manual work with automated Excel creation." />
-    <meta name="keywords" content="AI Excel generator, automated spreadsheet creation, Excel automation, AI spreadsheet tool, Zarium, Excel AI" />
+    <title>Zarium | AI Excel Generator | Create Spreadsheets in Seconds</title>
+    <meta name="description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
+    <meta name="keywords" content="AI Excel generator, spreadsheet creator, Excel automation, AI spreadsheet, Excel formulas, Excel macros" />
+    <meta name="robots" content="index, follow" />
     
     <!-- Theme Color -->
-    <meta name="theme-color" content="#059669" />
-    <meta name="msapplication-navbutton-color" content="#059669" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="#059669" />
+    <meta name="theme-color" content="#057857" />
+    <meta name="msapplication-navbutton-color" content="#057857" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="#057857" />
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://zarium.dev/" />
@@ -29,24 +80,25 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://zarium.dev/" />
-    <meta property="og:title" content="Zarium | AI Excel Generator | Create Spreadsheets Instantly" />
-    <meta property="og:description" content="Transform your data into professional Excel spreadsheets with Zarium's AI-powered generator. Save hours of manual work with automated Excel creation." />
+    <meta property="og:title" content="Zarium | AI Excel Generator | Create Spreadsheets in Seconds" />
+    <meta property="og:description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
     <meta property="og:image" content="https://zarium.dev/og-image.png" />
+    <meta property="og:site_name" content="Zarium" />
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://zarium.dev/" />
-    <meta property="twitter:title" content="Zarium | AI Excel Generator | Create Spreadsheets Instantly" />
-    <meta property="twitter:description" content="Transform your data into professional Excel spreadsheets with Zarium's AI-powered generator. Save hours of manual work with automated Excel creation." />
+    <meta property="twitter:title" content="Zarium | AI Excel Generator | Create Spreadsheets in Seconds" />
+    <meta property="twitter:description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
     <meta property="twitter:image" content="https://zarium.dev/twitter-image.png" />
 
-    <!-- Security Headers - Updated to allow TikTok -->
+    <!-- Security Headers - Updated to allow Google Analytics -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network https://m.stripe.com https://analytics.tiktok.com 'sha256-5DA+a07wxWmEka9IdoWjSPVHb17Cp5284/lJzfbl8KA=' 'sha256-/5Guo2nzv5n/w6ukZpOBZOtTJBJPSkJ6mhHpnBgm3Ls=';
-      connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network https://m.stripe.com https://*.azurestaticapps.net https://analytics.tiktok.com;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network https://m.stripe.com https://www.googletagmanager.com https://www.google-analytics.com 'sha256-5DA+a07wxWmEka9IdoWjSPVHb17Cp5284/lJzfbl8KA=' 'sha256-/5Guo2nzv5n/w6ukZpOBZOtTJBJPSkJ6mhHpnBgm3Ls=';
+      connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network https://m.stripe.com https://*.azurestaticapps.net https://www.google-analytics.com;
       style-src 'self' 'unsafe-inline';
-      img-src 'self' data: https:;
+      img-src 'self' data: https: https://www.google-analytics.com;
       frame-src https://js.stripe.com https://m.stripe.network https://hooks.stripe.com https://m.stripe.com;
       form-action 'self';
       worker-src 'self' blob:;
@@ -76,44 +128,56 @@
       "description": "AI-powered Excel spreadsheet generator that transforms your input into professional, downloadable Excel files."
     }
     </script>
-    
-    <!-- TikTok Pixel Code Start -->
+
+    <!-- Fallback script to handle blank screen edge case -->
     <script>
-    !function (w, d, t) { w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for( var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script") ;n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)}; ttq.load('CVDIA9JC77U30UV9B9Q0'); ttq.page(); }(window, document, 'ttq');
-    </script>
-    
-    <!-- Basic TikTok Event Tracking -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Track page view for all pages
-      ttq.track('ViewContent', {
-        content_name: 'Zarium AI Excel Generator',
-        content_type: 'product'
-      });
-      
-      // Optional: Listen for registration button clicks (adjust selector as needed)
-      const registerButtons = document.querySelectorAll('.register-button, .signup-button, .demo-button');
-      if (registerButtons.length > 0) {
-        registerButtons.forEach(button => {
-          button.addEventListener('click', function() {
-            ttq.track('ClickButton', {
-              content_name: 'Registration Button',
-              content_type: 'product'
-            });
-          });
+      // If the page is blank after 15 seconds, show an error message
+      window.addEventListener('DOMContentLoaded', function() {
+        var timeout = setTimeout(function() {
+          var root = document.getElementById('root');
+          if (root && (!root.children || root.children.length === 0)) {
+            console.error('Blank page fallback triggered');
+            root.innerHTML = `
+              <div class="initial-loader">
+                <div class="initial-loader-content">
+                  <h1>Oops! Something went wrong</h1>
+                  <p>We couldn't load the application. This might be due to network issues.</p>
+                  <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;margin-top:16px;">
+                    Reload page
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+        }, 15000);
+        
+        // If the app loads correctly, clear timeout
+        var observer = new MutationObserver(function(mutations) {
+          if (document.getElementById('root').children.length > 0) {
+            clearTimeout(timeout);
+            observer.disconnect();
+          }
         });
-      }
-    });
+        
+        observer.observe(document.getElementById('root'), { childList: true });
+      });
     </script>
-    <!-- TikTok Pixel Code End -->
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Initial loading state shown while React loads -->
+      <div class="initial-loader">
+        <div class="initial-loader-content">
+          <h1>Zarium</h1>
+          <div class="spinner"></div>
+          <p>Loading application...</p>
+        </div>
+      </div>
+    </div>
     <noscript>
       <div style="padding: 20px; text-align: center;">
         <h1>Zarium AI Excel Generator</h1>
-        <p>Zarium is an AI-powered tool that helps you generate professional Excel spreadsheets instantly based on your input.</p>
-        <p>Please enable JavaScript to use Zarium AI.</p>
+        <p>You need to enable JavaScript to run this app.</p>
       </div>
     </noscript>
     <script type="module" src="/src/main.tsx"></script>

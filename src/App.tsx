@@ -7,6 +7,7 @@ import api from './utils/api';
 import { ThemeProvider } from './components/ThemeProvider';
 import toast from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
+import LoadingSpinner from './components/LoadingSpinner';
 
 // Import pages
 import Home from './pages/Home';
@@ -80,14 +81,12 @@ function PostPaymentHandler() {
 }
 
 function App() {
-  const { initialize, isAuthenticated } = useAuthStore();
+  const { initialize, isAuthenticated, isLoading } = useAuthStore();
   const { isDark } = useThemeStore();
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const initApp = async () => {
-      setIsLoading(true);
       try {
         // First try to restore session from localStorage
         await initialize();
@@ -122,8 +121,6 @@ function App() {
       } catch (err) {
         console.error("App initialization error:", err);
         setError("Failed to initialize application");
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -159,8 +156,9 @@ function App() {
     }
   }, [isAuthenticated, initialize]);
 
+  // Viser loading-spinner mens app initialiseres
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <LoadingSpinner />;
   }
 
   if (error) {

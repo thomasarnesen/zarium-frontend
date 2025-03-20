@@ -4,7 +4,7 @@ import { FileSpreadsheet, Sparkles, Zap, Shield, CheckCircle, HelpCircle, Users 
 import { useAuthStore } from '../store/authStore';
 import { Helmet } from 'react-helmet-async'; // You'll need to install this package
 
-export default function Home() {
+const Home: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isLoggedIn = !!user?.token;
@@ -19,31 +19,24 @@ export default function Home() {
 
   return (
     <>
-      {/* SEO Meta Tags with Helmet */}
       <Helmet>
-        <title>Zarium | AI Excel Generator | Create Complete Spreadsheets in Seconds</title>
-        <meta name="description" content="Transform your ideas into professional Excel spreadsheets with 3D graphs in seconds. Upload existing files for AI enhancement or create new ones from scratch." />
-        <meta name="keywords" content="AI Excel generator, automated spreadsheet creation, Excel automation, AI spreadsheet tool" />
+        <title>Zarium | AI Excel Generator | Create Spreadsheets in Seconds</title>
+        <meta name="description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
+        <meta name="keywords" content="AI Excel generator, spreadsheet creator, Excel automation, AI spreadsheet, Excel formulas, Excel macros" />
+        <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://zarium.dev/" />
-        {/* Schema.org markup for SaaS product */}
-        <script type="application/ld+json">
-          {`
-            {
-              "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              "name": "Zarium",
-              "applicationCategory": "BusinessApplication",
-              "offers": {
-                "@type": "Offer",
-                "price": "0",
-                "priceCurrency": "USD",
-                "description": "Free trial available"
-              },
-              "operatingSystem": "Web",
-              "description": "AI-powered Excel generator that creates complete spreadsheets with 3D graphs in seconds or enhances your existing Excel files."
-            }
-          `}
-        </script>
+        
+        {/* Open Graph tags for social sharing */}
+        <meta property="og:title" content="Zarium | AI Excel Generator" />
+        <meta property="og:description" content="Create professional Excel spreadsheets with AI in seconds" />
+        <meta property="og:url" content="https://zarium.dev/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Zarium" />
+        
+        {/* Twitter card tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Zarium | AI Excel Generator" />
+        <meta name="twitter:description" content="Create professional Excel spreadsheets with AI in seconds" />
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
@@ -272,4 +265,6 @@ export default function Home() {
       </div>
     </>
   );
-}
+};
+
+export default Home;

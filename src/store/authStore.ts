@@ -42,6 +42,7 @@ interface AuthState {
   pendingRegistration: PendingRegistration | null;
   isRefreshing: boolean; // Added to track refresh state
   lastRefreshTime: number; // Added to track timing
+  isLoading: boolean; // Legg til isLoading-tilstand
  
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, planType?: 'Demo' | 'Basic' | 'Plus' | 'Pro') => Promise<void>;
@@ -71,6 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   pendingRegistration: null,
   isRefreshing: false, // New state to prevent concurrent refreshes
   lastRefreshTime: 0, // New state to track when refreshes happen
+  isLoading: true, // Sett initial state til true mens vi sjekker autentisering
 
   refreshUserData: async () => {
     // Prevent multiple concurrent refresh calls
@@ -182,6 +184,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (email: string, password: string) => {
     try {
+      set({ isLoading: true }); // Start loading
       console.log("🔄 Starting login process...");
       
       // Ensure we have a CSRF token before proceeding
@@ -228,7 +231,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       // Set up token refresh interval if not already set
       get().setupTokenRefreshInterval();
+      set({ isLoading: false }); // End loading
     } catch (error) {
+      set({ isLoading: false }); // End loading on error
       console.error('❌ Login error:', error);
       throw error;
     }
@@ -313,6 +318,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     try {
+      set({ isLoading: true }); // Start loading
       // Set flag for manual logout
       localStorage.setItem('manualLogout', 'true');
       
@@ -347,13 +353,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         planType: null,
         tokens: 0,
         isAuthenticated: false, // Important to set this to false
-        pendingRegistration: null
+        pendingRegistration: null,
+        isLoading: false
       });
       
       // Force an update of components that depend on authentication status
       window.dispatchEvent(new Event('auth-changed'));
       
     } catch (error) {
+      set({ isLoading: false }); // End loading on error
       console.error('Logout error:', error);
     }
   },
@@ -404,76 +412,87 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   initialize: async () => {
-    // Check for stored authentication data
-    const storedAuth = localStorage.getItem('authUser');
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    
-    // Check for pending registration
-    const pendingRegistrationStr = sessionStorage.getItem('pendingRegistration');
-    if (pendingRegistrationStr) {
-      try {
-        const pendingData = JSON.parse(pendingRegistrationStr);
-        set({ pendingRegistration: pendingData });
-      } catch (e) {
-        console.warn('Failed to parse pending registration data', e);
-        sessionStorage.removeItem('pendingRegistration');
-      }
-    }
-    
-    if (storedAuth && isAuthenticated) {
-      try {
-        const authData = JSON.parse(storedAuth);
-        
-        // Set initial user data from localStorage
-        set({
-          user: authData,
-          isAuthenticated: true,
-          planType: authData.planType,
-          tokens: authData.tokens || 0,
-          isDemoUser: authData.planType === 'Demo'
-        });
-        
-        // Do a single refresh at startup
+    try {
+      set({ isLoading: true }); // Sett isLoading til true når vi starter initialiseringen
+      // Check for stored authentication data
+      const storedAuth = localStorage.getItem('authUser');
+      const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+      
+      // Check for pending registration
+      const pendingRegistrationStr = sessionStorage.getItem('pendingRegistration');
+      if (pendingRegistrationStr) {
         try {
-          const refreshResponse = await api.fetch('/refresh-token', {
-            method: 'POST',
-            credentials: 'include'
+          const pendingData = JSON.parse(pendingRegistrationStr);
+          set({ pendingRegistration: pendingData });
+        } catch (e) {
+          console.warn('Failed to parse pending registration data', e);
+          sessionStorage.removeItem('pendingRegistration');
+        }
+      }
+      
+      if (storedAuth && isAuthenticated) {
+        try {
+          const authData = JSON.parse(storedAuth);
+          
+          // Set initial user data from localStorage
+          set({
+            user: authData,
+            isAuthenticated: true,
+            planType: authData.planType,
+            tokens: authData.tokens || 0,
+            isDemoUser: authData.planType === 'Demo'
           });
           
-          if (refreshResponse.ok) {
-            console.log("✅ Token refreshed on app start");
+          // Do a single refresh at startup
+          try {
+            const refreshResponse = await api.fetch('/refresh-token', {
+              method: 'POST',
+              credentials: 'include'
+            });
             
-            // Now get updated user data
-            const response = await api.fetch('/verify-token');
-            if (response.ok) {
-              const userData = await response.json();
+            if (refreshResponse.ok) {
+              console.log("✅ Token refreshed on app start");
               
-              // Update with fresh data but keep token
-              set({ 
-                user: {
-                  ...userData,
-                  token: authData.token,
-                  isAdmin: userData.isAdmin
-                },
-                tokens: userData.tokens || 0,
-                planType: userData.planType,
-                isDemoUser: userData.planType === 'Demo'
-              });
+              // Now get updated user data
+              const response = await api.fetch('/verify-token');
+              if (response.ok) {
+                const userData = await response.json();
+                
+                // Update with fresh data but keep token
+                set({ 
+                  user: {
+                    ...userData,
+                    token: authData.token,
+                    isAdmin: userData.isAdmin
+                  },
+                  tokens: userData.tokens || 0,
+                  planType: userData.planType,
+                  isDemoUser: userData.planType === 'Demo'
+                });
+              }
             }
+            
+            // Set up regular token refresh interval
+            get().setupTokenRefreshInterval();
+            
+          } catch (error) {
+            console.warn('Failed to refresh authentication on startup:', error);
+            // Keep using stored data without refreshing
           }
-          
-          // Set up regular token refresh interval
-          get().setupTokenRefreshInterval();
-          
         } catch (error) {
-          console.warn('Failed to refresh authentication on startup:', error);
-          // Keep using stored data without refreshing
+          console.error('Failed to parse stored authentication data:', error);
+          localStorage.removeItem('authUser');
+          localStorage.removeItem('isAuthenticated');
         }
-      } catch (error) {
-        console.error('Failed to parse stored authentication data:', error);
-        localStorage.removeItem('authUser');
-        localStorage.removeItem('isAuthenticated');
       }
+      set({ isLoading: false }); // Sett isLoading til false når vi er ferdig
+    } catch (error) {
+      console.error('Error initializing auth state:', error);
+      set({ 
+        user: null,
+        isAuthenticated: false,
+        isLoading: false // Sett isLoading til false ved feil
+      });
     }
   }
 }));
