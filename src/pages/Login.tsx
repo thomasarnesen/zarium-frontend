@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { FileSpreadsheet, Sparkles } from 'lucide-react';
 import csrfService from '../store/csrfService';
@@ -12,6 +12,7 @@ export default function Login() {
   const [csrfLoading, setCsrfLoading] = useState(true);
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
+  const location = useLocation();
 
   // Hent CSRF-token ved innlasting av komponenten
   useEffect(() => {
@@ -30,6 +31,24 @@ export default function Login() {
     
     fetchCsrfToken();
   }, []);
+
+  useEffect(() => {
+    // Check for session expiry or network error parameters
+    const queryParams = new URLSearchParams(location.search);
+    const sessionExpired = queryParams.get('session_expired');
+    const networkError = queryParams.get('network_error');
+    
+    if (sessionExpired) {
+      setError("Your session has expired. Please log in again.");
+    } else if (networkError) {
+      setError("Connection issue detected. Please log in again.");
+    }
+    
+    // Clean up URL parameters after we've used them
+    if (sessionExpired || networkError) {
+      window.history.replaceState({}, document.title, '/login');
+    }
+  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
