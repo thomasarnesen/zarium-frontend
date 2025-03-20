@@ -1,3 +1,4 @@
+// src/store/csrfService.ts
 import { config } from '../config';
 
 interface CSRFResponse {
@@ -6,6 +7,17 @@ interface CSRFResponse {
 
 // Track token fetching to prevent multiple simultaneous requests
 let tokenFetchPromise: Promise<string> | null = null;
+
+// Define error types for better error handling
+class CSRFError extends Error {
+  status?: number;
+  
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'CSRFError';
+    this.status = status;
+  }
+}
 
 const csrfService = {
   async getToken(): Promise<string> {
@@ -20,7 +32,7 @@ const csrfService = {
         return tokenFetchPromise;
       }
 
-      // Track retry attempts without using sessionStorage
+      // Simple retry tracking without sessionStorage
       const now = Date.now();
       const lastRetryTime = this._lastRetryTime || 0;
       const retryCount = now - lastRetryTime < 5000 ? this._retryCount + 1 : 1;
@@ -28,85 +40,90 @@ const csrfService = {
       this._lastRetryTime = now;
       this._retryCount = retryCount;
       
-      if (retryCount > 3) {
-        // If we've tried too many times recently, add delay before trying again
-        await new Promise(resolve => setTimeout(resolve, (retryCount - 3) * 1000));
+      // Add delay for rapid retries to prevent overwhelming the server
+      if (retryCount > 2) {
+        const delay = (retryCount - 2) * 1000; // Progressive delay
+        console.log(`Delaying CSRF token fetch for ${delay}ms due to multiple retries`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
 
       // Start a new fetch
       console.log("Initiating CSRF token fetch");
       tokenFetchPromise = new Promise(async (resolve, reject) => {
         try {
-          // Try multiple endpoints sequentially
-          let response;
-          let attempts = 0;
-          const maxAttempts = 2;
+          // Define endpoints to try
           const endpoints = [
-            `${config.apiUrl}/csrf-token`,
-            `${config.apiUrl}/api/csrf-token`
+            `/csrf-token`,
+            `/api/csrf-token`
           ];
           
+          // Try each endpoint with the API URL
           for (const endpoint of endpoints) {
-            attempts++;
-            
             try {
-              response = await fetch(endpoint, {
+              console.log(`Trying CSRF endpoint: ${config.apiUrl}${endpoint}`);
+              
+              const response = await fetch(`${config.apiUrl}${endpoint}`, {
                 method: 'GET',
                 credentials: 'include',
-                cache: 'no-store', // Prevent caching
+                cache: 'no-store',
                 headers: {
                   'Accept': 'application/json',
                   'Cache-Control': 'no-cache, no-store, must-revalidate',
-                  'Pragma': 'no-cache'
+                  'Pragma': 'no-cache',
+                  'X-Requested-With': 'XMLHttpRequest'
                 }
               });
               
               if (response.ok) {
-                break; // Success!
+                // Success - parse the token
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                  console.warn(`CSRF endpoint returned non-JSON content type: ${contentType}`);
+                }
+                
+                // Try to parse as JSON
+                const data: CSRFResponse = await response.json().catch(() => ({ token: "" }));
+                
+                if (!data || !data.token) {
+                  console.error("Invalid CSRF token response:", data);
+                  continue; // Try next endpoint
+                }
+                
+                console.log("CSRF token fetched successfully");
+                this._token = data.token;
+                this._retryCount = 0;
+                resolve(this._token);
+                return; // Exit the promise function
               }
               
+              // Log the error for debugging
               console.warn(`CSRF endpoint ${endpoint} failed with status ${response.status}`);
               
-              // Small delay between endpoint attempts
-              if (attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 500));
+              // For 400 errors, try to get more details
+              if (response.status === 400) {
+                const errorText = await response.text().catch(() => "Unknown error");
+                console.warn(`CSRF 400 error details: ${errorText}`);
+                
+                // If this looks like a cookie error, log it more specifically
+                if (errorText.includes('cookie') || errorText.includes('session')) {
+                  console.warn('CSRF token error appears to be cookie-related');
+                }
               }
-            } catch (error) {
-              console.warn(`CSRF fetch network error for ${endpoint}:`, error);
-              // Continue to next endpoint
+            } catch (endpointError) {
+              console.warn(`Network error fetching from ${endpoint}:`, endpointError);
+              // Continue to the next endpoint
             }
           }
           
-          // If all requests failed
-          if (!response || !response.ok) {
-            const errorText = response ? await response.text().catch(() => "Unknown error") : "No response";
-            console.error("All CSRF token endpoints failed:", errorText);
-            
-            // Handle status 400 (likely corrupted session)
-            if (response && response.status === 400) {
-              this.resetToken();
-            }
-            
-            throw new Error(`Failed to fetch CSRF token: ${response ? response.status : 'No response'}`);
-          }
+          // If we get here, all endpoints failed
+          console.error("All CSRF token endpoints failed");
           
-          // Parse the successful response
-          const data: CSRFResponse = await response.json().catch(() => ({ token: "" }));
+          // Clear existing token if it might be corrupted
+          this._token = null;
           
-          if (!data || !data.token) {
-            console.error("Invalid CSRF token response:", data);
-            throw new Error('Received invalid CSRF token');
-          }
-          
-          console.log("CSRF token fetched successfully");
-          this._token = data.token;
-          
-          // Reset retry counter on success
-          this._retryCount = 0;
-          
-          resolve(this._token);
+          reject(new CSRFError('Failed to fetch CSRF token from any endpoint'));
         } catch (error) {
-          console.error('Error fetching CSRF token:', error);
+          console.error('Error in CSRF token fetch:', error);
           this._token = null;
           reject(error);
         } finally {
@@ -140,6 +157,58 @@ const csrfService = {
     this._retryCount = 0;
     this._lastRetryTime = 0;
     console.log("CSRF token reset");
+  },
+  
+  checkCookiesEnabled(): boolean {
+    try {
+      // Try to set and read a test cookie
+      const testValue = `test-${Date.now()}`;
+      document.cookie = `csrf_test=${testValue};path=/;max-age=60`;
+      
+      // Try to read it back
+      const cookies = document.cookie.split(';');
+      const found = cookies.some(cookie => cookie.trim().startsWith('csrf_test='));
+      
+      // Clean up
+      document.cookie = "csrf_test=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      
+      return found;
+    } catch (e) {
+      console.warn('Error checking cookie support:', e);
+      return false;
+    }
+  },
+  
+  // Helper function to diagnose CSRF issues
+  async diagnoseIssues(): Promise<string[]> {
+    const issues: string[] = [];
+    
+    // Check if cookies are enabled
+    if (!this.checkCookiesEnabled()) {
+      issues.push('Cookies appear to be disabled or blocked in your browser');
+    }
+    
+    // Check if we're running in a cross-origin context
+    try {
+      const siteUrl = new URL(window.location.href);
+      const apiUrl = new URL(config.apiUrl);
+      
+      if (siteUrl.origin !== apiUrl.origin) {
+        issues.push('Cross-origin request detected - third-party cookies may be blocked');
+      }
+    } catch (e) {
+      issues.push('Unable to verify same-origin policy');
+    }
+    
+    // Check local storage
+    try {
+      localStorage.setItem('csrf_test', 'test');
+      localStorage.removeItem('csrf_test');
+    } catch (e) {
+      issues.push('LocalStorage is not available - browser may be in strict privacy mode');
+    }
+    
+    return issues;
   },
  
   _token: null as string | null,
