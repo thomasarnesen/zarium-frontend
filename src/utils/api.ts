@@ -8,25 +8,22 @@ const api = {
     const url = `${config.apiUrl}${apiEndpoint}`;
     
     let retryCount = 0;
-    const maxRetries = 2; // Reduced from 3 to avoid excessive retries
+    const maxRetries = 3;
     const retryDelay = 1000;
     
     // Special handling for verification endpoints - use more retries for network issues
     const isVerificationEndpoint = endpoint.includes('/verify-code') || endpoint.includes('/send-verification');
     const isCheckoutEndpoint = endpoint.includes('/create-checkout-session');
-    const verificationMaxRetries = 1;  // Reduced retries for verification endpoints
+    const verificationMaxRetries = 2;  // Reduced retries for verification - only retry for network errors
   
-    console.log(`API Request starting to ${endpoint}`);
-
     const executeRequest = async (shouldRetry = true): Promise<Response> => {
       try {
-        // Get CSRF headers with better error handling
+        // Get CSRF headers FIRST
         let csrfHeaders = {};
         try {
           csrfHeaders = await csrfService.getHeaders();
         } catch (csrfError) {
-          console.warn('Failed to get CSRF headers, continuing without them:', csrfError);
-          // Continue without CSRF headers rather than failing completely
+          console.warn('Failed to get CSRF headers:', csrfError);
         }
         
         // Add authorization from localStorage if available
@@ -49,36 +46,23 @@ const api = {
         
         const isFormData = options.body instanceof FormData;
         
-        // Create optimized fetch options with appropriate cache control
         const fetchOptions: RequestInit = {
           ...options,
           headers: {
             ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
             'Accept': 'application/json',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
             ...authHeaders,
             ...csrfHeaders,
             ...options.headers,  // Important: Let options.headers override standard headers
           },
           credentials: 'include',
-          mode: 'cors',
-          cache: 'no-store' // Prevent caching
+          mode: 'cors'
         };
   
         console.log(`Sending request to ${endpoint}`);
         if (process.env.NODE_ENV === 'development') {
-          console.log('Request options:', JSON.stringify(fetchOptions, (k, v) => 
-            k === 'headers' ? JSON.stringify(v) : v));
+          console.log('Request options:', fetchOptions);
         }
-
-        // Create a timeout for long-running requests
-        const controller = new AbortController();
-        const timeoutMs = endpoint.includes('generate-macro') ? 180000 : 30000; // 3 minutes for generation, 30s for others
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-        
-        // Add the signal to fetch options
-        fetchOptions.signal = controller.signal;
 
         // For Excel generation, preemptively refresh the token
         if (endpoint.includes('generate-macro')) {
@@ -88,14 +72,7 @@ const api = {
               method: 'POST',
               credentials: 'include',
               mode: 'cors',
-              headers: { 
-                ...authHeaders, 
-                ...csrfHeaders,
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache'
-              },
-              cache: 'no-store',
-              signal: controller.signal
+              headers: { ...authHeaders, ...csrfHeaders }
             });
             
             if (refreshResponse.ok) {
@@ -103,95 +80,80 @@ const api = {
             }
           } catch (error) {
             console.warn('Preemptive token refresh failed:', error);
-            // Continue anyway - don't fail the main request because of this
           }
         }
 
-        try {
-          const response = await fetch(url, fetchOptions);
-          clearTimeout(timeoutId); // Clear timeout on successful response
+        const response = await fetch(url, fetchOptions);
+
+        // Special handling for checkout endpoint - prioritize reliability
+        if (isCheckoutEndpoint && !response.ok) {
+          console.error(`Checkout error (${response.status}): ${endpoint}`);
           
-          // Special handling for checkout endpoint
-          if (isCheckoutEndpoint && !response.ok) {
-            console.error(`Checkout error (${response.status}): ${endpoint}`);
-            
-            const errorData = await response.json().catch(() => ({ error: "Payment processing failed" }));
-            throw new Error(errorData.error || "Payment processing failed");
-          }
+          // For checkout, we want proper error messages
+          const errorData = await response.json().catch(() => ({ error: "Payment processing failed" }));
+          throw new Error(errorData.error || "Payment processing failed");
+        }
 
-          // Special handling for verification endpoints
-          if (isVerificationEndpoint && !response.ok) {
-            console.warn(`Verification endpoint error (${response.status}): ${endpoint}`);
-            return response; // Return response even if not OK for verification endpoints
-          }
-
-          // Handle auth errors (401/403)
-          if (response.status === 401 || response.status === 403) {
-            // Don't retry if manually logged out
-            if (localStorage.getItem('manualLogout') === 'true') {
-              throw new Error(`Auth error: ${response.status}`);
-            }
-
-            if (retryCount < maxRetries && shouldRetry) {
-              retryCount++;
-              console.log(`Auth error, attempt ${retryCount}: Refreshing token...`);
-              
-              try {
-                // Try to refresh token with proper error handling
-                const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
-                  method: 'POST',
-                  credentials: 'include',
-                  mode: 'cors',
-                  headers: { 
-                    ...authHeaders, 
-                    ...csrfHeaders,
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
-                  },
-                  cache: 'no-store'
-                });
-                
-                if (refreshResponse.ok) {
-                  console.log('Token refreshed, retrying request');
-                  localStorage.setItem('isAuthenticated', 'true');
-                  
-                  // Short delay before retry
-                  await new Promise(resolve => setTimeout(resolve, 500));
-                  
-                  return executeRequest(false); // Only retry once after token refresh
-                } else {
-                  console.warn(`Token refresh failed with status: ${refreshResponse.status}`);
-                }
-              } catch (e) {
-                console.error('Failed to refresh token:', e);
-              }
-            }
-          }
-
+        // Special handling for verification endpoints
+        if (isVerificationEndpoint && !response.ok) {
+          console.warn(`Verification endpoint error (${response.status}): ${endpoint}`);
+          
+          // For verification endpoints, we want to return the response even if not OK
+          // so we can extract the error message - no retries for validation errors
           return response;
-        } catch (fetchError: any) {
-          clearTimeout(timeoutId); // Clear timeout to prevent memory leaks
-          
-          // Check if this was a timeout
-          if (fetchError.name === 'AbortError') {
-            console.error(`Request to ${endpoint} timed out after ${timeoutMs}ms`);
-            throw new Error(`Request timed out. Please try again.`);
+        }
+
+        // Re-authenticate on 401/403 errors
+        if (response.status === 401 || response.status === 403) {
+          // If we received a 401/403 error and we manually logged out, don't try to refresh token
+          if (localStorage.getItem('manualLogout') === 'true') {
+            // Just abort - don't try to refresh token
+            throw new Error(`Auth error: ${response.status}`);
+          }
+
+          if (retryCount < maxRetries && shouldRetry) {
+            retryCount++;
+            console.log(`Auth error, attempt ${retryCount}: Refreshing token...`);
+            
+            try {
+              const refreshResponse = await fetch(`${config.apiUrl}/api/refresh-token`, {
+                method: 'POST',
+                credentials: 'include',
+                mode: 'cors',
+                headers: { ...authHeaders, ...csrfHeaders }
+              });
+              
+              if (refreshResponse.ok) {
+                console.log('Token refreshed, retrying request');
+                // Update isAuthenticated in localStorage
+                localStorage.setItem('isAuthenticated', 'true');
+                return executeRequest(false);
+              }
+            } catch (e) {
+              console.error('Failed to refresh token:', e);
+            }
           }
           
-          throw fetchError; // Re-throw for the outer catch block
+          // If we're still having auth issues after retries, consider clearing auth
+          if (retryCount >= maxRetries) {
+            console.error('Authentication failed after maximum retries');
+            // Don't automatically redirect - let the component handle it
+          }
         }
-      } catch (error: any) {
-        // Handle network errors with limited retries
+
+        return response;
+      } catch (error) {
+        // For network errors (not HTTP errors like 400, 401, etc)
         const effectiveMaxRetries = isVerificationEndpoint ? verificationMaxRetries : maxRetries;
         
         if (shouldRetry && retryCount < effectiveMaxRetries) {
           retryCount++;
           console.log(`Network error, retrying (${retryCount}/${effectiveMaxRetries})...`);
           
-          // Use appropriate backoff strategy
+          // Use exponential backoff for verification endpoints
           const delay = isVerificationEndpoint 
-            ? retryDelay * Math.pow(2, retryCount - 1) // Exponential backoff for verification
-            : retryDelay * retryCount; // Linear backoff for others
+            ? retryDelay * Math.pow(2, retryCount - 1) // Exponential backoff
+            : retryDelay * retryCount; // Linear backoff
             
           await new Promise(resolve => setTimeout(resolve, delay));
           return executeRequest(true);
@@ -225,8 +187,8 @@ const api = {
                 errorMessage = 'Too many attempts. Please try again later.';
               }
             }
-          } catch (parseError) {
-            // If JSON parsing fails, use status text with context
+          } catch {
+            // If JSON parsing fails, use status text with added context
             errorMessage = `Verification error: ${response.statusText}`;
           }
           
@@ -234,19 +196,19 @@ const api = {
           throw new Error(errorMessage);
         }
       } else if (!response.ok) {
-        // Handle other non-OK responses
+        // Standard error handling for non-verification endpoints
         let errorMessage = response.statusText;
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
-        } catch (parseError) {
-          // Use status text if JSON parsing fails
+        } catch {
+          // If JSON parsing fails, use status text
         }
         throw new Error(errorMessage);
       }
 
       return response;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`API Error (${endpoint}):`, error);
       throw error;
     }
@@ -274,16 +236,10 @@ const api = {
     priceId: string
   ): Promise<{ success: boolean; url?: string; error?: string }> => {
     try {
-      // Use AbortController for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
-      
       const response = await fetch(`${config.apiUrl}/api/create-checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -294,11 +250,7 @@ const api = {
           successUrl: `${window.location.origin}/dashboard?success=true&email=${encodeURIComponent(email)}`,
           cancelUrl: `${window.location.origin}/pricing?success=false`
         }),
-        signal: controller.signal,
-        cache: 'no-store'
       });
-      
-      clearTimeout(timeoutId); // Clear timeout
 
       if (!response.ok) {
         let errorMessage;
@@ -329,15 +281,6 @@ const api = {
         url: data.url
       };
     } catch (error: any) {
-      // Special handling for timeout
-      if (error.name === 'AbortError') {
-        console.error("Checkout request timed out");
-        return {
-          success: false,
-          error: 'Request timed out. Please try again.'
-        };
-      }
-      
       console.error("Checkout creation exception:", error);
       return {
         success: false,
@@ -360,17 +303,7 @@ const api = {
       });
     }
     
-    // Get CSRF headers with better error handling
-    let csrfHeaders = {};
-    try {
-      csrfHeaders = await csrfService.getHeaders();
-    } catch (csrfError) {
-      console.warn('Failed to get CSRF headers for file upload, continuing without them:', csrfError);
-    }
-    
-    // Use AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for uploads
+    const csrfHeaders = await csrfService.getHeaders();
     
     try {
       const response = await fetch(url, {
@@ -381,24 +314,14 @@ const api = {
         },
         body: formData,
         credentials: 'include',
-        signal: controller.signal,
-        cache: 'no-store'
       });
       
-      clearTimeout(timeoutId); // Clear timeout
-      
       if (!response.ok) {
-        const errorText = await response.text().catch(() => response.statusText);
-        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+        throw new Error(`Upload failed: ${response.statusText}`);
       }
       
       return response;
-    } catch (error: any) {
-      // Special handling for timeout
-      if (error.name === 'AbortError') {
-        throw new Error('File upload timed out. Please try again with a smaller file or better connection.');
-      }
-      
+    } catch (error) {
       console.error('Upload Error:', error);
       throw error;
     }
