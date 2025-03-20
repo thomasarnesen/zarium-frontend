@@ -95,17 +95,17 @@
     <meta property="twitter:description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
     <meta property="twitter:image" content="https://zarium.dev/twitter-image.png" />
 
-    <!-- Security Headers - Fixed to properly support Google Analytics -->
+    <!-- UPDATED: Modified security headers to fix loading issues -->
     <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network https://m.stripe.com https://www.googletagmanager.com https://googletagmanager.com https://*.google-analytics.com https://analytics.google.com https://cdn.consentmanager.net https://*.consentmanager.net;
-      connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network https://m.stripe.com https://*.azurestaticapps.net https://www.googletagmanager.com https://region1.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://cdn.consentmanager.net https://*.consentmanager.net;
-      style-src 'self' 'unsafe-inline' https://cdn.consentmanager.net;
-      img-src 'self' data: https: https://*.google-analytics.com https://stats.g.doubleclick.net https://*.consentmanager.net;
-      frame-src https://js.stripe.com https://m.stripe.network https://hooks.stripe.com https://m.stripe.com https://*.consentmanager.net;
-      form-action 'self';
-      worker-src 'self' blob:;
-      font-src 'self' data: https://fonts.gstatic.com;
+      default-src 'self' https: data:;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:;
+      connect-src 'self' https: wss: blob:;
+      style-src 'self' 'unsafe-inline' https:;
+      img-src 'self' data: https:;
+      frame-src https: blob:;
+      font-src 'self' data: https:;
+      object-src 'none';
+      media-src 'self' https: blob:;
     " />
    
     <!-- Preload Critical Resources -->
@@ -125,44 +125,102 @@
       "offers": {
         "@type": "Offer",
         "price": "0",
-        "priceCurrency": "USD"
+        "priceCurrency": "USD",
+        "description": "Free trial available"
       },
       "operatingSystem": "Web",
-      "description": "AI-powered Excel spreadsheet generator that transforms your input into professional, downloadable Excel files."
+      "description": "AI-powered Excel generator that creates complete spreadsheets with 3D graphs in seconds or enhances your existing Excel files."
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Zarium",
+      "url": "https://zarium.dev/",
+      "logo": "https://zarium.dev/favicon-32x32.png"
     }
     </script>
 
-    <!-- Fallback script to handle blank screen edge case -->
+    <!-- Improved error detection script -->
     <script>
-      // If the page is blank after 15 seconds, show an error message
+      // Initialize error tracking
+      window.__zarium_errors = [];
+      window.__zarium_lastErrorTime = 0;
+      
+      // Global error handler to catch JS errors
+      window.addEventListener('error', function(event) {
+        const now = Date.now();
+        window.__zarium_errors.push({
+          message: event.message,
+          time: now
+        });
+        window.__zarium_lastErrorTime = now;
+        
+        console.error('Global error:', event.message);
+      });
+      
+      // If the page is blank after 10 seconds, show an error message
       window.addEventListener('DOMContentLoaded', function() {
         var timeout = setTimeout(function() {
           var root = document.getElementById('root');
-          if (root && (!root.children || root.children.length === 0)) {
-            console.error('Blank page fallback triggered');
-            root.innerHTML = `
-              <div class="initial-loader">
-                <div class="initial-loader-content">
-                  <h1>Oops! Something went wrong</h1>
-                  <p>We couldn't load the application. This might be due to network issues.</p>
-                  <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;margin-top:16px;">
-                    Reload page
-                  </button>
+          if (root && (!root.children || root.children.length === 0 || 
+              root.innerHTML.includes('Loading application'))) {
+            console.error('Application load timeout triggered');
+            
+            // Check if we have recent errors
+            const hasRecentErrors = window.__zarium_errors && 
+              window.__zarium_errors.some(err => (Date.now() - err.time) < 10000);
+            
+            // Show an appropriate error message
+            if (hasRecentErrors) {
+              root.innerHTML = `
+                <div class="initial-loader">
+                  <div class="initial-loader-content">
+                    <h1>Error Loading Zarium</h1>
+                    <p>We encountered errors while loading the application.</p>
+                    <p>This could be due to browser compatibility issues or network problems.</p>
+                    <div style="margin-top: 20px;">
+                      <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;margin-right:10px;">
+                        Reload page
+                      </button>
+                      <button onclick="localStorage.clear(); sessionStorage.clear(); document.cookie.split(';').forEach(c => document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')); window.location.href='/';" style="padding:8px 16px;background-color:#f3f4f6;color:#1f2937;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">
+                        Clear data & start fresh
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            `;
+              `;
+            } else {
+              root.innerHTML = `
+                <div class="initial-loader">
+                  <div class="initial-loader-content">
+                    <h1>Loading Zarium is taking longer than expected</h1>
+                    <p>This might be due to network issues or high server load.</p>
+                    <div style="margin-top: 20px;">
+                      <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;">
+                        Reload page
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
           }
-        }, 15000);
+        }, 10000);
         
         // If the app loads correctly, clear timeout
         var observer = new MutationObserver(function(mutations) {
-          if (document.getElementById('root').children.length > 0) {
+          const root = document.getElementById('root');
+          if (root && root.children.length > 0 && 
+              !root.innerHTML.includes('Loading application') &&
+              !root.innerHTML.includes('initial-loader')) {
             clearTimeout(timeout);
             observer.disconnect();
           }
         });
         
-        observer.observe(document.getElementById('root'), { childList: true });
+        observer.observe(document.getElementById('root'), { childList: true, subtree: true });
       });
     </script>
   </head>
@@ -180,9 +238,11 @@
     <noscript>
       <div style="padding: 20px; text-align: center;">
         <h1>Zarium AI Excel Generator</h1>
-        <p>You need to enable JavaScript to run this app.</p>
+        <p>Zarium is an AI-powered tool that helps you generate professional Excel spreadsheets.</p>
+        <p>Please enable JavaScript to use Zarium AI.</p>
       </div>
     </noscript>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Add cache busting parameter -->
+    <script type="module" src="/src/main.tsx?v=20240320"></script>
   </body>
 </html>

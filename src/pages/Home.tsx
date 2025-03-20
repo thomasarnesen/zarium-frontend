@@ -1,21 +1,52 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileSpreadsheet, Sparkles, Zap, Shield, CheckCircle, HelpCircle, Users } from 'lucide-react';
+import { FileSpreadsheet, Sparkles, Zap, Shield, CheckCircle, HelpCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { Helmet } from 'react-helmet-async'; // You'll need to install this package
+import { Helmet } from 'react-helmet-async';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isLoggedIn = !!user?.token;
+  const [isCtaLoading, setIsCtaLoading] = useState(false);
 
-  const handleGetStarted = () => {
-    if (isLoggedIn) {
-      navigate('/dashboard');
-    } else {
-      navigate('/pricing');
+  // Enhanced error handling with loading state
+  const handleGetStarted = useCallback(() => {
+    try {
+      setIsCtaLoading(true);
+      if (isLoggedIn) {
+        navigate('/dashboard');
+      } else {
+        navigate('/pricing');
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Show an error message if navigation fails
+      alert('An error occurred while navigating. Please try again.');
+    } finally {
+      // Reset loading state after navigation
+      setIsCtaLoading(false);
     }
-  };
+  }, [isLoggedIn, navigate]);
+
+  // Handle demo navigation with error handling
+  const handleStartDemo = useCallback(() => {
+    try {
+      setIsCtaLoading(true);
+      navigate('/register', { 
+        state: { 
+          selectedPlan: 'Demo', 
+          isDemo: true,
+          demoPriceId: 'price_1R2isCB9ONdEOi8LoDv9vBTN'
+        } 
+      });
+    } catch (error) {
+      console.error('Demo navigation error:', error);
+      alert('An error occurred while navigating to the demo. Please try again.');
+    } finally {
+      setIsCtaLoading(false);
+    }
+  }, [navigate]);
 
   return (
     <>
@@ -26,86 +57,89 @@ const Home: React.FC = () => {
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://zarium.dev/" />
         
-        {/* Open Graph tags for social sharing */}
+        {/* Open Graph tags for social sharing - improved with image dimensions */}
         <meta property="og:title" content="Zarium | AI Excel Generator" />
         <meta property="og:description" content="Create professional Excel spreadsheets with AI in seconds" />
         <meta property="og:url" content="https://zarium.dev/" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Zarium" />
+        <meta property="og:image" content="https://zarium.dev/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         
-        {/* Twitter card tags */}
+        {/* Twitter card tags - improved with image dimensions */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Zarium | AI Excel Generator" />
         <meta name="twitter:description" content="Create professional Excel spreadsheets with AI in seconds" />
+        <meta name="twitter:image" content="https://zarium.dev/twitter-image.png" />
+        <meta name="twitter:image:width" content="1200" />
+        <meta name="twitter:image:height" content="600" />
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-4 sm:px-6">
           
-          {/* Hero Section - Kept mostly the same but with SEO improvements */}
-          <div className="pt-24 pb-20">
+          {/* Hero Section - Improved accessibility and mobile responsiveness */}
+          <div className="pt-16 md:pt-24 pb-12 md:pb-20">
             <div className="text-center max-w-4xl mx-auto">
-              <div className="inline-flex items-center justify-center px-4 py-2 mb-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 shadow-sm">
-                <Sparkles className="h-4 w-4 mr-2" />
+              <div className="inline-flex items-center justify-center px-4 py-2 mb-6 md:mb-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 shadow-sm">
+                <Sparkles className="h-4 w-4 mr-2" aria-hidden="true" />
                 <span className="text-sm font-medium">Powered by Advanced AI</span>
               </div>
-              <h1 className="text-4xl font-bold mb-6 text-emerald-900 dark:text-emerald-100 leading-tight">
+              <h1 className="text-3xl md:text-4xl font-bold mb-4 md:mb-6 text-emerald-900 dark:text-emerald-100 leading-tight">
                 Excel Spreadsheets,<br />Generated by AI in Seconds
               </h1>
-              <p className="text-lg text-emerald-700 dark:text-emerald-300 mb-10 leading-relaxed max-w-2xl mx-auto">
-              Transform your ideas into professional Excel spreadsheets instantly.
-              Just describe what you need, and watch the magic happen.
-              
+              <p className="text-base md:text-lg text-emerald-700 dark:text-emerald-300 mb-8 md:mb-10 leading-relaxed max-w-2xl mx-auto">
+                Transform your ideas into professional Excel spreadsheets instantly.
+                Just describe what you need, and watch the magic happen.
               </p>
-              <div className="flex justify-center gap-4">
+              <div className="flex flex-col sm:flex-row justify-center gap-4 mx-auto max-w-md sm:max-w-none">
                 <button
                   onClick={handleGetStarted}
-                  className="px-8 py-3 rounded-lg text-base font-medium bg-emerald-800 dark:bg-emerald-700 text-white hover:bg-emerald-900 dark:hover:bg-emerald-600 transition-all shadow-sm hover:shadow-md"
+                  disabled={isCtaLoading}
+                  className="px-8 py-3 rounded-lg text-base font-medium bg-emerald-800 dark:bg-emerald-700 text-white hover:bg-emerald-900 dark:hover:bg-emerald-600 transition-all shadow-sm hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
+                  aria-label={isLoggedIn ? 'Go to Dashboard' : 'Start Generating'}
                 >
-                  {isLoggedIn ? 'Go to Dashboard' : 'Start Generating'}
+                  {isCtaLoading ? 'Loading...' : (isLoggedIn ? 'Go to Dashboard' : 'Start Generating')}
                 </button>
                 
                 {!isLoggedIn && (
                   <button
-                    onClick={() => navigate('/register', { 
-                      state: { 
-                        selectedPlan: 'Demo', 
-                        isDemo: true,
-                        demoPriceId: 'price_1R2isCB9ONdEOi8LoDv9vBTN'
-                      } 
-                    })}
-                    className="px-8 py-3 rounded-lg text-base font-medium bg-white dark:bg-gray-800 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow-md border border-emerald-200 dark:border-emerald-800 flex items-center gap-2"
+                    onClick={handleStartDemo}
+                    disabled={isCtaLoading}
+                    className="px-8 py-3 rounded-lg text-base font-medium bg-white dark:bg-gray-800 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow-md border border-emerald-200 dark:border-emerald-800 flex items-center justify-center sm:justify-start gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    aria-label="Try Demo"
                   >
-                    <Sparkles className="h-5 w-5" />
-                    Try Demo
+                    <Sparkles className="h-5 w-5" aria-hidden="true" />
+                    {isCtaLoading ? 'Loading...' : 'Try Demo'}
                   </button>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Features Section - Kept the same */}
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto pb-16">
+          {/* Features Section - Improved for accessibility */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-5xl mx-auto pb-12 md:pb-16">
             {[
               {
-                icon: <Zap className="h-6 w-6" />,
+                icon: <Zap className="h-6 w-6" aria-hidden="true" />,
                 title: "Instant Generation",
                 description: "Get complete Excel spreadsheets created in seconds with advanced AI - saving you hours of manual work."
               },
               {
-                icon: <FileSpreadsheet className="h-6 w-6" />,
+                icon: <FileSpreadsheet className="h-6 w-6" aria-hidden="true" />,
                 title: "Advanced Visuals",
                 description: "Create professional spreadsheets with 3D graphs, diagrams, custom formatting, and complex formulas."
               },
               {
-                icon: <Shield className="h-6 w-6" />,
+                icon: <Shield className="h-6 w-6" aria-hidden="true" />,
                 title: "Enhance Existing Files",
                 description: "Upload your Excel files to clean, improve, analyze, or solve specific tasks with AI assistance."
               }
             ].map((feature, index) => (
               <div
                 key={index}
-                className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all border border-emerald-100 dark:border-emerald-800 flex flex-col items-center text-center"
+                className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-sm hover:shadow-md transition-all border border-emerald-100 dark:border-emerald-800 flex flex-col items-center text-center"
               >
                 <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl flex items-center justify-center text-emerald-800 dark:text-emerald-200 mb-6">
                   {feature.icon}
@@ -120,12 +154,12 @@ const Home: React.FC = () => {
             ))}
           </div>
           
-          {/* NEW: How It Works Section - Added for SEO */}
-          <div className="max-w-5xl mx-auto pb-20">
-            <h2 className="text-3xl font-bold text-center mb-12 text-emerald-900 dark:text-emerald-100">
+          {/* How It Works Section - Improved for accessibility */}
+          <div className="max-w-5xl mx-auto pb-16 md:pb-20">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 text-emerald-900 dark:text-emerald-100">
               How Our AI Excel Generator Works
             </h2>
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
                 {
                   step: "1",
@@ -144,7 +178,7 @@ const Home: React.FC = () => {
                 }
               ].map((step, index) => (
                 <div key={index} className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 bg-emerald-700 dark:bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold mb-6">
+                  <div className="w-12 h-12 bg-emerald-700 dark:bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold mb-6" aria-hidden="true">
                     {step.step}
                   </div>
                   <h3 className="text-xl font-semibold mb-4 text-emerald-900 dark:text-emerald-100">
@@ -158,13 +192,13 @@ const Home: React.FC = () => {
             </div>
           </div>
           
-          {/* NEW: Use Cases Section - Added for SEO */}
-          <div className="bg-emerald-50 dark:bg-gray-800/50 py-16 -mx-6 px-6 mb-20">
+          {/* Use Cases Section - Improved layout for better mobile responsiveness */}
+          <div className="bg-emerald-50 dark:bg-gray-800/50 py-12 md:py-16 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-16 md:mb-20">
             <div className="max-w-5xl mx-auto">
-              <h2 className="text-3xl font-bold text-center mb-12 text-emerald-900 dark:text-emerald-100">
+              <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 text-emerald-900 dark:text-emerald-100">
                 Excel Spreadsheets You Can Generate
               </h2>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {[
                   "Financial Models with 3D Charts",
                   "Project Trackers & Gantt Charts",
@@ -177,7 +211,7 @@ const Home: React.FC = () => {
                   "Custom Excel File Enhancement"
                 ].map((useCase, index) => (
                   <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm flex items-center">
-                    <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mr-3 flex-shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mr-3 flex-shrink-0" aria-hidden="true" />
                     <span className="text-emerald-800 dark:text-emerald-200 font-medium">{useCase}</span>
                   </div>
                 ))}
@@ -185,12 +219,12 @@ const Home: React.FC = () => {
             </div>
           </div>
           
-          {/* NEW: FAQ Section - Added for SEO */}
-          <div className="max-w-4xl mx-auto pb-24">
-            <h2 className="text-3xl font-bold text-center mb-12 text-emerald-900 dark:text-emerald-100">
+          {/* FAQ Section - Improved accessibility */}
+          <div className="max-w-4xl mx-auto pb-16 md:pb-24">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 text-emerald-900 dark:text-emerald-100">
               Frequently Asked Questions
             </h2>
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               {[
                 {
                   question: "How quickly can Zarium generate an Excel spreadsheet?",
@@ -217,9 +251,9 @@ const Home: React.FC = () => {
                   answer: "Zarium offers a free trial with limited tokens that lets you test the service and preview generated spreadsheets. To download files and access the full functionality, you'll need a subscription. Our paid plans offer different token amounts to suit various usage needs."
                 }
               ].map((faq, index) => (
-                <div key={index} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-emerald-100 dark:border-emerald-800">
+                <div key={index} className="bg-white dark:bg-gray-800 p-5 md:p-6 rounded-xl shadow-sm border border-emerald-100 dark:border-emerald-800">
                   <h3 className="text-lg font-semibold mb-3 flex items-start text-emerald-900 dark:text-emerald-100">
-                    <HelpCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mr-2 mt-0.5 flex-shrink-0" />
+                    <HelpCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mr-2 mt-0.5 flex-shrink-0" aria-hidden="true" />
                     {faq.question}
                   </h3>
                   <p className="text-emerald-700 dark:text-emerald-300 leading-relaxed ml-7">
@@ -230,34 +264,28 @@ const Home: React.FC = () => {
             </div>
           </div>
           
-          {/* NEW: CTA Section - Added for SEO and conversion */}
-          <div className="bg-emerald-700 dark:bg-emerald-800 text-white -mx-6 px-6 py-16 mb-12 rounded-xl">
+          {/* CTA Section - Improved with error handling and loading states */}
+          <div className="bg-emerald-700 dark:bg-emerald-800 text-white -mx-4 sm:-mx-6 px-4 sm:px-6 py-12 md:py-16 mb-8 md:mb-12 rounded-lg md:rounded-xl">
             <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl font-bold mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">
                 Start Generating Excel Spreadsheets Today
               </h2>
-              <p className="text-lg text-emerald-100 dark:text-emerald-200 mb-8 max-w-2xl mx-auto">
+              <p className="text-base md:text-lg text-emerald-100 dark:text-emerald-200 mb-6 md:mb-8 max-w-2xl mx-auto">
                 Join professionals who save hours every week with Zarium's AI Excel generator. Create complete spreadsheets in seconds or enhance your existing Excel files.
               </p>
               <button
                 onClick={() => {
                   if (isLoggedIn) {
-                    // If user is logged in, navigate to dashboard
                     navigate('/dashboard');
                   } else {
-                    // If not logged in, go to registration with demo plan
-                    navigate('/register', { 
-                      state: { 
-                        selectedPlan: 'Demo', 
-                        isDemo: true,
-                        demoPriceId: 'price_1R2isCB9ONdEOi8LoDv9vBTN'
-                      } 
-                    });
+                    handleStartDemo();
                   }
                 }}
-                className="px-8 py-3 rounded-lg text-base font-medium bg-white text-emerald-900 hover:bg-emerald-100 transition-all shadow-sm hover:shadow-md"
+                disabled={isCtaLoading}
+                className="px-8 py-3 rounded-lg text-base font-medium bg-white text-emerald-900 hover:bg-emerald-100 transition-all shadow-sm hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
+                aria-label={isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}
               >
-                {isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}
+                {isCtaLoading ? 'Loading...' : (isLoggedIn ? 'Go to Dashboard' : 'Get Started Free')}
               </button>
             </div>
           </div>

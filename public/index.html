@@ -1,7 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Consent Manager -->
+    <script type="text/javascript" data-cmp-ab="1" src="https://cdn.consentmanager.net/delivery/autoblocking/baf364933221c.js" data-cmp-host="b.delivery.consentmanager.net" data-cmp-cdn="cdn.consentmanager.net" data-cmp-codesrc="16"></script>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-5CQ9BRYE2B"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-5CQ9BRYE2B');
+    </script>
+    
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
     <!-- Favicon and App Icons -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -11,9 +26,7 @@
     <meta name="msapplication-TileImage" content="/mstile-144x144.png">
     <meta name="msapplication-config" content="/browserconfig.xml">
     
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- Forbedret styling for loading state -->
+    <!-- Improved styling for loading state -->
     <style>
       body {
         margin: 0;
@@ -57,9 +70,10 @@
     <title>Zarium | AI Excel Generator | Create Spreadsheets in Seconds</title>
     <meta name="description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
     <meta name="keywords" content="AI Excel generator, spreadsheet creator, Excel automation, AI spreadsheet, Excel formulas, Excel macros" />
-    <meta name="theme-color" content="#057857" />
+    <meta name="robots" content="index, follow" />
     
-    <!-- Additional Meta Tags -->
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#057857" />
     <meta name="msapplication-navbutton-color" content="#057857" />
     <meta name="apple-mobile-web-app-status-bar-style" content="#057857" />
     
@@ -80,8 +94,27 @@
     <meta name="twitter:title" content="Zarium | AI Excel Generator | Create Spreadsheets in Seconds" />
     <meta name="twitter:description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
     <meta name="twitter:image" content="https://zarium.dev/twitter-image.png" />
-    <meta name="robots" content="index, follow" />
 
+    <!-- ADDED: Secure but permissive Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self' https: data:;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:;
+      connect-src 'self' https: wss: blob:;
+      style-src 'self' 'unsafe-inline' https:;
+      img-src 'self' data: https:;
+      frame-src https: blob:;
+      font-src 'self' data: https:;
+      object-src 'none';
+      media-src 'self' https: blob:;
+    " />
+   
+    <!-- Preload Critical Resources -->
+    <link rel="preconnect" href="https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net" />
+    <link rel="preconnect" href="https://js.stripe.com" crossorigin />
+    
+    <!-- Stripe Integration -->
+    <script src="https://js.stripe.com/v3/" defer></script>
+    
     <!-- Structured Data - JSON-LD -->
     <script type="application/ld+json">
     {
@@ -106,41 +139,88 @@
       "name": "Zarium",
       "url": "https://zarium.dev/",
       "logo": "https://zarium.dev/favicon-32x32.png"
-        
     }
     </script>
 
-    <!-- Fallback script to handle blank screen edge case -->
+    <!-- Improved error detection script -->
     <script>
-      // If the page is blank after 15 seconds, show an error message
+      // Initialize error tracking
+      window.__zarium_errors = [];
+      window.__zarium_lastErrorTime = 0;
+      
+      // Global error handler to catch JS errors
+      window.addEventListener('error', function(event) {
+        const now = Date.now();
+        window.__zarium_errors.push({
+          message: event.message,
+          time: now
+        });
+        window.__zarium_lastErrorTime = now;
+        
+        console.error('Global error:', event.message);
+      });
+      
+      // If the page is blank after 10 seconds, show an error message
       window.addEventListener('DOMContentLoaded', function() {
         var timeout = setTimeout(function() {
           var root = document.getElementById('root');
-          if (root && (!root.children || root.children.length === 0)) {
-            console.error('Blank page fallback triggered');
-            root.innerHTML = `
-              <div class="initial-loader">
-                <div class="initial-loader-content">
-                  <h1>Oops! Something went wrong</h1>
-                  <p>We couldn't load the application. This might be due to network issues.</p>
-                  <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;margin-top:16px;">
-                    Reload page
-                  </button>
+          if (root && (!root.children || root.children.length === 0 || 
+              root.innerHTML.includes('Loading application'))) {
+            console.error('Application load timeout triggered');
+            
+            // Check if we have recent errors
+            const hasRecentErrors = window.__zarium_errors && 
+              window.__zarium_errors.some(err => (Date.now() - err.time) < 10000);
+            
+            // Show an appropriate error message
+            if (hasRecentErrors) {
+              root.innerHTML = `
+                <div class="initial-loader">
+                  <div class="initial-loader-content">
+                    <h1>Error Loading Zarium</h1>
+                    <p>We encountered errors while loading the application.</p>
+                    <p>This could be due to browser compatibility issues or network problems.</p>
+                    <div style="margin-top: 20px;">
+                      <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;margin-right:10px;">
+                        Reload page
+                      </button>
+                      <button onclick="localStorage.clear(); sessionStorage.clear(); document.cookie.split(';').forEach(c => document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')); window.location.href='/';" style="padding:8px 16px;background-color:#f3f4f6;color:#1f2937;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">
+                        Clear data & start fresh
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            `;
+              `;
+            } else {
+              root.innerHTML = `
+                <div class="initial-loader">
+                  <div class="initial-loader-content">
+                    <h1>Loading Zarium is taking longer than expected</h1>
+                    <p>This might be due to network issues or high server load.</p>
+                    <div style="margin-top: 20px;">
+                      <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;">
+                        Reload page
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
           }
-        }, 15000);
+        }, 10000);
         
         // If the app loads correctly, clear timeout
         var observer = new MutationObserver(function(mutations) {
-          if (document.getElementById('root').children.length > 0) {
+          const root = document.getElementById('root');
+          if (root && root.children.length > 0 && 
+              !root.innerHTML.includes('Loading application') &&
+              !root.innerHTML.includes('initial-loader')) {
             clearTimeout(timeout);
             observer.disconnect();
           }
         });
         
-        observer.observe(document.getElementById('root'), { childList: true });
+        observer.observe(document.getElementById('root'), { childList: true, subtree: true });
       });
     </script>
   </head>
@@ -162,6 +242,7 @@
         <p>Please enable JavaScript to use Zarium AI.</p>
       </div>
     </noscript>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Add cache busting parameter -->
+    <script type="module" src="/src/main.tsx?v=20240320"></script>
   </body>
 </html>

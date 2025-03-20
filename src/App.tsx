@@ -102,9 +102,14 @@ function App() {
               return;
             }
             
+            // Add cache busting parameter to avoid stale requests
             await api.fetch('/api/refresh-token', {
               method: 'POST',
-              credentials: 'include'
+              credentials: 'include',
+              headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+              }
             });
             console.log("Token refreshed successfully by interval");
           } catch (err) {
@@ -144,7 +149,11 @@ function App() {
           try {
             await api.fetch('/api/refresh-token', { 
               method: 'POST',
-              credentials: 'include'
+              credentials: 'include',
+              headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+              }
             });
             await initialize();
           } catch (err) {
@@ -159,10 +168,42 @@ function App() {
 
   // Improved error detection to prevent infinite refresh loops
   useEffect(() => {
+    // Store timestamp of last refresh in localStorage to detect loops
+    const lastRefreshTime = localStorage.getItem('lastSecurityRefresh');
+    const now = Date.now();
+    
+    // If we've refreshed in the last 10 seconds, don't allow another automatic refresh
+    if (lastRefreshTime && (now - parseInt(lastRefreshTime)) < 10000) {
+      console.warn('Potential refresh loop detected - preventing automatic refresh');
+      // Clear any existing detection to break the loop
+      localStorage.removeItem('lastSecurityRefresh');
+      return;
+    }
+
     let consecutiveErrors = 0;
     let lastErrorTime = 0;
-    const maxConsecutiveErrors = 3; // Max number of retries before giving up
+    const maxConsecutiveErrors = 2; // Reduced from 3 to be more conservative
     const errorTimeWindow = 10000; // 10 seconds
+    
+    // Initialize error tracking
+    window.__zarium_errors = window.__zarium_errors || [];
+    window.__zarium_lastErrorTime = window.__zarium_lastErrorTime || 0;
+    
+    // Global error handler to catch JS errors
+    const errorHandler = (event: ErrorEvent) => {
+      const now = Date.now();
+      if (window.__zarium_errors) {
+        window.__zarium_errors.push({
+          message: event.message,
+          time: now
+        });
+      }
+      window.__zarium_lastErrorTime = now;
+      
+      console.error('Global error:', event.message);
+    };
+    
+    window.addEventListener('error', errorHandler);
     
     // Listen for security-related error messages in DOM
     const observer = new MutationObserver((mutations) => {
@@ -172,13 +213,12 @@ function App() {
             if (node.nodeType === Node.ELEMENT_NODE) {
               const element = node as Element;
               
-              // Check for various security-related error messages - update to include translated versions
+              // Check for various security-related error messages
               if (
                 element.textContent?.includes('security configuration') ||
                 element.textContent?.includes('CSRF token') ||
                 element.textContent?.includes('security token') ||
-                element.textContent?.includes('Could not retrieve security token') || // Translated from "Kunne ikke hente sikkerhetstoken"
-                // Keep the Norwegian versions for backward compatibility, but eventually they can be removed
+                element.textContent?.includes('Could not retrieve security token') ||
                 element.textContent?.includes('sikkerhetskonfigurasjonen') || 
                 element.textContent?.includes('sikkerhetstoken')
               ) {
@@ -194,15 +234,20 @@ function App() {
                 
                 lastErrorTime = now;
                 
-                // If too many consecutive errors, don't retry
+                // If too many consecutive errors, don't retry automatically
                 if (consecutiveErrors > maxConsecutiveErrors) {
                   console.error('Too many consecutive security errors - stopping automatic retry');
-                  // Show a helpful error to the user instead of looping
+                  // Show a helpful message instead of infinite reloads
                   document.body.innerHTML = `
                     <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;">
                       <div style="max-width:500px;padding:20px;background-color:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);text-align:center;">
                         <h1 style="font-size:24px;color:#ef4444;margin-bottom:16px;">Security Error Detected</h1>
-                        <p style="margin-bottom:16px;">We're having trouble with the security verification. Please try clearing your cookies or use a different browser.</p>
+                        <p style="margin-bottom:16px;">We're having trouble with the security verification. Please try the following:</p>
+                        <ul style="text-align:left;margin-bottom:16px;">
+                          <li style="margin-bottom:8px;">Clear your cookies and browser cache</li>
+                          <li style="margin-bottom:8px;">Try a different browser</li>
+                          <li style="margin-bottom:8px;">Disable any ad blockers or privacy extensions</li>
+                        </ul>
                         <div style="margin-bottom:16px;display:flex;justify-content:center;gap:10px;">
                           <button onclick="localStorage.clear(); sessionStorage.clear(); document.cookie.split(';').forEach(c => document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')); window.location.href='/';" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;">
                             Clear Data & Restart
@@ -219,15 +264,23 @@ function App() {
                 
                 console.log('Security-related error message detected - retrying (' + consecutiveErrors + '/' + maxConsecutiveErrors + ')');
                 
-                // Reset CSRF token
-                try {
-                  csrfService.resetToken();
-                  
-                  // Wait a progressive amount of time before reload (1s, 2s, 3s)
-                  setTimeout(() => window.location.reload(), consecutiveErrors * 1000);
-                } catch (error) {
-                  console.warn('Could not reset CSRF token:', error);
-                  setTimeout(() => window.location.reload(), consecutiveErrors * 1000);
+                // Only allow refresh if we haven't recently refreshed
+                if (!lastRefreshTime || (now - parseInt(lastRefreshTime)) > 10000) {
+                  // Reset CSRF token
+                  try {
+                    csrfService.resetToken();
+                    
+                    // Store the refresh timestamp to prevent loops
+                    localStorage.setItem('lastSecurityRefresh', now.toString());
+                    
+                    // Wait before reload (1s, 2s)
+                    setTimeout(() => window.location.reload(), consecutiveErrors * 1000);
+                  } catch (error) {
+                    console.warn('Could not reset CSRF token:', error);
+                    setTimeout(() => window.location.reload(), consecutiveErrors * 1000);
+                  }
+                } else {
+                  console.warn('Preventing rapid refresh - last refresh too recent');
                 }
               }
             }
@@ -238,18 +291,30 @@ function App() {
     
     observer.observe(document.body, { childList: true, subtree: true });
     
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('error', errorHandler);
+    };
   }, []);
 
-  // Show loading spinner while app initializes - update comment to English
+  // Show loading spinner while app initializes
   if (isLoading) {
     return <LoadingSpinner />;
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-red-500">
-        {error}
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">Application Error</h2>
+          <p className="mb-6 text-gray-700 dark:text-gray-300">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+          >
+            Reload Application
+          </button>
+        </div>
       </div>
     );
   }
@@ -310,6 +375,14 @@ function App() {
       </ThemeProvider>
     </HelmetProvider>
   );
+}
+
+// Add this type declaration to avoid TypeScript errors
+declare global {
+  interface Window {
+    __zarium_errors?: Array<{message: string, time: number}>;
+    __zarium_lastErrorTime?: number;
+  }
 }
 
 export default App;
