@@ -61,7 +61,8 @@
         "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Origin": "https://zarium.dev",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With",
+        "Cache-Control": "no-cache, no-store, must-revalidate"
       }
     },
     {
