@@ -13,7 +13,6 @@ export default function Login() {
   const [csrfError, setCsrfError] = useState(false);
   const [csrfRetryCount, setCsrfRetryCount] = useState(0);
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
 
   // Method to handle hard reset of all browser data
   const handleHardReset = () => {
