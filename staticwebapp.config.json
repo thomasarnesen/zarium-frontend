@@ -53,6 +53,11 @@
       "allowedRoles": ["anonymous", "authenticated"]
     },
     {
+      "route": "/.auth/login/google/callback",
+      "statusCode": 200,
+      "allowedRoles": ["anonymous", "authenticated"]
+    },
+    {
       "route": "/.auth/login/callback",
       "statusCode": 200,
       "allowedRoles": ["anonymous", "authenticated"]
@@ -123,6 +128,11 @@
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
       }
+    },
+    {
+      "route": "/welcome",
+      "allowedRoles": ["authenticated"],
+      "serve": "/index.html"
     },
     {
       "route": "/logout",
