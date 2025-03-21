@@ -8,7 +8,6 @@ import { ThemeProvider } from './components/ThemeProvider';
 import toast from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
 import LoadingSpinner from './components/LoadingSpinner';
-import csrfService from './store/csrfService';
 
 // Import pages
 import Home from './pages/Home';
@@ -26,8 +25,9 @@ import ResetPasswordPage from './pages/ResetPassword';
 import ErrorPage from './pages/ErrorPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
+import AuthCallback from './components/AuthCallback'; // Legg til denne komponenten senere
 
-// Force token refresh every 10 minutes
+// Token refresh interval (10 minutter)
 const TOKEN_REFRESH_INTERVAL = 10 * 60 * 1000;
 
 // Component to handle post-payment actions
@@ -82,89 +82,110 @@ function PostPaymentHandler() {
 }
 
 function App() {
-  const { initialize, isAuthenticated, isLoading } = useAuthStore();
-  const { isDark } = useThemeStore();
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { initialize, isAuthenticated } = useAuthStore();
+  const { isDark } = useThemeStore();
 
   useEffect(() => {
     const initApp = async () => {
       try {
-        // First try to restore session from localStorage
-        await initialize();
+        // Start initialisering uten å blokkere UI
+        setIsLoading(true);
         
-        // Set up periodic token refresh
-        const refreshInterval = setInterval(async () => {
-          try {
-            // Check if user manually logged out
-            const wasManuallyLoggedOut = localStorage.getItem('manualLogout') === 'true';
-            if (wasManuallyLoggedOut) {
-              clearInterval(refreshInterval);
-              return;
-            }
-            
-            // Add cache busting parameter to avoid stale requests
-            await api.fetch('/api/refresh-token', {
-              method: 'POST',
-              credentials: 'include',
-              headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache'
-              }
-            });
-            console.log("Token refreshed successfully by interval");
-          } catch (err) {
-            console.warn("Scheduled token refresh failed:", err);
-            // Don't log out automatically on failed refresh
-          }
-        }, TOKEN_REFRESH_INTERVAL);
+        // Initialiser auth i bakgrunnen uten å vente på den
+        initialize().catch(err => {
+          console.warn("Auth initialization issue (non-blocking):", err);
+        });
         
-        // Store interval so it can be canceled on logout
-        (window as any)['tokenRefreshInterval'] = refreshInterval;
+        // Tillat app å vises etter kort tid uansett auth-status
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 1500);
         
-        return () => {
-          clearInterval(refreshInterval);
-        };
       } catch (err) {
         console.error("App initialization error:", err);
         setError("Failed to initialize application");
+        setIsLoading(false);
       }
     };
 
     initApp();
   }, [initialize]);
 
-  // Listen for auth changes and store in localStorage
+  // Set up token refresh interval
+  useEffect(() => {
+    // Ikke gjør token refresh hvis brukeren ikke er logget inn
+    if (!isAuthenticated) return;
+    
+    console.log("Setting up token refresh interval");
+    
+    const refreshInterval = setInterval(async () => {
+      try {
+        // Check if user manually logged out
+        const wasManuallyLoggedOut = localStorage.getItem('manualLogout') === 'true';
+        if (wasManuallyLoggedOut) {
+          clearInterval(refreshInterval);
+          return;
+        }
+        
+        // Add cache busting parameter to avoid stale requests
+        await api.fetch('/api/refresh-token', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        console.log("Token refreshed successfully by interval");
+      } catch (err) {
+        console.warn("Scheduled token refresh failed:", err);
+        // Don't log out automatically on failed refresh
+      }
+    }, TOKEN_REFRESH_INTERVAL);
+    
+    // Store interval so it can be canceled on logout
+    (window as any)['tokenRefreshInterval'] = refreshInterval;
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [isAuthenticated]);
+
+  // Listen for auth changes
   useEffect(() => {
     if (isAuthenticated) {
       localStorage.setItem('isAuthenticated', 'true');
       // Remove manual logout flag when user is logged in
       localStorage.removeItem('manualLogout');
-    } else if (localStorage.getItem('isAuthenticated')) {
-      // If we were authenticated before, but not now, check if it was manual logout
-      const wasManuallyLoggedOut = localStorage.getItem('manualLogout') === 'true';
-      
-      if (!wasManuallyLoggedOut) {
-        // Only attempt re-auth if it wasn't manual logout
-        const attemptReauth = async () => {
-          try {
-            await api.fetch('/api/refresh-token', { 
-              method: 'POST',
-              credentials: 'include',
-              headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache'
-              }
-            });
-            await initialize();
-          } catch (err) {
-            console.warn("Re-authentication failed:", err);
-            localStorage.removeItem('isAuthenticated');
-          }
-        };
-        attemptReauth();
-      }
     }
-  }, [isAuthenticated, initialize]);
+  }, [isAuthenticated]);
+
+  // Check for B2C auth redirects
+  useEffect(() => {
+    const checkForAuthResults = () => {
+      // Sjekk om vi har returnert fra en Azure B2C-innlogging
+      if (window.location.hash.includes('id_token=')) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const idToken = hashParams.get('id_token');
+        
+        if (idToken) {
+          // Fjern token fra URL av sikkerhetsgrunner
+          window.history.replaceState({}, document.title, window.location.pathname);
+          
+          // Prosesser token
+          console.log("Detected returning from B2C auth flow, processing token...");
+          
+          // Send brukeren til AuthCallback
+          window.location.href = '/auth/callback?id_token=' + encodeURIComponent(idToken);
+        }
+      }
+    };
+    
+    // Kjør sjekk ved oppstart
+    checkForAuthResults();
+  }, []);
 
   // Improved error detection to prevent infinite refresh loops
   useEffect(() => {
@@ -266,17 +287,14 @@ function App() {
                 
                 // Only allow refresh if we haven't recently refreshed
                 if (!lastRefreshTime || (now - parseInt(lastRefreshTime)) > 10000) {
-                  // Reset CSRF token
                   try {
-                    csrfService.resetToken();
-                    
                     // Store the refresh timestamp to prevent loops
                     localStorage.setItem('lastSecurityRefresh', now.toString());
                     
                     // Wait before reload (1s, 2s)
                     setTimeout(() => window.location.reload(), consecutiveErrors * 1000);
                   } catch (error) {
-                    console.warn('Could not reset CSRF token:', error);
+                    console.warn('Error during security refresh:', error);
                     setTimeout(() => window.location.reload(), consecutiveErrors * 1000);
                   }
                 } else {
@@ -347,6 +365,7 @@ function App() {
               <Route path="terms" element={<TermsOfService />} />
               <Route path="privacy" element={<PrivacyPolicy />} />
               <Route path="help" element={<HelpPage />} />
+              <Route path="auth/callback" element={<AuthCallback />} />
               
               {/* Protected routes */}
               <Route path="dashboard" element={

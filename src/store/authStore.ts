@@ -404,76 +404,62 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   initialize: async () => {
-    // Check for stored authentication data
-    const storedAuth = localStorage.getItem('authUser');
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    
-    // Check for pending registration
-    const pendingRegistrationStr = sessionStorage.getItem('pendingRegistration');
-    if (pendingRegistrationStr) {
-      try {
-        const pendingData = JSON.parse(pendingRegistrationStr);
-        set({ pendingRegistration: pendingData });
-      } catch (e) {
-        console.warn('Failed to parse pending registration data', e);
-        sessionStorage.removeItem('pendingRegistration');
-      }
-    }
-    
-    if (storedAuth && isAuthenticated) {
-      try {
-        const authData = JSON.parse(storedAuth);
-        
-        // Set initial user data from localStorage
-        set({
-          user: authData,
-          isAuthenticated: true,
-          planType: authData.planType,
-          tokens: authData.tokens || 0,
-          isDemoUser: authData.planType === 'Demo'
-        });
-        
-        // Do a single refresh at startup
+    try {
+      // Sjekk for lagret autentiseringsdata
+      const storedAuth = localStorage.getItem('authUser');
+      const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+      
+      // Sett midlertidig tilstand for å unngå blokkering
+      if (storedAuth && isAuthenticated) {
         try {
-          const refreshResponse = await api.fetch('/refresh-token', {
-            method: 'POST',
-            credentials: 'include'
-          });
+          const authData = JSON.parse(storedAuth);
           
-          if (refreshResponse.ok) {
-            console.log("✅ Token refreshed on app start");
+          // Sett initiell brukerdata fra localStorage
+          set({
+            user: authData,
+            isAuthenticated: true,
+            planType: authData.planType,
+            tokens: authData.tokens || 0,
+            isDemoUser: authData.planType === 'Demo'
+          });
+        } catch (parseError) {
+          console.warn('Failed to parse stored auth data:', parseError);
+        }
+      }
+      
+      // Ikke blokker oppstart, fortsett med å validere i bakgrunnen
+      setTimeout(async () => {
+        try {
+          if (storedAuth && isAuthenticated) {
+            const refreshResponse = await api.fetch('/api/refresh-token', {
+              method: 'POST',
+              credentials: 'include'
+            });
             
-            // Now get updated user data
-            const response = await api.fetch('/verify-token');
-            if (response.ok) {
-              const userData = await response.json();
-              
-              // Update with fresh data but keep token
-              set({ 
-                user: {
-                  ...userData,
-                  token: authData.token,
-                  isAdmin: userData.isAdmin
-                },
-                tokens: userData.tokens || 0,
-                planType: userData.planType,
-                isDemoUser: userData.planType === 'Demo'
-              });
+            if (refreshResponse.ok) {
+              const response = await api.fetch('/api/verify-token');
+              if (response.ok) {
+                const userData = await response.json();
+                
+                set({ 
+                  user: {
+                    ...userData,
+                    token: JSON.parse(storedAuth).token,
+                    isAdmin: userData.isAdmin
+                  },
+                  tokens: userData.tokens || 0,
+                  planType: userData.planType,
+                  isDemoUser: userData.planType === 'Demo'
+                });
+              }
             }
           }
-          
-          // Set up regular token refresh interval
-          get().setupTokenRefreshInterval();
-          
         } catch (error) {
-          console.warn('Failed to refresh authentication on startup:', error);
-          // Keep using stored data without refreshing
+          console.warn('Background auth refresh failed:', error);
         }
-      } catch (error) {
-        console.error('Failed to parse stored authentication data:', error);
-        localStorage.removeItem('authUser');
-        localStorage.removeItem('isAuthenticated');
-      }
+      }, 1000);
+    } catch (error) {
+      console.error('Error in auth initialize:', error);
     }
-  }
+  },
 }));
