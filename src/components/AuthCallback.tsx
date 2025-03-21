@@ -4,9 +4,25 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../utils/api';
 
+// Create a type for the debug state
+interface DebugInfo {
+  path?: string;
+  search?: string;
+  hash?: string;
+  timestamp?: string;
+  authData?: any;
+  backendResponse?: any;
+  clientPrincipal?: any;
+  noAuthDataFound?: boolean;
+  finalError?: string;
+  clientPrincipalError?: string;
+  userData?: any;
+  [key: string]: any; // Allow additional properties
+}
+
 const AuthCallback = () => {
   const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(true);
+  const [debug, setDebug] = useState<DebugInfo>({}); // Use the interface
   const location = useLocation();
   const navigate = useNavigate();
   const { setUser } = useAuthStore();
@@ -14,69 +30,105 @@ const AuthCallback = () => {
   useEffect(() => {
     const processAuthCallback = async () => {
       try {
-        setIsProcessing(true);
-        console.log("Processing auth callback on path:", location.pathname);
-        console.log("URL search params:", location.search);
+        // Debug info
+        const debugInfo: DebugInfo = {
+          path: location.pathname,
+          search: location.search,
+          hash: location.hash,
+          timestamp: new Date().toISOString()
+        };
         
-        // Extract token from URL params (B2C sends it here)
-        const urlParams = new URLSearchParams(location.search);
-        const idToken = urlParams.get('id_token');
-        const code = urlParams.get('code');
+        console.log("Auth callback debug info:", debugInfo);
+        setDebug(debugInfo);
         
-        // Also check hash parameters (some auth flows use these)
-        let hashToken = null;
-        if (location.hash && location.hash.length > 1) {
+        // Try to get token from URL params (query string)
+        const searchParams = new URLSearchParams(location.search);
+        let token = searchParams.get('id_token');
+        const code = searchParams.get('code');
+        
+        // If not in query params, try hash fragment
+        if (!token && location.hash) {
           const hashParams = new URLSearchParams(location.hash.substring(1));
-          hashToken = hashParams.get('id_token');
+          token = hashParams.get('id_token');
         }
         
-        // Use whichever token we found
-        const token = idToken || hashToken || code;
+        // Collect all potentially useful data
+        const authData: any = {};
+        if (token) authData.id_token = token;
+        if (code) authData.code = code;
         
-        if (token) {
-          console.log("Found token in URL, sending to backend");
+        // Add all other params from URL for debugging
+        searchParams.forEach((value, key) => {
+          if (key !== 'id_token' && key !== 'code') {
+            authData[key] = value;
+          }
+        });
+        
+        debugInfo.authData = authData;
+        console.log("Collected auth data:", authData);
+        setDebug(prevDebug => ({...prevDebug, authData})); // Fix for prev error
+        
+        // Only proceed if we have some form of token
+        if (token || code) {
+          console.log("Sending auth data to backend...");
           
-          // Send token to backend
+          // Send to backend
           const response = await api.fetch('/api/auth/azure-callback', {
             method: 'POST',
-            body: JSON.stringify({
-              id_token: token,
-              // Include code if available
-              code: code || undefined
-            }),
+            body: JSON.stringify(authData),
           });
           
+          debugInfo.backendResponse = {
+            status: response.status,
+            ok: response.ok
+          };
+          
           if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || 'Authentication failed');
+            let errorText = '';
+            try {
+              const errorData = await response.json();
+              errorText = errorData.error || 'Unknown error';
+              debugInfo.backendResponse.error = errorData;
+            } catch (e) {
+              errorText = await response.text();
+              debugInfo.backendResponse.error = errorText;
+            }
+            
+            throw new Error(`Authentication failed: ${errorText}`);
           }
           
+          // Parse user data from response
           const userData = await response.json();
+          debugInfo.userData = {
+            received: true,
+            isNewUser: userData.isNewUser,
+            email: userData.email
+          };
           
-          // Check if this is a new user for potential different redirect
-          const isNewUser = userData.isNewUser;
+          console.log("Received user data:", userData);
           
-          // Save user data
+          // Store in local storage
           localStorage.setItem('authUser', JSON.stringify(userData));
           localStorage.setItem('isAuthenticated', 'true');
           setUser(userData);
           
-          // Redirect based on whether this is a new user
-          if (isNewUser) {
+          // Navigate based on user status
+          if (userData.isNewUser) {
             navigate('/welcome');
           } else {
             navigate('/dashboard');
           }
-          
           return;
         }
         
-        // If no token in URL, try the /.auth/me endpoint
+        // Try /.auth/me as fallback (for Static Web Apps auth)
         try {
+          console.log("No token found in URL, trying /.auth/me");
           const clientPrincipal = await getClientPrincipal();
+          debugInfo.clientPrincipal = clientPrincipal ? {found: true} : {found: false};
           
           if (clientPrincipal && (clientPrincipal.userDetails || clientPrincipal.userId)) {
-            console.log("Found client principal data:", clientPrincipal);
+            console.log("Found client principal, processing...");
             
             const response = await api.fetch('/api/auth/azure-callback', {
               method: 'POST',
@@ -88,44 +140,38 @@ const AuthCallback = () => {
             });
             
             if (!response.ok) {
-              const errorData = await response.json().catch(() => ({}));
-              throw new Error(errorData.error || 'Authentication failed');
+              throw new Error('Authentication failed via client principal');
             }
             
             const userData = await response.json();
-            
-            // Check if this is a new user
-            const isNewUser = userData.isNewUser;
-            
-            // Save user data
             localStorage.setItem('authUser', JSON.stringify(userData));
             localStorage.setItem('isAuthenticated', 'true');
             setUser(userData);
             
-            // Redirect based on whether this is a new user
-            if (isNewUser) {
+            if (userData.isNewUser) {
               navigate('/welcome');
             } else {
               navigate('/dashboard');
             }
-            
             return;
           }
-        } catch (clientPrincipalError) {
-          console.warn("Error fetching client principal:", clientPrincipalError);
-          // Continue with error handling below
+        } catch (error) { // Fix for clientPrincipalError
+          // Type assertion for the error
+          const clientPrincipalError = error as Error;
+          console.warn("Error with client principal:", clientPrincipalError);
+          debugInfo.clientPrincipalError = clientPrincipalError.message;
         }
         
-        // No authentication data found
+        // No auth data found anywhere
         setError('No authentication data found. Please try logging in again.');
-        setTimeout(() => navigate('/login'), 3000);
+        console.error("No authentication data found");
+        setDebug(prevDebug => ({...prevDebug, noAuthDataFound: true})); // Fix for prev error
         
       } catch (error) {
         console.error('Auth callback error:', error);
-        setError(`Authentication error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        setTimeout(() => navigate('/login'), 3000);
-      } finally {
-        setIsProcessing(false);
+        const finalError = error instanceof Error ? error.message : String(error);
+        setError(`Authentication error: ${finalError}`);
+        setDebug(prevDebug => ({...prevDebug, finalError})); // Fix for prev error
       }
     };
     
@@ -148,6 +194,8 @@ const AuthCallback = () => {
     }
   };
  
+  // Rest of the component remains the same...
+  
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -157,7 +205,29 @@ const AuthCallback = () => {
               Authentication Error
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">Redirecting to login...</p>
+            
+            {/* Add debugging information */}
+            <div className="mt-6 text-left text-sm text-gray-500 dark:text-gray-400 border-t pt-4">
+              <h3 className="font-semibold">Debug Info:</h3>
+              <pre className="mt-2 bg-gray-100 dark:bg-gray-900 p-2 rounded overflow-auto text-xs">
+                {JSON.stringify(debug, null, 2)}
+              </pre>
+              
+              <div className="mt-4 flex space-x-4 justify-center">
+                <button
+                  onClick={() => navigate('/login')}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Back to Login
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -168,9 +238,14 @@ const AuthCallback = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="text-center">
         <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-300">
-          {isProcessing ? "Processing authentication..." : "Completing sign in..."}
-        </p>
+        <p className="text-gray-600 dark:text-gray-300">Completing sign in...</p>
+        
+        {/* Show minimal debug info even on loading state */}
+        <div className="mt-8 text-left text-xs text-gray-400">
+          <p>Path: {location.pathname}</p>
+          <p>Has search params: {location.search ? 'Yes' : 'No'}</p>
+          <p>Has hash params: {location.hash ? 'Yes' : 'No'}</p>
+        </div>
       </div>
     </div>
   );
