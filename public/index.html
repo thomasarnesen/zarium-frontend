@@ -1,28 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-563CVNF3');</script>
-    <!-- End Google Tag Manager -->
-    
-    <!-- TikTok Pixel Code Start -->
-    <script>
-    !function (w, d, t) {
-      w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(
-    var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._i[e]._partner=o||'GoogleTagManagerClient',ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{},ttq._partner=ttq._partner||'GoogleTagManagerClient';n=document.createElement("script")
-    ;n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
-    
-    
-      ttq.load('CVDIA9JC77U30UV9B9Q0');
-      ttq.page();
-    }(window, document, 'ttq');
-    </script>
-    <!-- TikTok Pixel Code End -->
-    
+
     <!-- Consent Manager -->
     <script type="text/javascript" data-cmp-ab="1" src="https://cdn.consentmanager.net/delivery/autoblocking/baf364933221c.js" data-cmp-host="b.delivery.consentmanager.net" data-cmp-cdn="cdn.consentmanager.net" data-cmp-codesrc="16"></script>
     
@@ -246,12 +225,7 @@
       });
     </script>
   </head>
-  <body>
-    <!-- Google Tag Manager (noscript) -->
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-563CVNF3"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-    <!-- End Google Tag Manager (noscript) -->
-    
+  <body> 
     <div id="root">
       <!-- Initial loading state shown while React loads -->
       <div class="initial-loader">
@@ -271,5 +245,47 @@
     </noscript>
     <!-- Add cache busting parameter -->
     <script type="module" src="/src/main.tsx?v=20240320"></script>
+    
+    <script>
+      // Sikkerhetsnett for innlasting
+      window.addEventListener('load', function() {
+        var loadTimeout = setTimeout(function() {
+          var root = document.getElementById('root');
+          var loaderElement = document.querySelector('.initial-loader');
+          
+          // Sjekk om appen fortsatt viser lasteskjermen etter 15 sekunder
+          if (root && loaderElement && root.contains(loaderElement)) {
+            loaderElement.innerHTML = `
+              <div style="max-width:500px;padding:20px;text-align:center;">
+                <h2 style="font-size:20px;color:#059669;margin-bottom:15px;">
+                  Dette tar lengre tid enn forventet
+                </h2>
+                <p style="margin-bottom:20px;color:#555;line-height:1.5;">
+                  Vi beklager forsinkelsen. Dette kan skyldes treg nettverksforbindelse.
+                </p>
+                <div>
+                  <button onclick="window.location.reload()" style="padding:10px 20px;background-color:#059669;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:10px;">
+                    Oppdater siden
+                  </button>
+                  <button onclick="localStorage.clear();sessionStorage.clear();document.cookie.split(';').forEach(c=>document.cookie=c.replace(/^ +/,'').replace(/=.*/,'=;expires='+new Date().toUTCString()+';path=/'));window.location.href='/';" style="padding:10px 20px;background-color:#f3f4f6;color:#333;border:1px solid #ddd;border-radius:4px;cursor:pointer;">
+                    Start på nytt
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+        }, 15000); // 15 sekunder
+
+        // Rydd opp hvis appen laster som den skal
+        var observer = new MutationObserver(function(mutations) {
+          if (!document.querySelector('.initial-loader')) {
+            clearTimeout(loadTimeout);
+            observer.disconnect();
+          }
+        });
+        
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    </script>
   </body>
 </html>
