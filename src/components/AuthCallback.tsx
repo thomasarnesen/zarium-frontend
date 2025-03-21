@@ -16,56 +16,58 @@ const AuthCallback = () => {
       try {
         setIsProcessing(true);
         console.log("Processing auth callback on path:", location.pathname);
-        console.log("Query parameters:", location.search);
+        console.log("URL search params:", location.search);
         
-        // Check for various token formats in URL
+        // Extract token from URL params (B2C sends it here)
         const urlParams = new URLSearchParams(location.search);
-        const hashParams = new URLSearchParams(location.hash.substring(1));
-        
-        // Try to get token from different possible locations
-        const idToken = urlParams.get('id_token') || hashParams.get('id_token');
+        const idToken = urlParams.get('id_token');
         const code = urlParams.get('code');
-        const state = urlParams.get('state') || hashParams.get('state');
         
-        console.log("Found in URL - id_token:", !!idToken, "code:", !!code);
+        // Also check hash parameters (some auth flows use these)
+        let hashToken = null;
+        if (location.hash && location.hash.length > 1) {
+          const hashParams = new URLSearchParams(location.hash.substring(1));
+          hashToken = hashParams.get('id_token');
+        }
         
-        // If we have a token in the URL, process it
-        if (idToken || code) {
+        // Use whichever token we found
+        const token = idToken || hashToken || code;
+        
+        if (token) {
           console.log("Found token in URL, sending to backend");
           
-          // Construct payload with whatever tokens we have
-          const authPayload: any = {};
-          if (idToken) authPayload.id_token = idToken;
-          if (code) authPayload.code = code;
-          if (state) authPayload.state = state;
-          
-          // Send the token to our backend
+          // Send token to backend
           const response = await api.fetch('/api/auth/azure-callback', {
             method: 'POST',
-            body: JSON.stringify(authPayload),
+            body: JSON.stringify({
+              id_token: token,
+              // Include code if available
+              code: code || undefined
+            }),
           });
-         
+          
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.error || 'Authentication failed');
           }
-         
+          
           const userData = await response.json();
           
-          // Check if this is a new user
+          // Check if this is a new user for potential different redirect
           const isNewUser = userData.isNewUser;
           
-          // Store user data and update state
+          // Save user data
           localStorage.setItem('authUser', JSON.stringify(userData));
           localStorage.setItem('isAuthenticated', 'true');
           setUser(userData);
-         
+          
           // Redirect based on whether this is a new user
           if (isNewUser) {
             navigate('/welcome');
           } else {
             navigate('/dashboard');
           }
+          
           return;
         }
         
@@ -74,9 +76,8 @@ const AuthCallback = () => {
           const clientPrincipal = await getClientPrincipal();
           
           if (clientPrincipal && (clientPrincipal.userDetails || clientPrincipal.userId)) {
-            console.log("Found client principal, sending to backend");
+            console.log("Found client principal data:", clientPrincipal);
             
-            // We have authentication info, send to backend
             const response = await api.fetch('/api/auth/azure-callback', {
               method: 'POST',
               body: JSON.stringify({
@@ -85,36 +86,37 @@ const AuthCallback = () => {
                 user_id: clientPrincipal.userId
               }),
             });
-           
+            
             if (!response.ok) {
               const errorData = await response.json().catch(() => ({}));
               throw new Error(errorData.error || 'Authentication failed');
             }
-           
+            
             const userData = await response.json();
             
             // Check if this is a new user
             const isNewUser = userData.isNewUser;
             
-            // Store user data and update state
+            // Save user data
             localStorage.setItem('authUser', JSON.stringify(userData));
             localStorage.setItem('isAuthenticated', 'true');
             setUser(userData);
-           
+            
             // Redirect based on whether this is a new user
             if (isNewUser) {
               navigate('/welcome');
             } else {
               navigate('/dashboard');
             }
+            
             return;
           }
         } catch (clientPrincipalError) {
           console.warn("Error fetching client principal:", clientPrincipalError);
-          // Continue to the error section below
+          // Continue with error handling below
         }
         
-        // No authentication info found - show error
+        // No authentication data found
         setError('No authentication data found. Please try logging in again.');
         setTimeout(() => navigate('/login'), 3000);
         
@@ -126,7 +128,7 @@ const AuthCallback = () => {
         setIsProcessing(false);
       }
     };
-   
+    
     processAuthCallback();
   }, [location, navigate, setUser]);
  
@@ -137,7 +139,7 @@ const AuthCallback = () => {
       if (!response.ok) {
         throw new Error('Failed to get authentication data');
       }
-     
+      
       const data = await response.json();
       return data.clientPrincipal;
     } catch (error) {
@@ -166,7 +168,9 @@ const AuthCallback = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="text-center">
         <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-300">Completing sign in...</p>
+        <p className="text-gray-600 dark:text-gray-300">
+          {isProcessing ? "Processing authentication..." : "Completing sign in..."}
+        </p>
       </div>
     </div>
   );
