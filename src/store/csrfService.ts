@@ -1,3 +1,4 @@
+// Korrekt implementasjon av csrfService.ts
 import { config } from '../config';
 
 interface CSRFResponse {
@@ -5,7 +6,7 @@ interface CSRFResponse {
 }
 
 const csrfService = {
-  async getToken(): Promise<string> {
+  async getToken(): Promise<string> { // Fikset returtype
     try {
       // Return cached token if available
       if (this._token) {
@@ -43,7 +44,7 @@ const csrfService = {
     }
   },
   
-  async getHeaders(): Promise<Record<string, string>> {
+  async getHeaders(): Promise<Record<string, string>> { // Fikset returtype
     try {
       const token = await this.getToken();
       return token ? { 'X-CSRF-Token': token } : {};

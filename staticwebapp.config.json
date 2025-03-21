@@ -1,4 +1,30 @@
 {
+  "auth": {
+    "identityProviders": {
+      "azureActiveDirectory": {
+        "registration": {
+          "openIdIssuer": "https://zarium.b2clogin.com/zarium.onmicrosoft.com/v2.0/.well-known/openid-configuration?p=B2C_1_signup_signin",
+          "clientIdSettingName": "AADB2C_PROVIDER_CLIENT_ID",
+          "clientSecretSettingName": "AADB2C_PROVIDER_CLIENT_SECRET"
+        },
+        "login": {
+          "nameClaimType": "name",
+          "scopes": ["openid", "profile", "email"]
+        }
+      },
+      "google": {
+        "registration": {
+          "clientIdSettingName": "GOOGLE_CLIENT_ID",
+          "clientSecretSettingName": "GOOGLE_CLIENT_SECRET"
+        }
+      }
+    },
+    "defaultProvider": "azureActiveDirectory",
+    "userDetailsClaim": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+    "authorizedTokenIssuers": [
+      "https://zarium.b2clogin.com/zarium.onmicrosoft.com/v2.0/"
+    ]
+  },
   "routes": [
     {
       "route": "/robots.txt",
@@ -15,6 +41,40 @@
       "headers": {
         "Content-Type": "application/xml"
       }
+    },
+    {
+      "route": "/.auth/login/aad",
+      "statusCode": 200,
+      "allowedRoles": ["anonymous", "authenticated"]
+    },
+    {
+      "route": "/.auth/login/google",
+      "statusCode": 200,
+      "allowedRoles": ["anonymous", "authenticated"]
+    },
+    {
+      "route": "/.auth/login/callback",
+      "statusCode": 200,
+      "allowedRoles": ["anonymous", "authenticated"]
+    },
+    {
+      "route": "/.auth/logout",
+      "statusCode": 200,
+      "allowedRoles": ["anonymous", "authenticated"]
+    },
+    {
+      "route": "/auth/callback",
+      "allowedRoles": ["anonymous"],
+      "serve": "/index.html"
+    },
+    {
+      "route": "/logout-callback",
+      "allowedRoles": ["anonymous", "authenticated"],
+      "serve": "/index.html"
+    },
+    {
+      "route": "/api/auth/*",
+      "allowedRoles": ["anonymous"]
     },
     {
       "route": "/login",
@@ -336,7 +396,7 @@
   ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/images/*.{png,jpg,gif}", "/css/*", "/assets/*", "/*.txt", "/*.xml"]
+    "exclude": ["/images/*.{png,jpg,gif}", "/css/*", "/assets/*", "/*.txt", "/*.xml", "/js/*"]
   },
   "responseOverrides": {
     "404": {
@@ -345,14 +405,14 @@
     }
   },
   "globalHeaders": {
-  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network https://m.stripe.com https://analytics.tiktok.com; connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network https://m.stripe.com https://*.azurestaticapps.net https://analytics.tiktok.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://js.stripe.com https://m.stripe.network https://hooks.stripe.com https://m.stripe.com; form-action 'self'; worker-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; upgrade-insecure-requests",
-  "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "DENY",
-  "X-XSS-Protection": "1; mode=block",
-  "Access-Control-Allow-Credentials": "true",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
-},
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network https://m.stripe.com https://analytics.tiktok.com; connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network https://m.stripe.com https://*.azurestaticapps.net https://analytics.tiktok.com https://zarium.b2clogin.com https://*.b2clogin.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://js.stripe.com https://m.stripe.network https://hooks.stripe.com https://m.stripe.com https://zarium.b2clogin.com https://*.b2clogin.com; form-action 'self' https://zarium.b2clogin.com https://*.b2clogin.com; worker-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; upgrade-insecure-requests",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
+  },
   "mimeTypes": {
     ".json": "text/json",
     ".xml": "application/xml",
@@ -360,5 +420,12 @@
     ".webmanifest": "application/manifest+json",
     ".ico": "image/x-icon",
     ".png": "image/png"
-  }
+  },
+  "platformErrorOverrides": [
+    {
+      "errorType": "Unauthenticated",
+      "statusCode": 302,
+      "serve": "/.auth/login/aad"
+    }
+  ]
 }

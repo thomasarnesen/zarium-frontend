@@ -25,7 +25,8 @@ import ResetPasswordPage from './pages/ResetPassword';
 import ErrorPage from './pages/ErrorPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
-import AuthCallback from './components/AuthCallback'; // Legg til denne komponenten senere
+import AuthCallback from './components/AuthCallback'; 
+import LogoutCallback from './components/LogoutCallback'; 
 
 // Token refresh interval (10 minutter)
 const TOKEN_REFRESH_INTERVAL = 10 * 60 * 1000;
@@ -359,6 +360,7 @@ function App() {
               <Route index element={<Home />} />
               <Route path="login" element={<LoginPage />} />
               <Route path="register" element={<RegisterPage />} />
+              <Route path="logout-callback" element={<LogoutCallback />} />
               <Route path="forgot-password" element={<ForgotPasswordPage />} />
               <Route path="reset-password" element={<ResetPasswordPage />} />
               <Route path="pricing" element={<PricingPage />} />

@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { FileSpreadsheet, Sparkles } from 'lucide-react';
 import csrfService from '../store/csrfService';
+import SocialLogin from '../components/SocialLogin';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -153,6 +154,14 @@ export default function Login() {
               >
                 {loading ? 'Signing in...' : (csrfLoading ? 'Preparing...' : 'Sign in')}
               </button>
+              
+              <SocialLogin 
+                onLoginStart={() => setLoading(true)}
+                onLoginError={(error) => {
+                  setLoading(false);
+                  setError(error.message);
+                }}
+              />
               
               <div className="mt-4 text-center">
                 <Link to="/forgot-password" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">

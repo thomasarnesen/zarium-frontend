@@ -1,3 +1,4 @@
+// src/components/AuthCallback.tsx
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -12,43 +13,64 @@ const AuthCallback = () => {
   useEffect(() => {
     const processAuthCallback = async () => {
       try {
-        // Hent token fra URL
-        const params = new URLSearchParams(location.search);
-        const token = params.get('id_token') || '';
+        // Sjekk om vi har autentiseringsinfo i URL
+        const clientPrincipal = await getClientPrincipal();
         
-        if (!token) {
-          setError('No authentication token found');
-          return;
+        if (clientPrincipal && clientPrincipal.userDetails) {
+          // Vi har autentiseringsinfo, send til backend for å opprette/logge inn bruker
+          const response = await api.fetch('/api/auth/azure-callback', {
+            method: 'POST',
+            body: JSON.stringify({ 
+              id_token: JSON.stringify(clientPrincipal),
+              user_details: clientPrincipal.userDetails,
+              user_id: clientPrincipal.userId
+            }),
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Authentication failed');
+          }
+          
+          const userData = await response.json();
+          
+          // Lagre brukerdata og oppdater tilstand
+          localStorage.setItem('authUser', JSON.stringify(userData));
+          localStorage.setItem('isAuthenticated', 'true');
+          setUser(userData);
+          
+          // Omdiriger til dashboard
+          navigate('/dashboard');
+        } else {
+          // Ingen autentiseringsinfo funnet
+          setError('No authentication data found');
+          setTimeout(() => navigate('/login'), 2000);
         }
-        
-        // Send token til backend for validering og brukeropprettelse/innlogging
-        const response = await api.fetch('/api/auth/azure-callback', {
-          method: 'POST',
-          body: JSON.stringify({ id_token: token }),
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Authentication failed');
-        }
-        
-        const userData = await response.json();
-        
-        // Lagre brukerdata og oppdater tilstand
-        localStorage.setItem('authUser', JSON.stringify(userData));
-        localStorage.setItem('isAuthenticated', 'true');
-        setUser(userData);
-        
-        // Omdiriger til dashboard
-        navigate('/dashboard');
       } catch (error) {
         console.error('Auth callback error:', error);
         setError(`Authentication error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setTimeout(() => navigate('/login'), 3000);
       }
     };
     
     processAuthCallback();
   }, [location, navigate, setUser]);
+  
+  // Funksjon for å hente clientPrincipal fra /.auth/me endepunktet
+  const getClientPrincipal = async () => {
+    try {
+      const response = await fetch('/.auth/me');
+      if (!response.ok) {
+        throw new Error('Failed to get authentication data');
+      }
+      
+      const data = await response.json();
+      return data.clientPrincipal;
+    } catch (error) {
+      console.error('Error fetching auth data:', error);
+      return null;
+    }
+  };
   
   if (error) {
     return (
@@ -59,12 +81,7 @@ const AuthCallback = () => {
               Authentication Error
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
-            <button
-              onClick={() => navigate('/login')}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-            >
-              Return to Login
-            </button>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">Redirecting to login...</p>
           </div>
         </div>
       </div>
