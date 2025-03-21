@@ -27,6 +27,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import AuthCallback from './components/AuthCallback'; 
 import LogoutCallback from './components/LogoutCallback'; 
+import WelcomePage from './pages/WelcomePage';
 
 // Token refresh interval (10 minutter)
 const TOKEN_REFRESH_INTERVAL = 10 * 60 * 1000;
@@ -368,6 +369,13 @@ function App() {
               <Route path="privacy" element={<PrivacyPolicy />} />
               <Route path="help" element={<HelpPage />} />
               <Route path="auth/callback" element={<AuthCallback />} />
+              
+              {/* Add Welcome route */}
+              <Route path="welcome" element={
+                <ProtectedRoute>
+                  <WelcomePage />
+                </ProtectedRoute>
+              } />
               
               {/* Protected routes */}
               <Route path="dashboard" element={

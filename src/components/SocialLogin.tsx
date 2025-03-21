@@ -1,32 +1,29 @@
-// src/components/SocialLogin.tsx
-import React, { useState } from 'react';
-import { config } from '../config';
+import React from 'react';
 
 interface SocialLoginProps {
+  mode?: 'login' | 'register'; // Add mode property
   onLoginStart?: () => void;
   onLoginError?: (error: Error) => void;
 }
 
-const SocialLogin: React.FC<SocialLoginProps> = ({ 
-  onLoginStart, 
+const SocialLogin: React.FC<SocialLoginProps> = ({
+  mode = 'login',
+  onLoginStart,
   onLoginError
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  
   const handleSocialLogin = async (provider: string) => {
     try {
-      setIsLoading(true);
       if (onLoginStart) onLoginStart();
       
-      // Bruk Azure AD B2C-innlogging direkte
-      window.location.href = `/.auth/login/${provider}`;
+      // You can add query parameters to the URL to indicate this is a registration
+      const registrationParam = mode === 'register' ? '?registration=true' : '';
+      window.location.href = `/.auth/login/${provider}${registrationParam}`;
     } catch (error) {
-      console.error(`Error during ${provider} login:`, error);
-      setIsLoading(false);
+      console.error(`Error during ${provider} ${mode}:`, error);
       if (onLoginError) onLoginError(error instanceof Error ? error : new Error(String(error)));
     }
   };
-  
+
   return (
     <div className="mt-6">
       <div className="relative">
@@ -35,31 +32,29 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
         </div>
         <div className="relative flex justify-center text-sm">
           <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-            Or continue with
+            Or {mode === 'register' ? 'register' : 'sign in'} with
           </span>
         </div>
       </div>
-      
+     
       <div className="mt-6 grid grid-cols-2 gap-3">
         <button
           type="button"
           onClick={() => handleSocialLogin('google')}
-          disabled={isLoading}
-          className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+          className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
-          <span className="sr-only">Sign in with Google</span>
+          <span className="sr-only">{mode === 'register' ? 'Register' : 'Sign in'} with Google</span>
           <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
           </svg>
         </button>
-        
+       
         <button
           type="button"
           onClick={() => handleSocialLogin('aad')}
-          disabled={isLoading}
-          className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+          className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
-          <span className="sr-only">Sign in with Microsoft</span>
+          <span className="sr-only">{mode === 'register' ? 'Register' : 'Sign in'} with Microsoft</span>
           <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
             <path d="M0 0h11.5v11.5h-11.5zM12.5 0h11.5v11.5h-11.5zM0 12.5h11.5v11.5h-11.5zM12.5 12.5h11.5v11.5h-11.5z" />
           </svg>

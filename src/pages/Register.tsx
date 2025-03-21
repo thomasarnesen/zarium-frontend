@@ -6,6 +6,7 @@ import { PolicyModal } from '../components/PolicyModal';
 import { TermsContent } from '../components/TermsContent';
 import { PrivacyContent } from '../components/PrivacyContent';
 import api from '../utils/api';
+import SocialLogin from '../components/SocialLogin';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -341,6 +342,15 @@ export default function Register() {
                 >
                   {loading ? 'Creating account...' : 'Continue to payment'}
                 </button>
+                
+                <SocialLogin 
+                  mode="register"
+                  onLoginStart={() => setLoading(true)}
+                  onLoginError={(error) => {
+                    setLoading(false);
+                    setError(error.message);
+                  }}
+                />
               </form>
             ) : (
               <div className="space-y-6">
