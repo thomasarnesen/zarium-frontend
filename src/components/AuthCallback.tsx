@@ -3,23 +3,17 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../utils/api';
 
-// Interface for debug info
 interface DebugInfo {
-  path?: string;
-  search?: string;
-  hash?: string;
   timestamp?: string;
   authData?: any;
-  backendResponse?: any;
   finalError?: string;
-  userData?: any;
-  [key: string]: any; 
+  [key: string]: any;
 }
 
 const AuthCallback = () => {
   const [error, setError] = useState<string | null>(null);
-  const [debug, setDebug] = useState<DebugInfo>({}); 
   const [processing, setProcessing] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<any>({});
   const location = useLocation();
   const navigate = useNavigate();
   const { setUser } = useAuthStore();
@@ -27,31 +21,38 @@ const AuthCallback = () => {
   useEffect(() => {
     const processAuthCallback = async () => {
       try {
-        console.log("Processing auth callback with URL:", 
-          window.location.pathname + window.location.search + window.location.hash);
-        
-        // Debug info
-        const debugInfo: DebugInfo = {
+        // Collect debug info
+        const debug: DebugInfo = {
           path: location.pathname,
           search: location.search,
           hash: location.hash,
           timestamp: new Date().toISOString()
         };
+        setDebugInfo(debug);
+        console.log("Auth callback started with URL:", 
+          window.location.pathname + window.location.search + window.location.hash);
+
+        // Check if there's an error in the hash (common with Azure B2C)
+        if (location.hash && location.hash.includes('error=')) {
+          const hashParams = new URLSearchParams(location.hash.substring(1));
+          const errorCode = hashParams.get('error');
+          const errorDescription = hashParams.get('error_description');
+          
+          console.error(`Authentication error: ${errorCode} - ${errorDescription}`);
+          throw new Error(`Authentication failed: ${errorDescription || errorCode}`);
+        }
         
-        console.log("Auth callback debug info:", debugInfo);
-        setDebug(debugInfo);
-        
-        // CRITICAL: Check URL hash first (where Azure B2C puts the token)
+        // Extract token from hash (Azure B2C uses fragment/hash)
         let token = null;
         let provider = 'azure';
         
         if (window.location.hash && window.location.hash.length > 1) {
-          console.log("Found hash in URL:", window.location.hash);
+          console.log("Found hash in URL");
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
           token = hashParams.get('id_token');
           
           if (token) {
-            console.log("Successfully extracted token from hash!");
+            console.log("Successfully extracted token from hash");
           } else {
             console.error("No id_token found in hash parameters");
           }
@@ -69,18 +70,15 @@ const AuthCallback = () => {
         
         // Final check if we have a token
         if (!token) {
-          console.error("No authentication token found in URL");
           throw new Error('No authentication token found in URL');
         }
         
         // For security, remove token from URL history
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // Extract user info from token for Azure B2C (if possible)
-        let userDetails = null;
-        let userId = null;
-        
-        if (provider === 'azure') {
+        // Extract user info for logging (optional)
+        let userEmail = null;
+        if (token && provider === 'azure') {
           try {
             // Try to decode the token payload
             const parts = token.split('.');
@@ -88,32 +86,27 @@ const AuthCallback = () => {
               const payload = parts[1];
               const decodedPayload = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
               const tokenData = JSON.parse(decodedPayload);
-              
-              // Extract claims from the token
-              userDetails = tokenData.email || tokenData.emails?.[0] || tokenData.name;
-              userId = tokenData.sub || tokenData.oid;
-              
-              console.log("Extracted user details from token:", userDetails);
+              userEmail = tokenData.email || tokenData.emails?.[0] || tokenData.name;
+              console.log("Extracted email from token:", userEmail);
             }
           } catch (decodeError) {
             console.warn("Could not decode token payload:", decodeError);
           }
         }
         
-        // Construct auth data for the backend
+        // Prepare authentication data for backend
         const authData = {
           id_token: token,
-          user_details: userDetails,
-          user_id: userId,
+          user_details: userEmail,
+          user_id: null, // Will be extracted by backend
           provider: provider,
           create_demo: true  // Always create a demo account
         };
         
-        debugInfo.authData = authData;
-        console.log("Auth data prepared:", authData);
-        setDebug(prevDebug => ({...prevDebug, authData}));
-          
-        // Choose the right endpoint based on the provider
+        debug.authData = { ...authData, id_token: '***redacted***' };
+        setDebugInfo((prev: DebugInfo) => ({...prev, ...debug}));
+        
+        // Send token to backend for verification/user creation
         const callbackEndpoint = 
           provider === 'google' 
             ? '/api/auth/google/callback' 
@@ -121,98 +114,64 @@ const AuthCallback = () => {
         
         console.log(`Using callback endpoint: ${callbackEndpoint}`);
             
-        // Set timeout for fetch to avoid hanging
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const response = await api.fetch(callbackEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(authData),
+          credentials: 'include'
+        });
+          
+        if (!response.ok) {
+          let errorMessage = '';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || `Error ${response.status}`;
+          } catch (e) {
+            errorMessage = `Error ${response.status}: ${response.statusText}`;
+          }
+          throw new Error(errorMessage);
+        }
+          
+        // Parse user data from response
+        const userData = await response.json();
         
-        try {
-          const response = await api.fetch(callbackEndpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(authData),
-            credentials: 'include',
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-          
-          debugInfo.backendResponse = {
-            status: response.status,
-            ok: response.ok
-          };
-          
-          if (!response.ok) {
-            let errorText = '';
-            try {
-              const errorData = await response.json();
-              errorText = errorData.error || 'Unknown error';
-              debugInfo.backendResponse.error = errorData;
-            } catch (e) {
-              errorText = await response.text();
-              debugInfo.backendResponse.error = errorText;
-            }
-            
-            throw new Error(`Authentication failed: ${errorText}`);
-          }
-          
-          // Parse user data from response
-          const userData = await response.json();
-          debugInfo.userData = {
-            received: true,
-            isNewUser: userData.isNewUser,
-            email: userData.email,
-            planType: userData.planType
-          };
-          
-          console.log("Received user data:", userData);
-          
-          // Store in local storage
-          localStorage.setItem('authUser', JSON.stringify(userData));
-          localStorage.setItem('isAuthenticated', 'true');
-          localStorage.removeItem('manualLogout'); // Clear any logout flag
-          setUser(userData);
-          
-          // Get saved redirect URL if it exists
-          const redirectUrl = sessionStorage.getItem('authRedirectUrl');
-          sessionStorage.removeItem('authRedirectUrl');
-          
-          // Navigate based on user status
-          if (userData.isNewUser) {
-            console.log("Redirecting to welcome page for new user");
-            navigate('/welcome');
-          } else {
-            console.log("Redirecting to dashboard or saved URL for existing user");
-            navigate(redirectUrl || '/dashboard');
-          }
-        } catch (fetchError: unknown) {
-          if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-            throw new Error('Network request timed out. Please check your connection and try again.');
-          } else {
-            throw fetchError;
-          }
-        } finally {
-          clearTimeout(timeoutId);
+        // Store in local storage
+        localStorage.setItem('authUser', JSON.stringify(userData));
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.removeItem('manualLogout'); // Clear any logout flag
+        setUser(userData);
+        
+        // Get saved redirect URL if it exists
+        const redirectUrl = sessionStorage.getItem('authRedirectUrl');
+        sessionStorage.removeItem('authRedirectUrl');
+        
+        // Navigate based on user status
+        if (userData.isNewUser) {
+          console.log("Redirecting to welcome page for new user");
+          navigate('/welcome');
+        } else {
+          console.log("Redirecting to dashboard or saved URL for existing user");
+          navigate(redirectUrl || '/dashboard');
         }
         
         setProcessing(false);
       } catch (error) {
         console.error('Auth callback error:', error);
-        const finalError = error instanceof Error ? error.message : String(error);
-        setError(`Authentication error: ${finalError}`);
-        setDebug(prevDebug => ({...prevDebug, finalError}));
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setError(`Authentication error: ${errorMessage}`);
+        setDebugInfo((prev: DebugInfo) => ({...prev, finalError: errorMessage}));
         setProcessing(false);
         
         // Redirect to homepage after a delay
-        setTimeout(() => navigate('/'), 5000);
+        setTimeout(() => navigate('/'), 8000);
       }
     };
     
     processAuthCallback();
   }, [location, navigate, setUser]);
  
-  // Rest of the component remains the same
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -228,13 +187,13 @@ const AuthCallback = () => {
             <div className="mt-6 text-left text-sm text-gray-500 dark:text-gray-400 border-t pt-4">
               <h3 className="font-semibold">Debug Info:</h3>
               <pre className="mt-2 bg-gray-100 dark:bg-gray-900 p-2 rounded overflow-auto text-xs">
-                {JSON.stringify(debug, null, 2)}
+                {JSON.stringify(debugInfo, null, 2)}
               </pre>
               
               <div className="mt-4 flex space-x-4 justify-center">
                 <button
                   onClick={() => navigate('/')}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
                 >
                   Back to Home
                 </button>
@@ -257,7 +216,7 @@ const AuthCallback = () => {
       <div className="text-center">
         <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4"></div>
         <p className="text-gray-600 dark:text-gray-300">
-          {processing ? "Completing sign in..." : "Authentication complete, redirecting..."}
+          {processing ? "Signing you in..." : "Authentication complete, redirecting..."}
         </p>
       </div>
     </div>
