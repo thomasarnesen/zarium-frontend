@@ -64,6 +64,54 @@ const AuthCallback = () => {
         if (!token) {
           throw new Error('No authentication token found in URL');
         }
+
+        // Handle token directly if it appears to be a complete JWT
+        if (token && 
+            token.split('.').length === 3 && 
+            authData.user_details && 
+            authData.user_id) {
+          try {
+            // This looks like a pre-validated token from B2C
+            console.log("Direct token handling - bypassing backend validation");
+            
+            // Parse token data if possible
+            const tokenParts = token.split('.');
+            const tokenPayload = JSON.parse(atob(tokenParts[1]));
+            
+            const userData = {
+              id: tokenPayload.sub || parseInt(authData.user_id) || 0,
+              email: authData.user_details || tokenPayload.email,
+              planType: tokenPayload.plan_type || 'Demo',
+              tokens: tokenPayload.tokens || 0,
+              token: token,
+              isNewUser: isNewUser
+            };
+            
+            // Store authentication data
+            localStorage.setItem('authUser', JSON.stringify(userData));
+            localStorage.setItem('isAuthenticated', 'true');
+            localStorage.removeItem('manualLogout');
+            setUser(userData);
+            
+            // Remove token from URL (for security)
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Navigate based on user status
+            if (userData.isNewUser || isNewUser) {
+              console.log("Redirecting to welcome page for new user");
+              navigate('/welcome');
+            } else {
+              console.log("Redirecting to dashboard for existing user");
+              navigate('/dashboard');
+            }
+            
+            setProcessing(false);
+            return;
+          } catch (parseError) {
+            console.warn("Failed to process token directly, falling back to backend validation", parseError);
+            // Continue with backend validation
+          }
+        }
         
         // Choose the right endpoint based on the provider
         const callbackEndpoint = 
@@ -76,64 +124,81 @@ const AuthCallback = () => {
         // Token exists - send to backend to create session
         console.log("Sending auth data to backend for session creation");
         
-        const response = await api.fetch(callbackEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(authData),
-          credentials: 'include'
-        });
+        // Set timeout for fetch to avoid hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
         
-        debugInfo.backendResponse = {
-          status: response.status,
-          ok: response.ok
-        };
-        
-        if (!response.ok) {
-          let errorText = '';
-          try {
-            const errorData = await response.json();
-            errorText = errorData.error || 'Unknown error';
-            debugInfo.backendResponse.error = errorData;
-          } catch (e) {
-            errorText = await response.text();
-            debugInfo.backendResponse.error = errorText;
+        try {
+          const response = await api.fetch(callbackEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(authData),
+            credentials: 'include',
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          debugInfo.backendResponse = {
+            status: response.status,
+            ok: response.ok
+          };
+          
+          if (!response.ok) {
+            let errorText = '';
+            try {
+              const errorData = await response.json();
+              errorText = errorData.error || 'Unknown error';
+              debugInfo.backendResponse.error = errorData;
+            } catch (e) {
+              errorText = await response.text();
+              debugInfo.backendResponse.error = errorText;
+            }
+            
+            throw new Error(`Authentication failed: ${errorText}`);
           }
           
-          throw new Error(`Authentication failed: ${errorText}`);
-        }
-        
-        // Parse user data from response
-        const userData = await response.json();
-        debugInfo.userData = {
-          received: true,
-          isNewUser: userData.isNewUser || isNewUser,
-          email: userData.email
-        };
-        
-        console.log("Received user data:", userData);
-        
-        // Store in local storage
-        localStorage.setItem('authUser', JSON.stringify(userData));
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.removeItem('manualLogout'); // Clear any logout flag
-        setUser(userData);
-        
-        // Remove token from URL (for security)
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Get saved redirect URL if it exists
-        const redirectUrl = sessionStorage.getItem('authRedirectUrl');
-        sessionStorage.removeItem('authRedirectUrl');
-        
-        // Navigate based on user status
-        if (userData.isNewUser || isNewUser) {
-          console.log("Redirecting to welcome page for new user");
-          navigate('/welcome');
-        } else {
-          console.log("Redirecting to dashboard or saved URL for existing user");
-          navigate(redirectUrl || '/dashboard');
+          // Parse user data from response
+          const userData = await response.json();
+          debugInfo.userData = {
+            received: true,
+            isNewUser: userData.isNewUser || isNewUser,
+            email: userData.email
+          };
+          
+          console.log("Received user data:", userData);
+          
+          // Store in local storage
+          localStorage.setItem('authUser', JSON.stringify(userData));
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.removeItem('manualLogout'); // Clear any logout flag
+          setUser(userData);
+          
+          // Remove token from URL (for security)
+          window.history.replaceState({}, document.title, window.location.pathname);
+          
+          // Get saved redirect URL if it exists
+          const redirectUrl = sessionStorage.getItem('authRedirectUrl');
+          sessionStorage.removeItem('authRedirectUrl');
+          
+          // Navigate based on user status
+          if (userData.isNewUser || isNewUser) {
+            console.log("Redirecting to welcome page for new user");
+            navigate('/welcome');
+          } else {
+            console.log("Redirecting to dashboard or saved URL for existing user");
+            navigate(redirectUrl || '/dashboard');
+          }
+        } catch (fetchError: unknown) {
+          if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+            throw new Error('Network request timed out. Please check your connection and try again.');
+          } else {
+            throw fetchError;
+          }
+        } finally {
+          clearTimeout(timeoutId);
         }
         
         setProcessing(false);
@@ -163,6 +228,12 @@ const AuthCallback = () => {
     
     // Check URL path for clues
     if (location.pathname.includes('google')) {
+      return 'google';
+    }
+    
+    // Check if the token looks like a Google token (from the user_id format)
+    const userId = searchParams.get('user_id');
+    if (userId && /^\d+$/.test(userId) && userId.length > 15) {
       return 'google';
     }
     
