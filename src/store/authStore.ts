@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import api from '../utils/api';
 import csrfService from './csrfService';
+import { config } from '../config';
 
 declare global {
   interface Window {
@@ -57,6 +58,8 @@ interface AuthState {
   initialize: () => Promise<void>; 
   completeRegistrationAfterPayment: (email: string) => Promise<boolean>;
   setupTokenRefreshInterval: () => void; // Added to interface
+  getAuthHeaders: () => Record<string, string>; // New function
+  checkSession: () => Promise<boolean>; // New function
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -79,9 +82,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return true;
     }
     
-    // Check if refresh was called too recently (minimum 3 seconds between refreshes)
+    // Check if refresh was called too recently (minimum 2 seconds between refreshes)
     const now = Date.now();
-    if (now - get().lastRefreshTime < 3000) {
+    if (now - get().lastRefreshTime < 2000) {
       console.log("Skipping refresh - too soon since last refresh");
       return true;
     }
@@ -92,58 +95,130 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       // First try refreshing the token to ensure we have a valid session
       try {
-        await api.fetch('/refresh-token', {
+        const tokenResponse = await api.fetch('/api/refresh-token', {
           method: 'POST',
           credentials: 'include',
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
         });
+        
+        if (!tokenResponse.ok) {
+          console.warn("Token refresh failed:", await tokenResponse.text());
+          // Don't return yet - still try to get user data
+        }
       } catch (error) {
         console.warn('Token refresh during data refresh failed:', error);
         // Continue anyway to try to get data
       }
 
-      const [tokenResponse, tokenInfoResponse] = await Promise.allSettled([
-        api.fetch('/verify-token'),
-        api.fetch('/user/tokens')
-      ]);
-
-      if (tokenResponse.status === 'fulfilled' && tokenResponse.value.ok) {
-        const userData = await tokenResponse.value.json();
-        
-        // Update localStorage with latest user data
-        const authUser = JSON.parse(localStorage.getItem('authUser') || '{}');
-        
-        const updatedUser = {
-          ...userData,
-          token: authUser.token || userData.token,
-          isAdmin: userData.isAdmin
-        };
-        
-        localStorage.setItem('authUser', JSON.stringify(updatedUser));
-        localStorage.setItem('isAuthenticated', 'true');
-        
-        // Update state
-        if (tokenInfoResponse.status === 'fulfilled' && tokenInfoResponse.value.ok) {
-          const tokenData = await tokenInfoResponse.value.json();
-          
-          set({ 
-            user: updatedUser,
-            isAuthenticated: true,
-            tokens: tokenData.current_tokens || userData.tokens || 0,
-            planType: userData.planType,
-            isDemoUser: userData.planType === 'Demo'
+      // Get user information with retries
+      let attempts = 0;
+      const maxAttempts = 2;
+      
+      while (attempts < maxAttempts) {
+        try {
+          const tokenResponse = await api.fetch('/api/verify-token', {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
           });
-        } else {
-          set({ 
-            user: updatedUser,
+
+          if (tokenResponse.ok) {
+            const userData = await tokenResponse.json();
+            
+            // Update localStorage with latest user data
+            const authUser = JSON.parse(localStorage.getItem('authUser') || '{}');
+            
+            const updatedUser = {
+              ...userData,
+              token: authUser.token || userData.token,
+              isAdmin: userData.isAdmin
+            };
+            
+            localStorage.setItem('authUser', JSON.stringify(updatedUser));
+            localStorage.setItem('isAuthenticated', 'true');
+            
+            // Also get token information
+            try {
+              const tokenInfoResponse = await api.fetch('/api/user/tokens', {
+                cache: 'no-store',
+                headers: {
+                  'Cache-Control': 'no-cache, no-store, must-revalidate',
+                  'Pragma': 'no-cache'
+                }
+              });
+              
+              if (tokenInfoResponse.ok) {
+                const tokenData = await tokenInfoResponse.json();
+                
+                set({ 
+                  user: updatedUser,
+                  isAuthenticated: true,
+                  tokens: tokenData.current_tokens || userData.tokens || 0,
+                  planType: userData.planType,
+                  isDemoUser: userData.planType === 'Demo'
+                });
+              } else {
+                set({ 
+                  user: updatedUser,
+                  isAuthenticated: true,
+                  tokens: userData.tokens || 0,
+                  planType: userData.planType,
+                  isDemoUser: userData.planType === 'Demo'
+                });
+              }
+            } catch (tokenInfoError) {
+              console.warn('Error fetching token info:', tokenInfoError);
+              set({ 
+                user: updatedUser,
+                isAuthenticated: true,
+                tokens: userData.tokens || 0,
+                planType: userData.planType,
+                isDemoUser: userData.planType === 'Demo'
+              });
+            }
+            
+            return true;
+          }
+          
+          // If we got a 401/403, increase attempt count and retry after delay
+          attempts++;
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } catch (error) {
+          console.warn(`Attempt ${attempts + 1} failed:`, error);
+          attempts++;
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+      
+      // If we've exhausted retries, check if we have local data
+      const authUser = localStorage.getItem('authUser');
+      if (authUser) {
+        try {
+          const userData = JSON.parse(authUser);
+          set({
+            user: userData,
             isAuthenticated: true,
             tokens: userData.tokens || 0,
             planType: userData.planType,
             isDemoUser: userData.planType === 'Demo'
           });
+          console.log('Using cached user data due to API failure');
+          return true;
+        } catch (parseError) {
+          console.error('Error parsing cached user data:', parseError);
         }
-        
-        return true;
       }
+      
       return false;
     } catch (error) {
       console.error('Error refreshing user data:', error);
@@ -460,6 +535,58 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }, 1000);
     } catch (error) {
       console.error('Error in auth initialize:', error);
+    }
+  },
+
+  // Add this function to safely get authentication headers for API requests
+  getAuthHeaders: () => {
+    try {
+      const user = get().user;
+      if (!user || !user.token) return {} as Record<string, string>;
+      
+      return {
+        'Authorization': `Bearer ${user.token}`
+      };
+    } catch (e) {
+      console.warn('Error getting auth headers:', e);
+      return {} as Record<string, string>;
+    }
+  },
+
+  // Improve session check function
+  checkSession: async () => {
+    // Prevent check if manual logout occurred
+    if (localStorage.getItem('manualLogout') === 'true') {
+      return false;
+    }
+    
+    try {
+      // Check both token and verify-token endpoints with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(`${config.apiUrl}/api/refresh-token`, {
+        method: 'POST',
+        credentials: 'include',
+        signal: controller.signal,
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        // Token was refreshed successfully, now verify it
+        await get().refreshUserData();
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      console.warn('Session check failed:', e);
+      return false;
     }
   },
 }));

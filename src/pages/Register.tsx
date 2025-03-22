@@ -26,47 +26,109 @@ export default function Register() {
   
   const navigate = useNavigate();
   const location = useLocation();
-  const { register, setPendingRegistration, markVerificationComplete } = useAuthStore();
+  const { register, markVerificationComplete, setUser } = useAuthStore();
 
   // Get parameters from location state
-  const selectedPlan = location.state?.selectedPlan;
+  const selectedPlan = location.state?.selectedPlan || 'Demo'; // Default to Demo if not specified
   const stripePriceId = location.state?.stripePriceId;
   const price = location.state?.price;
-  const isDemo = location.state?.isDemo;
+  const isDemo = location.state?.isDemo || selectedPlan === 'Demo';
+  const skipPayment = location.state?.skipPayment || false;
 
-  useEffect(() => {
-    // Redirect to pricing if no plan is selected
-    if (!selectedPlan) {
-      navigate('/pricing');
-    }
-  }, [selectedPlan, navigate]);
-
-  const validatePassword = (password: string) => {
-    const hasCapitalLetter = /[A-Z]/.test(password);
-    const hasLowercase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>_\-]/.test(password);
-    const hasMinLength = password.length >= 8;
-    
-    if (!hasMinLength) {
+  const validatePassword = (password: string): string | null => {
+    if (password.length < 8) {
       return "Password must be at least 8 characters long";
-    }
-    if (!hasCapitalLetter) {
-      return "Password must contain at least one capital letter";
-    }
-    if (!hasLowercase) {
-      return "Password must contain at least one lowercase letter";
-    }
-    if (!hasNumber) {
-      return "Password must contain at least one number";
-    }
-    if (!hasSpecialChar) {
-      return "Password must contain at least one special character";
     }
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  interface DemoUserRegistrationRequest {
+    email: string;
+    password: string;
+    plan_type: string;
+    skipPayment: boolean;
+  }
+
+  interface UserData {
+    id: string;
+    email: string;
+    [key: string]: any; // For other potential user properties
+  }
+
+  interface LoginResponse extends UserData {
+    token: string;
+    planType: 'Demo' | 'Basic' | 'Plus' | 'Pro';
+    [key: string]: any; // For other potential properties
+  }
+
+  const createDemoUser = async (email: string, password: string): Promise<UserData> => {
+    try {
+      const response = await api.fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email,
+          password,
+          plan_type: 'Demo',
+          skipPayment: true
+        } as DemoUserRegistrationRequest),
+      });
+
+      if (!response.ok) {
+        const data: { error?: string } = await response.json();
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      const userData: UserData = await response.json();
+      
+      // Create access token directly and log the user in
+      const loginResponse = await api.fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!loginResponse.ok) {
+        throw new Error('Login failed after registration');
+      }
+
+      const userWithToken: LoginResponse = await loginResponse.json();
+      
+      // Set user data in auth store with id converted to number
+      setUser({
+        ...userWithToken,
+        id: parseInt(userWithToken.id, 10)
+      });
+      
+      // Store in local storage
+      localStorage.setItem('authUser', JSON.stringify(userWithToken));
+      localStorage.setItem('isAuthenticated', 'true');
+      
+      // Direct to welcome page
+      navigate('/welcome');
+      
+      return userData;
+    } catch (error) {
+      console.error('Error creating demo user:', error);
+      throw error;
+    }
+  };
+
+  // Define interfaces for API responses and requests
+  interface CheckEmailResponse {
+    exists: boolean;
+    message?: string;
+  }
+
+  interface ApiError {
+    error?: string;
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError('');
     
@@ -100,7 +162,7 @@ export default function Register() {
           body: JSON.stringify({ email }),
         });
         
-        const checkData = await checkResponse.json();
+        const checkData: CheckEmailResponse = await checkResponse.json();
         
         if (checkData && checkData.exists) {
           setError('An account with this email already exists. Please login instead.');
@@ -112,7 +174,21 @@ export default function Register() {
         console.warn('Email check failed, continuing with registration attempt:', checkError);
       }
       
-      // Important: Store the registration details in AuthStore first
+      // For demo accounts with skipPayment flag, create user directly
+      if (isDemo && skipPayment) {
+        try {
+          await createDemoUser(email, password);
+          // User will be redirected in the createDemoUser function
+          return;
+        } catch (error: unknown) {
+          setError(error instanceof Error ? error.message : 'Failed to create demo account');
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // For non-demo accounts or when not skipping payment, continue with regular flow
+      // Store the registration details in AuthStore first
       await register(email, password, selectedPlan);
       
       // Proceed with sending verification code
@@ -125,7 +201,7 @@ export default function Register() {
       });
       
       if (!verifyResponse.ok) {
-        const responseData = await verifyResponse.json().catch(() => ({}));
+        const responseData: ApiError = await verifyResponse.json().catch(() => ({}));
         
         // Handle specific error cases
         if (responseData.error && responseData.error.includes('already exists')) {
@@ -138,14 +214,27 @@ export default function Register() {
       // Success - show verification form
       setSentEmail(email);
       setShowVerification(true);
-    } catch (error: any) {
-      setError(error.message || 'Error sending verification code');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error sending verification code';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyAndRegister = async (e: React.FormEvent) => {
+  // Define interfaces for clarity
+  interface VerifyResponse {
+    success?: boolean;
+    error?: string;
+  }
+
+  interface CheckoutResult {
+    success: boolean;
+    url?: string;
+    error?: string;
+  }
+
+  const handleVerifyAndRegister = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setVerificationError('');
     setLoading(true);
@@ -167,15 +256,33 @@ export default function Register() {
         // Mark verification as complete in the store
         markVerificationComplete();
         
+        // Demo accounts should bypass payment
+        if (isDemo && skipPayment) {
+          try {
+            await createDemoUser(sentEmail, password);
+            return;
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to create demo account';
+            setVerificationError(errorMessage);
+            setLoading(false);
+            return;
+          }
+        }
+        
         // Get the price ID for this plan
-        const priceId = isDemo 
+        const priceId: string | undefined = isDemo 
           ? location.state?.demoPriceId
           : stripePriceId;
+        
+        // If price ID is undefined, provide a fallback or handle the error
+        if (!priceId) {
+          throw new Error('Price ID is required for checkout');
+        }
         
         console.log(`Creating checkout session with plan: ${selectedPlan}, price: ${priceId}`);
         
         // Use the direct checkout method
-        const checkoutResult = await api.createRegistrationCheckout(
+        const checkoutResult: CheckoutResult = await api.createRegistrationCheckout(
           sentEmail,
           password,
           selectedPlan,
@@ -193,14 +300,15 @@ export default function Register() {
       } else {
         // Handle verification failure
         try {
-          const errorData = await verifyResponse.json();
+          const errorData: VerifyResponse = await verifyResponse.json();
           setVerificationError(errorData.error || 'Verification failed');
         } catch (parseError) {
           setVerificationError('Verification failed. Please check your code and try again.');
         }
       }
-    } catch (error: any) {
-      setVerificationError(`Error: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      setVerificationError(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -219,12 +327,18 @@ export default function Register() {
             <div className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-emerald-100/80 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 mb-4">
               <Sparkles className="h-4 w-4 mr-2" />
               <span className="text-sm font-medium">
-                {selectedPlan} Plan {price && `- $${price}/month`}
+                {selectedPlan} Plan {isDemo ? '- Free' : price && `- $${price}/month`}
               </span>
             </div>
             <h2 className="text-3xl font-bold text-emerald-800 dark:text-emerald-200 mb-2">
               Create your account
             </h2>
+            <p className="text-emerald-700 dark:text-emerald-300">
+              Already have an account?{' '}
+              <Link to="/login" className="font-medium text-emerald-800 dark:text-emerald-200 hover:text-emerald-900 dark:hover:text-emerald-100">
+                Sign in
+              </Link>
+            </p>
           </div>
 
           <div className="bg-white/60 dark:bg-gray-800/50 rounded-xl border border-emerald-100 dark:border-emerald-800 p-8">
@@ -340,17 +454,22 @@ export default function Register() {
                   disabled={loading || !(acceptTerms && acceptPrivacy)}
                   className="w-full py-2 px-4 rounded-lg bg-emerald-800 dark:bg-emerald-700 text-white hover:bg-emerald-900 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition-colors border border-emerald-900 dark:border-emerald-600"
                 >
-                  {loading ? 'Creating account...' : 'Continue to payment'}
+                  {loading ? 'Creating account...' : (isDemo ? 'Create Free Account' : 'Continue to payment')}
                 </button>
                 
-                <SocialLogin 
-                  mode="register"
-                  onLoginStart={() => setLoading(true)}
-                  onLoginError={(error) => {
-                    setLoading(false);
-                    setError(error.message);
-                  }}
-                />
+                <div className="mt-4">
+                  <p className="text-center text-sm text-emerald-600 dark:text-emerald-400 mb-3">
+                    Or continue with social login
+                  </p>
+                  <SocialLogin 
+                    mode="register"
+                    onLoginStart={() => setLoading(true)}
+                    onLoginError={(error) => {
+                      setLoading(false);
+                      setError(error.message);
+                    }}
+                  />
+                </div>
               </form>
             ) : (
               <div className="space-y-6">
