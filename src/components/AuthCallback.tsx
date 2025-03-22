@@ -27,6 +27,9 @@ const AuthCallback = () => {
   useEffect(() => {
     const processAuthCallback = async () => {
       try {
+        console.log("Processing auth callback with URL:", 
+          window.location.pathname + window.location.search + window.location.hash);
+        
         // Debug info
         const debugInfo: DebugInfo = {
           path: location.pathname,
@@ -38,157 +41,159 @@ const AuthCallback = () => {
         console.log("Auth callback debug info:", debugInfo);
         setDebug(debugInfo);
         
-        // IMPORTANT: Check both URL hash and search parameters for the token
-        // B2C typically returns tokens in the URL hash fragment
+        // CRITICAL: Check URL hash first (where Azure B2C puts the token)
         let token = null;
         let provider = 'azure';
         
-        // Check URL hash for id_token (this is how Azure B2C returns the token)
-        if (location.hash) {
-          const hashParams = new URLSearchParams(location.hash.substring(1));
+        if (window.location.hash && window.location.hash.length > 1) {
+          console.log("Found hash in URL:", window.location.hash);
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
           token = hashParams.get('id_token');
+          
           if (token) {
-            console.log("Found token in URL hash fragment");
+            console.log("Successfully extracted token from hash!");
+          } else {
+            console.error("No id_token found in hash parameters");
           }
-        }
-        
-        // If not in hash, check search params (for other providers)
-        if (!token && location.search) {
+        } else {
+          console.log("No hash fragment in URL, checking search parameters");
+          
+          // Fall back to query parameters (for OAuth2 code flow with Google)
           const searchParams = new URLSearchParams(location.search);
-          token = searchParams.get('id_token') || searchParams.get('code');
+          token = searchParams.get('code');
           if (token) {
-            console.log("Found token in URL search parameters");
+            console.log("Found code in search parameters");
+            provider = 'google';
           }
         }
         
-        // Determine the provider (google or azure)
-        if (location.search && location.search.includes('provider=google')) {
-          provider = 'google';
+        // Final check if we have a token
+        if (!token) {
+          console.error("No authentication token found in URL");
+          throw new Error('No authentication token found in URL');
         }
         
-        // When we have a token, process it
-        if (token) {
-          console.log(`Processing ${provider} authentication token`);
-          
-          // For security, remove token from URL history
-          window.history.replaceState({}, document.title, window.location.pathname);
-          
-          // Extract user info from token for Azure B2C (if possible)
-          let userDetails = null;
-          let userId = null;
-          
+        // For security, remove token from URL history
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Extract user info from token for Azure B2C (if possible)
+        let userDetails = null;
+        let userId = null;
+        
+        if (provider === 'azure') {
           try {
             // Try to decode the token payload
-            const payload = token.split('.')[1];
-            const decodedPayload = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-            const tokenData = JSON.parse(decodedPayload);
-            
-            // Extract claims from the token
-            userDetails = tokenData.email || tokenData.emails?.[0] || tokenData.name;
-            userId = tokenData.sub || tokenData.oid;
-            
-            console.log("Extracted user details from token:", userDetails);
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = parts[1];
+              const decodedPayload = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+              const tokenData = JSON.parse(decodedPayload);
+              
+              // Extract claims from the token
+              userDetails = tokenData.email || tokenData.emails?.[0] || tokenData.name;
+              userId = tokenData.sub || tokenData.oid;
+              
+              console.log("Extracted user details from token:", userDetails);
+            }
           } catch (decodeError) {
             console.warn("Could not decode token payload:", decodeError);
           }
+        }
+        
+        // Construct auth data for the backend
+        const authData = {
+          id_token: token,
+          user_details: userDetails,
+          user_id: userId,
+          provider: provider,
+          create_demo: true  // Always create a demo account
+        };
+        
+        debugInfo.authData = authData;
+        console.log("Auth data prepared:", authData);
+        setDebug(prevDebug => ({...prevDebug, authData}));
           
-          // Construct auth data for the backend
-          const authData = {
-            id_token: token,
-            user_details: userDetails,
-            user_id: userId,
-            provider: provider,
-            create_demo: true  // Always create a demo account
+        // Choose the right endpoint based on the provider
+        const callbackEndpoint = 
+          provider === 'google' 
+            ? '/api/auth/google/callback' 
+            : '/api/auth/azure-callback';
+        
+        console.log(`Using callback endpoint: ${callbackEndpoint}`);
+            
+        // Set timeout for fetch to avoid hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        try {
+          const response = await api.fetch(callbackEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(authData),
+            credentials: 'include',
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          debugInfo.backendResponse = {
+            status: response.status,
+            ok: response.ok
           };
           
-          debugInfo.authData = authData;
-          console.log("Auth data prepared:", authData);
-          setDebug(prevDebug => ({...prevDebug, authData}));
-          
-          // Choose the right endpoint based on the provider
-          const callbackEndpoint = 
-            provider === 'google' 
-              ? '/api/auth/google/callback' 
-              : '/api/auth/azure-callback';
-          
-          console.log(`Using callback endpoint: ${callbackEndpoint}`);
-              
-          // Set timeout for fetch to avoid hanging
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
-          
-          try {
-            const response = await api.fetch(callbackEndpoint, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(authData),
-              credentials: 'include',
-              signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            debugInfo.backendResponse = {
-              status: response.status,
-              ok: response.ok
-            };
-            
-            if (!response.ok) {
-              let errorText = '';
-              try {
-                const errorData = await response.json();
-                errorText = errorData.error || 'Unknown error';
-                debugInfo.backendResponse.error = errorData;
-              } catch (e) {
-                errorText = await response.text();
-                debugInfo.backendResponse.error = errorText;
-              }
-              
-              throw new Error(`Authentication failed: ${errorText}`);
+          if (!response.ok) {
+            let errorText = '';
+            try {
+              const errorData = await response.json();
+              errorText = errorData.error || 'Unknown error';
+              debugInfo.backendResponse.error = errorData;
+            } catch (e) {
+              errorText = await response.text();
+              debugInfo.backendResponse.error = errorText;
             }
             
-            // Parse user data from response
-            const userData = await response.json();
-            debugInfo.userData = {
-              received: true,
-              isNewUser: userData.isNewUser,
-              email: userData.email,
-              planType: userData.planType
-            };
-            
-            console.log("Received user data:", userData);
-            
-            // Store in local storage
-            localStorage.setItem('authUser', JSON.stringify(userData));
-            localStorage.setItem('isAuthenticated', 'true');
-            localStorage.removeItem('manualLogout'); // Clear any logout flag
-            setUser(userData);
-            
-            // Get saved redirect URL if it exists
-            const redirectUrl = sessionStorage.getItem('authRedirectUrl');
-            sessionStorage.removeItem('authRedirectUrl');
-            
-            // Navigate based on user status
-            if (userData.isNewUser) {
-              console.log("Redirecting to welcome page for new user");
-              navigate('/welcome');
-            } else {
-              console.log("Redirecting to dashboard or saved URL for existing user");
-              navigate(redirectUrl || '/dashboard');
-            }
-          } catch (fetchError: unknown) {
-            if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-              throw new Error('Network request timed out. Please check your connection and try again.');
-            } else {
-              throw fetchError;
-            }
-          } finally {
-            clearTimeout(timeoutId);
+            throw new Error(`Authentication failed: ${errorText}`);
           }
-        } else {
-          throw new Error('No authentication token found in URL');
+          
+          // Parse user data from response
+          const userData = await response.json();
+          debugInfo.userData = {
+            received: true,
+            isNewUser: userData.isNewUser,
+            email: userData.email,
+            planType: userData.planType
+          };
+          
+          console.log("Received user data:", userData);
+          
+          // Store in local storage
+          localStorage.setItem('authUser', JSON.stringify(userData));
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.removeItem('manualLogout'); // Clear any logout flag
+          setUser(userData);
+          
+          // Get saved redirect URL if it exists
+          const redirectUrl = sessionStorage.getItem('authRedirectUrl');
+          sessionStorage.removeItem('authRedirectUrl');
+          
+          // Navigate based on user status
+          if (userData.isNewUser) {
+            console.log("Redirecting to welcome page for new user");
+            navigate('/welcome');
+          } else {
+            console.log("Redirecting to dashboard or saved URL for existing user");
+            navigate(redirectUrl || '/dashboard');
+          }
+        } catch (fetchError: unknown) {
+          if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+            throw new Error('Network request timed out. Please check your connection and try again.');
+          } else {
+            throw fetchError;
+          }
+        } finally {
+          clearTimeout(timeoutId);
         }
         
         setProcessing(false);
@@ -207,6 +212,7 @@ const AuthCallback = () => {
     processAuthCallback();
   }, [location, navigate, setUser]);
  
+  // Rest of the component remains the same
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">

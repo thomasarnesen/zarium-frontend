@@ -31,6 +31,37 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
     }
   };
 
+  // Add this to your SocialLoginChoice component
+  const handleMicrosoftLogin = () => {
+    try {
+      if (onLoginStart) onLoginStart();
+      
+      // Save current page to session storage for potential redirect after login
+      sessionStorage.setItem('authRedirectUrl', window.location.pathname);
+      
+      const redirectUri = `${window.location.origin}/auth/callback`;
+      const nonce = Math.floor(Math.random() * 1000000).toString();
+      
+      // Build the URL with EXACT parameters
+      const b2cBaseUrl = "https://zarium.b2clogin.com/zarium.onmicrosoft.com/B2C_1_signup_signin/oauth2/v2.0/authorize";
+      const params = new URLSearchParams({
+        client_id: "279cccfd-a2d6-4149-90d2-311cf5db1f35",
+        response_type: "id_token",
+        redirect_uri: redirectUri,
+        scope: "openid profile email",
+        response_mode: "fragment", // CRITICAL - ensures token comes in URL hash
+        nonce: nonce,
+        state: new Date().getTime().toString()
+      });
+      
+      console.log(`Redirecting to Microsoft login with params: ${params.toString()}`);
+      window.location.href = `${b2cBaseUrl}?${params.toString()}`;
+    } catch (error) {
+      console.error(`Error during Microsoft ${mode}:`, error);
+      if (onLoginError) onLoginError(error instanceof Error ? error : new Error(String(error)));
+    }
+  };
+
   return (
     <div className="mt-6">
       <div className="relative">
@@ -58,7 +89,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
        
         <button
           type="button"
-          onClick={() => handleSocialLogin('microsoft')}
+          onClick={handleMicrosoftLogin}
           className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           <span className="sr-only">{mode === 'register' ? 'Register' : 'Sign in'} with Microsoft</span>
