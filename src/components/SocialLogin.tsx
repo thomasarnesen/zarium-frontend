@@ -15,15 +15,15 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
   const handleSocialLogin = async (provider: string) => {
     try {
       if (onLoginStart) onLoginStart();
-     
+      
       // Save current page to session storage for potential redirect after login
       sessionStorage.setItem('authRedirectUrl', window.location.pathname);
       
-      // Use our custom backend endpoints instead of Azure's /.auth/login/{provider}
-      const apiUrl = `${config.apiUrl}/api/auth/${provider}/login?mode=${mode}`;
+      // Use frontend URL instead of backend
+      const apiUrl = `${window.location.origin}/api/auth/${provider}/login?mode=${mode}`;
       console.log(`Redirecting to ${provider} login: ${apiUrl}`);
       
-      // Navigate to our backend OAuth login endpoint
+      // Navigate to our frontend OAuth login endpoint (will be proxied to backend)
       window.location.href = apiUrl;
     } catch (error) {
       console.error(`Error during ${provider} ${mode}:`, error);

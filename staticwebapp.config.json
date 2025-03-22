@@ -61,6 +61,12 @@
       "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/microsoft/callback"
     },
     {
+      "route": "/api/auth/azure-callback",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/azure-callback"
+    },
+    {
       "route": "/auth/callback",
       "methods": ["GET", "POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
@@ -150,34 +156,10 @@
       "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/download/*"
     },
     {
-      "route": "/create-checkout-session",
-      "methods": ["POST", "OPTIONS"],
-      "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/create-checkout-session"
-    },
-    {
-      "route": "/webhook",
-      "methods": ["POST", "OPTIONS"],
-      "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/webhook"
-    },
-    {
       "route": "/api/*",
       "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       "allowedRoles": ["anonymous"],
       "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/*"
-    },
-    {
-      "route": "/health",
-      "methods": ["GET", "OPTIONS"],
-      "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/health"
-    },
-    {
-      "route": "/refresh-token",
-      "methods": ["POST", "OPTIONS"],
-      "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/refresh-token"
     },
     {
       "route": "/*",
@@ -196,7 +178,7 @@
     }
   },
   "globalHeaders": {
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network https://m.stripe.com https://analytics.tiktok.com https://accounts.google.com https://apis.google.com; connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network https://m.stripe.com https://*.azurestaticapps.net https://analytics.tiktok.com https://zarium.b2clogin.com https://*.b2clogin.com https://accounts.google.com https://apis.google.com https://oauth2.googleapis.com https://www.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://js.stripe.com https://m.stripe.network https://hooks.stripe.com https://m.stripe.com https://zarium.b2clogin.com https://*.b2clogin.com https://accounts.google.com;",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network https://m.stripe.com https://analytics.tiktok.com https://accounts.google.com https://apis.google.com; connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network https://m.stripe.com https://*.azurestaticapps.net https://analytics.tiktok.com https://zarium.b2clogin.com https://*.b2clogin.com https://accounts.google.com https://apis.google.com https://oauth2.googleapis.com https://www.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://js.stripe.com https://m.stripe.network https://hooks.stripe.com https://m.stripe.com https://zarium.b2clogin.com https://*.b2clogin.com https://accounts.google.com; form-action 'self' https://zarium.b2clogin.com https://*.b2clogin.com https://accounts.google.com; worker-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; upgrade-insecure-requests",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "X-XSS-Protection": "1; mode=block",
