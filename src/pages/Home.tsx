@@ -10,7 +10,7 @@ const Home = () => {
   const isLoggedIn = !!user?.token;
   const [isLoading, setIsLoading] = useState(false);
 
-  // Function to directly trigger Microsoft login
+  // Updated login function with better parameters
   const handleGetStarted = () => {
     try {
       setIsLoading(true);
@@ -20,14 +20,23 @@ const Home = () => {
         return;
       }
       
-      // Direct to Microsoft authentication
+      // Direct to Microsoft authentication - Updated with better parameters
       const redirectUrl = `${window.location.origin}/auth/callback`;
       
       // Store the current URL for potential redirect after login
       sessionStorage.setItem('authRedirectUrl', '/dashboard');
       
-      // Define the B2C URL with all necessary parameters
-      const b2cUrl = `https://zarium.b2clogin.com/zarium.onmicrosoft.com/B2C_1_signup_signin/oauth2/v2.0/authorize?client_id=279cccfd-a2d6-4149-90d2-311cf5db1f35&response_type=id_token&redirect_uri=${encodeURIComponent(redirectUrl)}&response_mode=fragment&scope=openid%20profile%20email&state=12345&nonce=${Date.now()}`;
+      // Generate a more secure nonce and state
+      const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const state = Math.random().toString(36).substring(2, 15);
+      
+      // Store state for validation in callback
+      sessionStorage.setItem('auth_state', state);
+      
+      // Define the B2C URL with all necessary parameters - updated with more explicit parameters
+      const b2cUrl = `https://zarium.b2clogin.com/zarium.onmicrosoft.com/B2C_1_signup_signin/oauth2/v2.0/authorize?client_id=279cccfd-a2d6-4149-90d2-311cf5db1f35&response_type=id_token&redirect_uri=${encodeURIComponent(redirectUrl)}&response_mode=query&scope=openid%20profile%20email&state=${state}&nonce=${nonce}`;
+      
+      console.log(`Redirecting to: ${b2cUrl}`);
       
       // Redirect to B2C login page
       window.location.href = b2cUrl;
