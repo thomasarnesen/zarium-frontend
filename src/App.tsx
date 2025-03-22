@@ -164,28 +164,51 @@ function App() {
     }
   }, [isAuthenticated]);
 
-  // Check for B2C auth redirects
+  // Check for B2C auth redirects - improved detection
   useEffect(() => {
     const checkForAuthResults = () => {
-      // Sjekk om vi har returnert fra en Azure B2C-innlogging
-      if (window.location.hash.includes('id_token=')) {
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const idToken = hashParams.get('id_token');
+      // Check if we're returning from B2C login
+      if (window.location.hash.includes('id_token=') || 
+          window.location.search.includes('code=')) {
+        console.log("Detected auth redirect with token");
         
-        if (idToken) {
-          // Fjern token fra URL av sikkerhetsgrunner
-          window.history.replaceState({}, document.title, window.location.pathname);
+        try {
+          let token = null;
+          let provider = null;
           
-          // Prosesser token
-          console.log("Detected returning from B2C auth flow, processing token...");
+          // Check for token in hash (implicit flow)
+          if (window.location.hash.includes('id_token=')) {
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            token = hashParams.get('id_token');
+            provider = 'aad'; // Assuming this is from Azure AD
+          }
           
-          // Send brukeren til AuthCallback
-          window.location.href = '/auth/callback?id_token=' + encodeURIComponent(idToken);
+          // Check for code in query params (authorization code flow)
+          else if (window.location.search.includes('code=')) {
+            const searchParams = new URLSearchParams(window.location.search);
+            token = searchParams.get('code');
+            
+            // Try to determine provider from state or other params
+            if (searchParams.get('state')?.includes('google')) {
+              provider = 'google';
+            } else {
+              provider = 'aad'; // Default to Azure if unknown
+            }
+          }
+          
+          if (token) {
+            // For security, remove sensitive info from URL 
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Add provider info to request so backend knows the source
+            window.location.href = `/auth/callback?id_token=${encodeURIComponent(token)}&provider=${provider}`;
+          }
+        } catch (error) {
+          console.error("Error handling auth redirect:", error);
         }
       }
     };
     
-    // Kjør sjekk ved oppstart
     checkForAuthResults();
   }, []);
 

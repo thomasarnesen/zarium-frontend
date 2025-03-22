@@ -31,7 +31,7 @@ const AuthCallback = () => {
     const processAuthCallback = async () => {
       try {
         // Debug info
-        const debugInfo: DebugInfo = {
+        const debugInfo = {
           path: location.pathname,
           search: location.search,
           hash: location.hash,
@@ -41,36 +41,29 @@ const AuthCallback = () => {
         console.log("Auth callback debug info:", debugInfo);
         setDebug(debugInfo);
         
-        // Try to get token from URL params (query string)
+        // Get token from various sources
         const searchParams = new URLSearchParams(location.search);
         let token = searchParams.get('id_token');
         const code = searchParams.get('code');
+        const provider = searchParams.get('provider') || 'unknown';
         
-        // If not in query params, try hash fragment
+        // If not in query params, try hash fragment (implicit flow)
         if (!token && location.hash) {
           const hashParams = new URLSearchParams(location.hash.substring(1));
           token = hashParams.get('id_token');
         }
         
-        // Collect all potentially useful data
-        const authData: any = {};
+        // Collect auth data
+        const authData: any = {
+          provider: provider
+        };
+        
         if (token) authData.id_token = token;
         if (code) authData.code = code;
         
-        // Add all other params from URL for debugging
-        searchParams.forEach((value, key) => {
-          if (key !== 'id_token' && key !== 'code') {
-            authData[key] = value;
-          }
-        });
-        
-        debugInfo.authData = authData;
-        console.log("Collected auth data:", authData);
-        setDebug(prevDebug => ({...prevDebug, authData})); // Fix for prev error
-        
-        // Only proceed if we have some form of token
+        // Only proceed if we have a token or code
         if (token || code) {
-          console.log("Sending auth data to backend...");
+          console.log(`Processing ${provider} authentication...`);
           
           // Send to backend
           const response = await api.fetch('/api/auth/azure-callback', {
@@ -78,123 +71,44 @@ const AuthCallback = () => {
             body: JSON.stringify(authData),
           });
           
-          debugInfo.backendResponse = {
-            status: response.status,
-            ok: response.ok
-          };
-          
           if (!response.ok) {
-            let errorText = '';
-            try {
-              const errorData = await response.json();
-              errorText = errorData.error || 'Unknown error';
-              debugInfo.backendResponse.error = errorData;
-            } catch (e) {
-              errorText = await response.text();
-              debugInfo.backendResponse.error = errorText;
-            }
-            
-            throw new Error(`Authentication failed: ${errorText}`);
+            throw new Error(`Authentication failed with status ${response.status}`);
           }
           
-          // Parse user data from response
+          // Process user data
           const userData = await response.json();
-          debugInfo.userData = {
-            received: true,
-            isNewUser: userData.isNewUser,
-            email: userData.email
-          };
           
-          console.log("Received user data:", userData);
-          
-          // Store in local storage
+          // Store in local storage and state
           localStorage.setItem('authUser', JSON.stringify(userData));
           localStorage.setItem('isAuthenticated', 'true');
           setUser(userData);
           
           // Navigate based on user status
+          const redirectUrl = sessionStorage.getItem('authRedirectUrl') || '/dashboard';
+          sessionStorage.removeItem('authRedirectUrl');
+          
           if (userData.isNewUser) {
             navigate('/welcome');
           } else {
-            navigate('/dashboard');
+            navigate(redirectUrl);
           }
-          return;
+        } else {
+          throw new Error('No authentication token found');
         }
-        
-        // Try /.auth/me as fallback (for Static Web Apps auth)
-        try {
-          console.log("No token found in URL, trying /.auth/me");
-          const clientPrincipal = await getClientPrincipal();
-          debugInfo.clientPrincipal = clientPrincipal ? {found: true} : {found: false};
-          
-          if (clientPrincipal && (clientPrincipal.userDetails || clientPrincipal.userId)) {
-            console.log("Found client principal, processing...");
-            
-            const response = await api.fetch('/api/auth/azure-callback', {
-              method: 'POST',
-              body: JSON.stringify({
-                id_token: JSON.stringify(clientPrincipal),
-                user_details: clientPrincipal.userDetails,
-                user_id: clientPrincipal.userId
-              }),
-            });
-            
-            if (!response.ok) {
-              throw new Error('Authentication failed via client principal');
-            }
-            
-            const userData = await response.json();
-            localStorage.setItem('authUser', JSON.stringify(userData));
-            localStorage.setItem('isAuthenticated', 'true');
-            setUser(userData);
-            
-            if (userData.isNewUser) {
-              navigate('/welcome');
-            } else {
-              navigate('/dashboard');
-            }
-            return;
-          }
-        } catch (error) { // Fix for clientPrincipalError
-          // Type assertion for the error
-          const clientPrincipalError = error as Error;
-          console.warn("Error with client principal:", clientPrincipalError);
-          debugInfo.clientPrincipalError = clientPrincipalError.message;
-        }
-        
-        // No auth data found anywhere
-        setError('No authentication data found. Please try logging in again.');
-        console.error("No authentication data found");
-        setDebug(prevDebug => ({...prevDebug, noAuthDataFound: true})); // Fix for prev error
-        
       } catch (error) {
-        console.error('Auth callback error:', error);
-        const finalError = error instanceof Error ? error.message : String(error);
-        setError(`Authentication error: ${finalError}`);
-        setDebug(prevDebug => ({...prevDebug, finalError})); // Fix for prev error
+        console.error('Auth processing error:', error);
+        setError(`Authentication error: ${error instanceof Error ? error.message : String(error)}`);
+        setTimeout(() => navigate('/login'), 3000);
       }
     };
     
     processAuthCallback();
   }, [location, navigate, setUser]);
  
-  // Function to get clientPrincipal from /.auth/me endpoint
-  const getClientPrincipal = async () => {
-    try {
-      const response = await fetch('/.auth/me');
-      if (!response.ok) {
-        throw new Error('Failed to get authentication data');
-      }
-      
-      const data = await response.json();
-      return data.clientPrincipal;
-    } catch (error) {
-      console.error('Error fetching auth data:', error);
-      return null;
-    }
-  };
- 
-  // Rest of the component remains the same...
+// Either remove the unused function or use it in the component
+// For example, in the useEffect:
+
+// Rest of the component remains the same...
   
   if (error) {
     return (

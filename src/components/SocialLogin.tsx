@@ -15,9 +15,15 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
     try {
       if (onLoginStart) onLoginStart();
       
-      // You can add query parameters to the URL to indicate this is a registration
-      const registrationParam = mode === 'register' ? '?registration=true' : '';
-      window.location.href = `/.auth/login/${provider}${registrationParam}`;
+      // Save the current page to return after login
+      sessionStorage.setItem('authRedirectUrl', window.location.pathname);
+      
+      // Add state parameter to track source
+      const state = `source=signup&provider=${provider}`;
+      const registrationParam = mode === 'register' ? '&registration=true' : '';
+      
+      // For Azure Static Web Apps
+      window.location.href = `/.auth/login/${provider}?state=${encodeURIComponent(state)}${registrationParam}`;
     } catch (error) {
       console.error(`Error during ${provider} ${mode}:`, error);
       if (onLoginError) onLoginError(error instanceof Error ? error : new Error(String(error)));
