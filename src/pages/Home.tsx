@@ -10,38 +10,41 @@ const Home = () => {
   const isLoggedIn = !!user?.token;
   const [isLoading, setIsLoading] = useState(false);
 
-  // Updated login function with better parameters
+  // Oppdatert handleGetStarted-funksjon med nye B2C-parametre
   const handleGetStarted = () => {
     try {
       setIsLoading(true);
-      // If already logged in, go to dashboard
+      // Hvis allerede innlogget, gå til dashboard
       if (isLoggedIn) {
         navigate('/dashboard');
         return;
       }
       
-      // Direct to Microsoft authentication - Updated with better parameters
+      // Bruk nøyaktig redirect URL som er konfigurert i B2C
       const redirectUrl = `${window.location.origin}/auth/callback`;
       
-      // Store the current URL for potential redirect after login
+      // Lagre nåværende URL for mulig redirect etter innlogging
       sessionStorage.setItem('authRedirectUrl', '/dashboard');
       
-      // Generate a more secure nonce and state
+      // Generer sikker nonce og state
       const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const state = Math.random().toString(36).substring(2, 15);
       
-      // Store state for validation in callback
+      // Lagre state for validering i callback
       sessionStorage.setItem('auth_state', state);
       
-      // Define the B2C URL with all necessary parameters - updated with more explicit parameters
-      const b2cUrl = `https://zarium.b2clogin.com/zarium.onmicrosoft.com/B2C_1_signup_signin/oauth2/v2.0/authorize?client_id=279cccfd-a2d6-4149-90d2-311cf5db1f35&response_type=id_token&redirect_uri=${encodeURIComponent(redirectUrl)}&response_mode=query&scope=openid%20profile%20email&state=${state}&nonce=${nonce}`;
+      // Definer B2C URL med alle nødvendige parametere - bruker tenant ID og NY app ID
+      const tenantId = 'e0da0fd2-e17c-4536-9748-7c4ed7a54a6d';
+      const newClientId = 'a0432355-cca6-450f-b415-a4c3c4e5d55b';
+      
+      const b2cUrl = `https://zarium.b2clogin.com/${tenantId}/B2C_1_signup_signin/oauth2/v2.0/authorize?client_id=${newClientId}&response_type=id_token&redirect_uri=${encodeURIComponent(redirectUrl)}&response_mode=fragment&scope=openid%20profile%20email&state=${state}&nonce=${nonce}`;
       
       console.log(`Redirecting to: ${b2cUrl}`);
       
-      // Redirect to B2C login page
+      // Redirect til B2C login-side
       window.location.href = b2cUrl;
     } catch (error) {
-      console.error('Navigation error:', error);
+      console.error('Navigasjonsfeil:', error);
       setIsLoading(false);
     }
   };
@@ -230,7 +233,7 @@ const Home = () => {
             </div>
           </div>
           
-          {/* CTA Section - Update to use the same direct authentication */}
+          {/* CTA Section - Update to use the same updated handleGetStarted function */}
           <div className="bg-emerald-700 dark:bg-emerald-800 text-white -mx-4 sm:-mx-6 px-4 sm:px-6 py-12 md:py-16 mb-8 md:mb-12 rounded-lg md:rounded-xl">
             <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">
