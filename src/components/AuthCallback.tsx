@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../utils/api';
 
-// Create a type for the debug state
+// Interface for debug info
 interface DebugInfo {
   path?: string;
   search?: string;
@@ -11,17 +11,14 @@ interface DebugInfo {
   timestamp?: string;
   authData?: any;
   backendResponse?: any;
-  clientPrincipal?: any;
-  noAuthDataFound?: boolean;
   finalError?: string;
-  clientPrincipalError?: string;
   userData?: any;
-  [key: string]: any; // Allow additional properties
+  [key: string]: any; 
 }
 
 const AuthCallback = () => {
   const [error, setError] = useState<string | null>(null);
-  const [debug, setDebug] = useState<DebugInfo>({}); // Use the interface
+  const [debug, setDebug] = useState<DebugInfo>({}); 
   const [processing, setProcessing] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
@@ -43,11 +40,14 @@ const AuthCallback = () => {
         
         // Get token from URL parameters
         const searchParams = new URLSearchParams(location.search);
-        const token = searchParams.get('id_token');
+        const token = searchParams.get('id_token') || searchParams.get('code');
         const userDetails = searchParams.get('user_details'); 
         const userId = searchParams.get('user_id');
-        const provider = searchParams.get('provider') || 'unknown';
+        const provider = searchParams.get('provider') || determineProvider();
         const isNewUser = searchParams.get('isNewUser') === 'true';
+        
+        // Logging for debugging
+        console.log(`Auth provider detected: ${provider}`);
         
         // Collect auth data
         const authData: any = {
@@ -65,10 +65,18 @@ const AuthCallback = () => {
           throw new Error('No authentication token found in URL');
         }
         
+        // Choose the right endpoint based on the provider
+        const callbackEndpoint = 
+          provider === 'google' 
+            ? '/api/auth/google/callback' 
+            : '/api/auth/azure-callback';
+        
+        console.log(`Using callback endpoint: ${callbackEndpoint}`);
+            
         // Token exists - send to backend to create session
         console.log("Sending auth data to backend for session creation");
         
-        const response = await api.fetch('/api/auth/azure-callback', {
+        const response = await api.fetch(callbackEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -143,6 +151,24 @@ const AuthCallback = () => {
     
     processAuthCallback();
   }, [location, navigate, setUser]);
+  
+  // Helper function to determine the provider from the URL
+  function determineProvider() {
+    const searchParams = new URLSearchParams(location.search);
+    
+    // Check if this might be Google (code param is typically from Google)
+    if (searchParams.has('code') && !searchParams.has('provider')) {
+      return 'google';
+    }
+    
+    // Check URL path for clues
+    if (location.pathname.includes('google')) {
+      return 'google';
+    }
+    
+    // Default to Azure if can't determine
+    return 'azure';
+  }
  
   if (error) {
     return (
