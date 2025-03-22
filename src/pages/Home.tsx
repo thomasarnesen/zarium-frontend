@@ -10,41 +10,46 @@ const Home = () => {
   const isLoggedIn = !!user?.token;
   const [isLoading, setIsLoading] = useState(false);
 
-  // Oppdatert handleGetStarted-funksjon med nye B2C-parametre
+  // Updated handleGetStarted function with Azure CIAM authentication
   const handleGetStarted = () => {
     try {
       setIsLoading(true);
-      // Hvis allerede innlogget, gå til dashboard
+      // If already logged in, go to dashboard
       if (isLoggedIn) {
         navigate('/dashboard');
         return;
       }
       
-      // Bruk nøyaktig redirect URL som er konfigurert i B2C
-      const redirectUrl = `${window.location.origin}/auth/callback`;
+      // Use redirect URL that matches what's configured in Azure portal
+      const redirectUri = `${window.location.origin}/auth/callback`;
       
-      // Lagre nåværende URL for mulig redirect etter innlogging
+      // Store the current path for redirect after login
       sessionStorage.setItem('authRedirectUrl', '/dashboard');
       
-      // Generer sikker nonce og state
+      // Generate secure nonce and state for security
       const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const state = Math.random().toString(36).substring(2, 15);
       
-      // Lagre state for validering i callback
-      sessionStorage.setItem('auth_state', state);
+      // Use Azure CIAM URL format
+      const authUrl = `https://zariumai.ciamlogin.com/zariumai.onmicrosoft.com/oauth2/v2.0/authorize`;
       
-      // Definer B2C URL med alle nødvendige parametere - bruker tenant ID og NY app ID
-      const tenantId = 'e0da0fd2-e17c-4536-9748-7c4ed7a54a6d';
-      const newClientId = 'a0432355-cca6-450f-b415-a4c3c4e5d55b';
+      const params = new URLSearchParams({
+        client_id: 'a0432355-cca6-450f-b415-a4c3c4e5d55b',
+        response_type: 'id_token',
+        redirect_uri: redirectUri,
+        scope: 'openid profile email',
+        response_mode: 'fragment',
+        nonce: nonce,
+        state: state,
+        prompt: 'login'
+      });
       
-      const b2cUrl = `https://zarium.b2clogin.com/${tenantId}/B2C_1_signup_signin/oauth2/v2.0/authorize?client_id=${newClientId}&response_type=id_token&redirect_uri=${encodeURIComponent(redirectUrl)}&response_mode=fragment&scope=openid%20profile%20email&state=${state}&nonce=${nonce}`;
+      const fullUrl = `${authUrl}?${params.toString()}`;
+      console.log(`Redirecting to: ${fullUrl}`);
       
-      console.log(`Redirecting to: ${b2cUrl}`);
-      
-      // Redirect til B2C login-side
-      window.location.href = b2cUrl;
+      window.location.href = fullUrl;
     } catch (error) {
-      console.error('Navigasjonsfeil:', error);
+      console.error('Navigation error:', error);
       setIsLoading(false);
     }
   };
@@ -233,7 +238,7 @@ const Home = () => {
             </div>
           </div>
           
-          {/* CTA Section - Update to use the same updated handleGetStarted function */}
+          {/* CTA Section - Update to use the same direct authentication */}
           <div className="bg-emerald-700 dark:bg-emerald-800 text-white -mx-4 sm:-mx-6 px-4 sm:px-6 py-12 md:py-16 mb-8 md:mb-12 rounded-lg md:rounded-xl">
             <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">

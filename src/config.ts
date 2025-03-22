@@ -7,10 +7,13 @@ export const config = {
   stripePublicKey: import.meta.env.VITE_STRIPE_PUBLIC_KEY,
   environment: import.meta.env.MODE,
   apiTimeout: 30000,
-  b2c: {
-    tenantName: 'zarium', 
-    policyName: 'B2C_1_signup_signin', 
-    clientId: '279cccfd-a2d6-4149-90d2-311cf5db1f35', 
+  auth: {
+    b2c: {
+      tenantId: '4a79a3ed-0b81-4b28-93d3-8a65eb17cc7c',
+      tenantDomain: 'zariumai.onmicrosoft.com',
+      clientId: 'a0432355-cca6-450f-b415-a4c3c4e5d55b',
+      userFlow: 'zarium'
+    }
   }
 };
 

@@ -1,3 +1,4 @@
+// AuthCallback.tsx - Enhanced with TikTok browser compatibility
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -18,6 +19,14 @@ const AuthCallback = () => {
   const navigate = useNavigate();
   const { setUser } = useAuthStore();
  
+  // Helper function to detect TikTok browser
+  const isTikTokBrowser = () => {
+    return /TikTok/i.test(navigator.userAgent) || 
+           navigator.userAgent.includes('WebView') ||
+           !('cookieEnabled' in navigator) || 
+           !navigator.cookieEnabled;
+  };
+
   useEffect(() => {
     const processAuthCallback = async () => {
       try {
@@ -26,13 +35,15 @@ const AuthCallback = () => {
           path: location.pathname,
           search: location.search,
           hash: location.hash,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          isTikTok: isTikTokBrowser(),
+          userAgent: navigator.userAgent
         };
         setDebugInfo(debug);
         console.log("Auth callback started with URL:", 
           window.location.pathname + window.location.search + window.location.hash);
 
-        // Check if there's an error in the hash (common with Azure B2C)
+        // Check if there's an error in the hash (common with Azure AD)
         if (location.hash && location.hash.includes('error=')) {
           const hashParams = new URLSearchParams(location.hash.substring(1));
           const errorCode = hashParams.get('error');
@@ -42,7 +53,7 @@ const AuthCallback = () => {
           throw new Error(`Authentication failed: ${errorDescription || errorCode}`);
         }
         
-        // Extract token from hash (Azure B2C uses fragment/hash)
+        // Extract token from hash (Azure AD uses fragment/hash)
         let token = null;
         let provider = 'azure';
         
@@ -68,9 +79,57 @@ const AuthCallback = () => {
           }
         }
         
+        // Check for special case: auth_success=true but no token (TikTok browser)
+        const isAuthSuccess = new URLSearchParams(location.search).get('auth_success') === 'true';
+        
+        if (!token && isAuthSuccess) {
+          console.log("TikTok browser special case detected: auth_success=true but no token");
+          
+          // In TikTok browser, we'd use session storage or special endpoint to get the auth data
+          const sessionAuthData = sessionStorage.getItem('auth_pending_data');
+          const sessionProvider = sessionStorage.getItem('auth_provider');
+          
+          if (sessionAuthData && sessionProvider) {
+            try {
+              const parsedData = JSON.parse(sessionAuthData);
+              if (parsedData.id_token) {
+                token = parsedData.id_token;
+                provider = sessionProvider;
+                console.log(`Successfully retrieved token from session storage for ${provider}`);
+              }
+            } catch (e) {
+              console.error("Failed to parse session auth data:", e);
+            }
+          }
+          
+          // If we still don't have a token, try to fetch from special endpoint
+          if (!token) {
+            try {
+              const sessionId = sessionStorage.getItem('auth_session_id');
+              if (sessionId) {
+                console.log(`Attempting to retrieve auth data from session helper with ID: ${sessionId}`);
+                const sessionResponse = await fetch(`/api/auth/session-helper?session_id=${sessionId}`);
+                
+                if (sessionResponse.ok) {
+                  const sessionData = await sessionResponse.json();
+                  if (sessionData.token) {
+                    token = sessionData.token;
+                    provider = sessionData.provider || 'azure';
+                    console.log(`Successfully retrieved token from session helper for ${provider}`);
+                  }
+                } else {
+                  console.error("Failed to retrieve auth data from session helper:", await sessionResponse.text());
+                }
+              }
+            } catch (sessionError) {
+              console.error("Error fetching from session helper:", sessionError);
+            }
+          }
+        }
+        
         // Final check if we have a token
         if (!token) {
-          throw new Error('No authentication token found in URL');
+          throw new Error('No authentication token found. Authentication failed.');
         }
         
         // For security, remove token from URL history
@@ -86,7 +145,7 @@ const AuthCallback = () => {
               const payload = parts[1];
               const decodedPayload = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
               const tokenData = JSON.parse(decodedPayload);
-              userEmail = tokenData.email || tokenData.emails?.[0] || tokenData.name;
+              userEmail = tokenData.email || tokenData.preferred_username || tokenData.name;
               console.log("Extracted email from token:", userEmail);
             }
           } catch (decodeError) {
@@ -100,7 +159,8 @@ const AuthCallback = () => {
           user_details: userEmail,
           user_id: null, // Will be extracted by backend
           provider: provider,
-          create_demo: true  // Always create a demo account
+          create_demo: true, // Always create a demo account
+          isTikTok: isTikTokBrowser() // Let backend know if this is TikTok browser
         };
         
         debug.authData = { ...authData, id_token: '***redacted***' };
@@ -141,6 +201,13 @@ const AuthCallback = () => {
         localStorage.setItem('authUser', JSON.stringify(userData));
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.removeItem('manualLogout'); // Clear any logout flag
+        
+        // Clean up any session storage items we might have used
+        sessionStorage.removeItem('auth_pending_data');
+        sessionStorage.removeItem('auth_provider');
+        sessionStorage.removeItem('auth_session_id');
+        
+        // Update auth store
         setUser(userData);
         
         // Get saved redirect URL if it exists

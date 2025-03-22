@@ -12,27 +12,15 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
   onLoginStart,
   onLoginError
 }) => {
-  const handleSocialLogin = async (provider: string) => {
-    try {
-      if (onLoginStart) onLoginStart();
-      
-      // Save current page to session storage for potential redirect after login
-      sessionStorage.setItem('authRedirectUrl', window.location.pathname);
-      
-      // Use frontend URL instead of backend
-      const apiUrl = `${window.location.origin}/api/auth/${provider}/login?mode=${mode}`;
-      console.log(`Redirecting to ${provider} login: ${apiUrl}`);
-      
-      // Navigate to our frontend OAuth login endpoint (will be proxied to backend)
-      window.location.href = apiUrl;
-    } catch (error) {
-      console.error(`Error during ${provider} ${mode}:`, error);
-      if (onLoginError) onLoginError(error instanceof Error ? error : new Error(String(error)));
-    }
+  // Helper function to detect TikTok browser
+  const isTikTokBrowser = () => {
+    return /TikTok/i.test(navigator.userAgent) || 
+           navigator.userAgent.includes('WebView') ||
+           !('cookieEnabled' in navigator) || 
+           !navigator.cookieEnabled;
   };
 
-  // Add this to your SocialLoginChoice component
-  const handleMicrosoftLogin = () => {
+  const handleAzureLogin = () => {
     try {
       if (onLoginStart) onLoginStart();
       
@@ -41,23 +29,38 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
       
       const redirectUri = `${window.location.origin}/auth/callback`;
       const nonce = Math.floor(Math.random() * 1000000).toString();
+      const state = new Date().getTime().toString();
       
-      // Build the URL with EXACT parameters
-      const b2cBaseUrl = "https://zarium.b2clogin.com/zarium.onmicrosoft.com/B2C_1_signup_signin/oauth2/v2.0/authorize";
+      // For TikTok browser special handling
+      if (isTikTokBrowser()) {
+        sessionStorage.setItem('auth_pending', 'true');
+        sessionStorage.setItem('auth_provider', 'azure');
+        
+        // Use a special endpoint that will handle the session-based approach
+        const tikTokFriendlyUrl = `${window.location.origin}/api/auth/azure-login?tiktok=true`;
+        console.log(`Redirecting to Azure login with TikTok compatibility: ${tikTokFriendlyUrl}`);
+        window.location.href = tikTokFriendlyUrl;
+        return;
+      }
+      
+      // Azure CIAM authentication URL
+      const authUrl = `https://zariumai.ciamlogin.com/zariumai.onmicrosoft.com/oauth2/v2.0/authorize`;
+      
       const params = new URLSearchParams({
-        client_id: "279cccfd-a2d6-4149-90d2-311cf5db1f35",
-        response_type: "id_token",
+        client_id: 'a0432355-cca6-450f-b415-a4c3c4e5d55b',
+        response_type: 'id_token',
         redirect_uri: redirectUri,
-        scope: "openid profile email",
-        response_mode: "fragment", // CRITICAL - ensures token comes in URL hash
+        scope: 'openid profile email',
+        response_mode: 'fragment',
         nonce: nonce,
-        state: new Date().getTime().toString()
+        state: state,
+        prompt: 'login'
       });
       
-      console.log(`Redirecting to Microsoft login with params: ${params.toString()}`);
-      window.location.href = `${b2cBaseUrl}?${params.toString()}`;
+      console.log(`Redirecting to Azure login with params: ${params.toString()}`);
+      window.location.href = `${authUrl}?${params.toString()}`;
     } catch (error) {
-      console.error(`Error during Microsoft ${mode}:`, error);
+      console.error(`Error during Azure login:`, error);
       if (onLoginError) onLoginError(error instanceof Error ? error : new Error(String(error)));
     }
   };
@@ -75,27 +78,17 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
         </div>
       </div>
      
-      <div className="mt-6 grid grid-cols-2 gap-3">
+      <div className="mt-6 grid grid-cols-1 gap-3">
         <button
           type="button"
-          onClick={() => handleSocialLogin('google')}
-          className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
-        >
-          <span className="sr-only">{mode === 'register' ? 'Register' : 'Sign in'} with Google</span>
-          <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
-          </svg>
-        </button>
-       
-        <button
-          type="button"
-          onClick={handleMicrosoftLogin}
+          onClick={handleAzureLogin}
           className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           <span className="sr-only">{mode === 'register' ? 'Register' : 'Sign in'} with Microsoft</span>
           <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
             <path d="M0 0h11.5v11.5h-11.5zM12.5 0h11.5v11.5h-11.5zM0 12.5h11.5v11.5h-11.5zM12.5 12.5h11.5v11.5h-11.5z" />
           </svg>
+          <span className="ml-2">Continue with Microsoft</span>
         </button>
       </div>
     </div>

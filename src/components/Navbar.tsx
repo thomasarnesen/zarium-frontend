@@ -8,18 +8,33 @@ export default function Navbar() {
   const { user } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
 
-  // Direct to Microsoft authentication
+  // Direct to Azure CIAM authentication
   const handleDirectAuth = () => {
     const redirectUrl = `${window.location.origin}/auth/callback`;
     
     // Store the current URL for potential redirect after login
     sessionStorage.setItem('authRedirectUrl', window.location.pathname);
     
-    // Define the B2C URL with all necessary parameters
-    const b2cUrl = `https://zarium.b2clogin.com/zarium.onmicrosoft.com/B2C_1_signup_signin/oauth2/v2.0/authorize?client_id=279cccfd-a2d6-4149-90d2-311cf5db1f35&response_type=id_token&redirect_uri=${encodeURIComponent(redirectUrl)}&response_mode=fragment&scope=openid%20profile%20email&state=12345&nonce=${Date.now()}`;
+    // Generate nonce for security
+    const nonce = Date.now().toString();
+    const state = Math.random().toString(36).substring(2, 15);
     
-    // Redirect to B2C login page
-    window.location.href = b2cUrl;
+    // Azure CIAM authorization URL
+    const authUrl = `https://zariumai.ciamlogin.com/zariumai.onmicrosoft.com/oauth2/v2.0/authorize`;
+    
+    const params = new URLSearchParams({
+      client_id: 'a0432355-cca6-450f-b415-a4c3c4e5d55b',
+      response_type: 'id_token',
+      redirect_uri: redirectUrl,
+      scope: 'openid profile email',
+      response_mode: 'fragment',
+      nonce: nonce,
+      state: state,
+      prompt: 'login'
+    });
+    
+    // Redirect to Azure CIAM login page
+    window.location.href = `${authUrl}?${params.toString()}`;
   };
 
   return (
