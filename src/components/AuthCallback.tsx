@@ -1,4 +1,3 @@
-// src/components/AuthCallback.tsx
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -23,6 +22,7 @@ interface DebugInfo {
 const AuthCallback = () => {
   const [error, setError] = useState<string | null>(null);
   const [debug, setDebug] = useState<DebugInfo>({}); // Use the interface
+  const [processing, setProcessing] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
   const { setUser } = useAuthStore();
@@ -31,7 +31,7 @@ const AuthCallback = () => {
     const processAuthCallback = async () => {
       try {
         // Debug info
-        const debugInfo = {
+        const debugInfo: DebugInfo = {
           path: location.pathname,
           search: location.search,
           hash: location.hash,
@@ -41,75 +41,109 @@ const AuthCallback = () => {
         console.log("Auth callback debug info:", debugInfo);
         setDebug(debugInfo);
         
-        // Get token from various sources
+        // Get token from URL parameters
         const searchParams = new URLSearchParams(location.search);
-        let token = searchParams.get('id_token');
-        const code = searchParams.get('code');
+        const token = searchParams.get('id_token');
+        const userDetails = searchParams.get('user_details'); 
+        const userId = searchParams.get('user_id');
         const provider = searchParams.get('provider') || 'unknown';
-        
-        // If not in query params, try hash fragment (implicit flow)
-        if (!token && location.hash) {
-          const hashParams = new URLSearchParams(location.hash.substring(1));
-          token = hashParams.get('id_token');
-        }
+        const isNewUser = searchParams.get('isNewUser') === 'true';
         
         // Collect auth data
         const authData: any = {
+          id_token: token,
+          user_details: userDetails,
+          user_id: userId,
           provider: provider
         };
         
-        if (token) authData.id_token = token;
-        if (code) authData.code = code;
+        debugInfo.authData = authData;
+        console.log("Collected auth data:", authData);
+        setDebug(prevDebug => ({...prevDebug, authData}));
         
-        // Only proceed if we have a token or code
-        if (token || code) {
-          console.log(`Processing ${provider} authentication...`);
-          
-          // Send to backend
-          const response = await api.fetch('/api/auth/azure-callback', {
-            method: 'POST',
-            body: JSON.stringify(authData),
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Authentication failed with status ${response.status}`);
-          }
-          
-          // Process user data
-          const userData = await response.json();
-          
-          // Store in local storage and state
-          localStorage.setItem('authUser', JSON.stringify(userData));
-          localStorage.setItem('isAuthenticated', 'true');
-          setUser(userData);
-          
-          // Navigate based on user status
-          const redirectUrl = sessionStorage.getItem('authRedirectUrl') || '/dashboard';
-          sessionStorage.removeItem('authRedirectUrl');
-          
-          if (userData.isNewUser) {
-            navigate('/welcome');
-          } else {
-            navigate(redirectUrl);
-          }
-        } else {
-          throw new Error('No authentication token found');
+        if (!token) {
+          throw new Error('No authentication token found in URL');
         }
+        
+        // Token exists - send to backend to create session
+        console.log("Sending auth data to backend for session creation");
+        
+        const response = await api.fetch('/api/auth/azure-callback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(authData),
+          credentials: 'include'
+        });
+        
+        debugInfo.backendResponse = {
+          status: response.status,
+          ok: response.ok
+        };
+        
+        if (!response.ok) {
+          let errorText = '';
+          try {
+            const errorData = await response.json();
+            errorText = errorData.error || 'Unknown error';
+            debugInfo.backendResponse.error = errorData;
+          } catch (e) {
+            errorText = await response.text();
+            debugInfo.backendResponse.error = errorText;
+          }
+          
+          throw new Error(`Authentication failed: ${errorText}`);
+        }
+        
+        // Parse user data from response
+        const userData = await response.json();
+        debugInfo.userData = {
+          received: true,
+          isNewUser: userData.isNewUser || isNewUser,
+          email: userData.email
+        };
+        
+        console.log("Received user data:", userData);
+        
+        // Store in local storage
+        localStorage.setItem('authUser', JSON.stringify(userData));
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.removeItem('manualLogout'); // Clear any logout flag
+        setUser(userData);
+        
+        // Remove token from URL (for security)
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Get saved redirect URL if it exists
+        const redirectUrl = sessionStorage.getItem('authRedirectUrl');
+        sessionStorage.removeItem('authRedirectUrl');
+        
+        // Navigate based on user status
+        if (userData.isNewUser || isNewUser) {
+          console.log("Redirecting to welcome page for new user");
+          navigate('/welcome');
+        } else {
+          console.log("Redirecting to dashboard or saved URL for existing user");
+          navigate(redirectUrl || '/dashboard');
+        }
+        
+        setProcessing(false);
       } catch (error) {
-        console.error('Auth processing error:', error);
-        setError(`Authentication error: ${error instanceof Error ? error.message : String(error)}`);
-        setTimeout(() => navigate('/login'), 3000);
+        console.error('Auth callback error:', error);
+        const finalError = error instanceof Error ? error.message : String(error);
+        setError(`Authentication error: ${finalError}`);
+        setDebug(prevDebug => ({...prevDebug, finalError}));
+        setProcessing(false);
+        
+        // Redirect to login after a delay
+        setTimeout(() => navigate('/login'), 5000);
       }
     };
     
     processAuthCallback();
   }, [location, navigate, setUser]);
  
-// Either remove the unused function or use it in the component
-// For example, in the useEffect:
-
-// Rest of the component remains the same...
-  
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -119,6 +153,7 @@ const AuthCallback = () => {
               Authentication Error
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">Redirecting to login page in a few seconds...</p>
             
             {/* Add debugging information */}
             <div className="mt-6 text-left text-sm text-gray-500 dark:text-gray-400 border-t pt-4">
@@ -152,14 +187,9 @@ const AuthCallback = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="text-center">
         <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-300">Completing sign in...</p>
-        
-        {/* Show minimal debug info even on loading state */}
-        <div className="mt-8 text-left text-xs text-gray-400">
-          <p>Path: {location.pathname}</p>
-          <p>Has search params: {location.search ? 'Yes' : 'No'}</p>
-          <p>Has hash params: {location.hash ? 'Yes' : 'No'}</p>
-        </div>
+        <p className="text-gray-600 dark:text-gray-300">
+          {processing ? "Completing sign in..." : "Authentication complete, redirecting..."}
+        </p>
       </div>
     </div>
   );

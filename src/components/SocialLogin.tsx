@@ -1,7 +1,8 @@
 import React from 'react';
+import { config } from '../config';
 
 interface SocialLoginProps {
-  mode?: 'login' | 'register'; // Add mode property
+  mode?: 'login' | 'register';
   onLoginStart?: () => void;
   onLoginError?: (error: Error) => void;
 }
@@ -14,16 +15,16 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
   const handleSocialLogin = async (provider: string) => {
     try {
       if (onLoginStart) onLoginStart();
-      
-      // Save the current page to return after login
+     
+      // Save current page to session storage for potential redirect after login
       sessionStorage.setItem('authRedirectUrl', window.location.pathname);
       
-      // Add state parameter to track source
-      const state = `source=signup&provider=${provider}`;
-      const registrationParam = mode === 'register' ? '&registration=true' : '';
+      // Use our custom backend endpoints instead of Azure's /.auth/login/{provider}
+      const apiUrl = `${config.apiUrl}/api/auth/${provider}/login?mode=${mode}`;
+      console.log(`Redirecting to ${provider} login: ${apiUrl}`);
       
-      // For Azure Static Web Apps
-      window.location.href = `/.auth/login/${provider}?state=${encodeURIComponent(state)}${registrationParam}`;
+      // Navigate to our backend OAuth login endpoint
+      window.location.href = apiUrl;
     } catch (error) {
       console.error(`Error during ${provider} ${mode}:`, error);
       if (onLoginError) onLoginError(error instanceof Error ? error : new Error(String(error)));
@@ -57,7 +58,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
        
         <button
           type="button"
-          onClick={() => handleSocialLogin('aad')}
+          onClick={() => handleSocialLogin('microsoft')}
           className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           <span className="sr-only">{mode === 'register' ? 'Register' : 'Sign in'} with Microsoft</span>
