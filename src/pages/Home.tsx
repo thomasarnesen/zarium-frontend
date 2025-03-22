@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FileSpreadsheet, Sparkles, Zap, Shield, CheckCircle, HelpCircle, User } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FileSpreadsheet, Sparkles, Zap, Shield, CheckCircle, HelpCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Helmet } from 'react-helmet-async';
 
@@ -8,33 +8,34 @@ const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isLoggedIn = !!user?.token;
-  const [isCtaLoading, setIsCtaLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Simplified direct navigation to registration with demo plan
-  const handleGetStarted = useCallback(() => {
+  // Function to directly trigger Microsoft login
+  const handleGetStarted = () => {
     try {
-      setIsCtaLoading(true);
-      // Handle different user states
+      setIsLoading(true);
+      // If already logged in, go to dashboard
       if (isLoggedIn) {
-        // If already logged in, go to dashboard
         navigate('/dashboard');
-      } else {
-        // If not logged in, send to registration with Demo plan selected
-        navigate('/register', { 
-          state: { 
-            selectedPlan: 'Demo', 
-            isDemo: true,
-            skipPayment: true // Important flag to skip payment step
-          } 
-        });
+        return;
       }
+      
+      // Direct to Microsoft authentication
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      
+      // Store the current URL for potential redirect after login
+      sessionStorage.setItem('authRedirectUrl', '/dashboard');
+      
+      // Define the B2C URL with all necessary parameters
+      const b2cUrl = `https://zarium.b2clogin.com/zarium.onmicrosoft.com/B2C_1_signup_signin/oauth2/v2.0/authorize?client_id=279cccfd-a2d6-4149-90d2-311cf5db1f35&response_type=id_token&redirect_uri=${encodeURIComponent(redirectUrl)}&response_mode=fragment&scope=openid%20profile%20email&state=12345&nonce=${Date.now()}`;
+      
+      // Redirect to B2C login page
+      window.location.href = b2cUrl;
     } catch (error) {
       console.error('Navigation error:', error);
-      alert('An error occurred while navigating. Please try again.');
-    } finally {
-      setIsCtaLoading(false);
+      setIsLoading(false);
     }
-  }, [isLoggedIn, navigate]);
+  };
 
   return (
     <>
@@ -61,25 +62,15 @@ const Home = () => {
                 Transform your ideas into professional Excel spreadsheets instantly.
                 Just describe what you need, and watch the magic happen.
               </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4 mx-auto max-w-md sm:max-w-none">
+              <div className="flex justify-center">
                 <button
                   onClick={handleGetStarted}
-                  disabled={isCtaLoading}
+                  disabled={isLoading}
                   className="px-8 py-3 rounded-lg text-base font-medium bg-emerald-800 dark:bg-emerald-700 text-white hover:bg-emerald-900 dark:hover:bg-emerald-600 transition-all shadow-sm hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
-                  aria-label={isLoggedIn ? 'Go to Dashboard' : 'Start for Free'}
+                  aria-label={isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}
                 >
-                  {isCtaLoading ? 'Loading...' : (isLoggedIn ? 'Go to Dashboard' : 'Start for Free')}
+                  {isLoading ? 'Loading...' : (isLoggedIn ? 'Go to Dashboard' : 'Get Started Free')}
                 </button>
-                
-                {!isLoggedIn && (
-                  <Link
-                    to="/login"
-                    className="px-8 py-3 rounded-lg text-base font-medium bg-white dark:bg-gray-800 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow-md border border-emerald-200 dark:border-emerald-800 flex items-center justify-center sm:justify-start gap-2"
-                  >
-                    <User className="h-5 w-5" aria-hidden="true" />
-                    Sign In
-                  </Link>
-                )}
               </div>
             </div>
           </div>
@@ -230,7 +221,7 @@ const Home = () => {
             </div>
           </div>
           
-          {/* CTA Section */}
+          {/* CTA Section - Update to use the same direct authentication */}
           <div className="bg-emerald-700 dark:bg-emerald-800 text-white -mx-4 sm:-mx-6 px-4 sm:px-6 py-12 md:py-16 mb-8 md:mb-12 rounded-lg md:rounded-xl">
             <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">
@@ -241,11 +232,11 @@ const Home = () => {
               </p>
               <button
                 onClick={handleGetStarted}
-                disabled={isCtaLoading}
+                disabled={isLoading}
                 className="px-8 py-3 rounded-lg text-base font-medium bg-white text-emerald-900 hover:bg-emerald-100 transition-all shadow-sm hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                 aria-label={isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}
               >
-                {isCtaLoading ? 'Loading...' : (isLoggedIn ? 'Go to Dashboard' : 'Get Started Free')}
+                {isLoading ? 'Loading...' : (isLoggedIn ? 'Go to Dashboard' : 'Get Started Free')}
               </button>
             </div>
           </div>

@@ -8,6 +8,20 @@ export default function Navbar() {
   const { user } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
 
+  // Direct to Microsoft authentication
+  const handleDirectAuth = () => {
+    const redirectUrl = `${window.location.origin}/auth/callback`;
+    
+    // Store the current URL for potential redirect after login
+    sessionStorage.setItem('authRedirectUrl', window.location.pathname);
+    
+    // Define the B2C URL with all necessary parameters
+    const b2cUrl = `https://zarium.b2clogin.com/zarium.onmicrosoft.com/B2C_1_signup_signin/oauth2/v2.0/authorize?client_id=279cccfd-a2d6-4149-90d2-311cf5db1f35&response_type=id_token&redirect_uri=${encodeURIComponent(redirectUrl)}&response_mode=fragment&scope=openid%20profile%20email&state=12345&nonce=${Date.now()}`;
+    
+    // Redirect to B2C login page
+    window.location.href = b2cUrl;
+  };
+
   return (
     <nav className="bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 border-b border-emerald-100 dark:border-emerald-900 sticky top-0 z-50 backdrop-blur-sm">
       <div className="container mx-auto px-6">
@@ -22,7 +36,6 @@ export default function Navbar() {
               </div>
             </div>
           </Link>
-
           <div className="flex items-center space-x-8">
             {user ? (
               <>
@@ -32,31 +45,26 @@ export default function Navbar() {
                 >
                   Dashboard
                 </Link>
-                <UserMenu />
-              </>
-            ) : (
-              <>
+                {/* Only show Pricing to authenticated users */}
                 <Link
                   to="/pricing"
                   className="text-base text-emerald-800 dark:text-emerald-200 hover:text-emerald-900 dark:hover:text-emerald-100"
                 >
                   Pricing
                 </Link>
-                <Link
-                  to="/login"
-                  className="text-base text-emerald-800 dark:text-emerald-200 hover:text-emerald-900 dark:hover:text-emerald-100"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
+                <UserMenu />
+              </>
+            ) : (
+              <>
+                {/* For non-authenticated users, just show "Get Started" button */}
+                <button
+                  onClick={handleDirectAuth}
                   className="text-base bg-emerald-800 dark:bg-emerald-700 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-900 dark:hover:bg-emerald-600 shadow-sm hover:shadow-md transition-all"
                 >
-                  Sign Up
-                </Link>
+                  Get Started Free
+                </button>
               </>
             )}
-
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
