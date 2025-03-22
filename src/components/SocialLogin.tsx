@@ -14,9 +14,9 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
 }) => {
   // Helper function to detect TikTok browser
   const isTikTokBrowser = () => {
-    return /TikTok/i.test(navigator.userAgent) || 
+    return /TikTok/i.test(navigator.userAgent) ||
            navigator.userAgent.includes('WebView') ||
-           !('cookieEnabled' in navigator) || 
+           !('cookieEnabled' in navigator) ||
            !navigator.cookieEnabled;
   };
 
@@ -25,11 +25,18 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
       if (onLoginStart) onLoginStart();
       
       // Save current page to session storage for potential redirect after login
-      sessionStorage.setItem('authRedirectUrl', window.location.pathname);
+      sessionStorage.setItem('authRedirectUrl', '/dashboard'); // Explicitly set to dashboard
       
+      // Generate more secure random values for state and nonce
+      const nonce = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+      const state = Math.random().toString(36).substring(2) + Date.now().toString();
+      
+      // Store state in session storage for validation in callback
+      sessionStorage.setItem('auth_state', state);
+      sessionStorage.setItem('auth_nonce', nonce);
+      
+      // Set redirect URI to your callback page
       const redirectUri = `${window.location.origin}/auth/callback`;
-      const nonce = Math.floor(Math.random() * 1000000).toString();
-      const state = new Date().getTime().toString();
       
       // For TikTok browser special handling
       if (isTikTokBrowser()) {
@@ -43,9 +50,10 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
         return;
       }
       
-      // Azure CIAM authentication URL
+      // Azure AD B2C authentication URL
       const authUrl = `https://zariumai.ciamlogin.com/zariumai.onmicrosoft.com/oauth2/v2.0/authorize`;
       
+      // Prepare authentication parameters
       const params = new URLSearchParams({
         client_id: 'a0432355-cca6-450f-b415-a4c3c4e5d55b',
         response_type: 'id_token',
@@ -57,10 +65,16 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
         prompt: 'login'
       });
       
-      console.log(`Redirecting to Azure login with params: ${params.toString()}`);
-      window.location.href = `${authUrl}?${params.toString()}`;
+      // Log for debugging
+      console.log(`Initiating login with Microsoft. Redirect URI: ${redirectUri}`);
+      
+      // Redirect to Microsoft authentication page
+      const fullUrl = `${authUrl}?${params.toString()}`;
+      console.log(`Full auth URL: ${fullUrl}`);
+      window.location.href = fullUrl;
+      
     } catch (error) {
-      console.error(`Error during Azure login:`, error);
+      console.error(`Error during authentication:`, error);
       if (onLoginError) onLoginError(error instanceof Error ? error : new Error(String(error)));
     }
   };
