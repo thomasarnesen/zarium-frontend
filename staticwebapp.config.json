@@ -37,16 +37,28 @@
       "headers": { "Content-Type": "application/xml" }
     },
     {
-      "route": "/api/auth/google/*",
+      "route": "/api/auth/google/login",
       "methods": ["GET", "POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/google/*"
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/google/login"
     },
     {
-      "route": "/api/auth/microsoft/*",
+      "route": "/api/auth/google/callback",
       "methods": ["GET", "POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/microsoft/*"
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/google/callback"
+    },
+    {
+      "route": "/api/auth/microsoft/login",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/microsoft/login"
+    },
+    {
+      "route": "/api/auth/microsoft/callback",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/microsoft/callback"
     },
     {
       "route": "/auth/callback",
@@ -72,16 +84,100 @@
       "serve": "/index.html"
     },
     {
+      "route": "/login",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/login"
+    },
+    {
+      "route": "/register",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/register"
+    },
+    {
+      "route": "/register/check-email",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/register/check-email"
+    },
+    {
+      "route": "/verify-token",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/verify-token"
+    },
+    {
+      "route": "/csrf-token",
+      "methods": ["GET", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/csrf-token"
+    },
+    {
+      "route": "/logout",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/logout"
+    },
+    {
+      "route": "/user/current",
+      "methods": ["GET", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/user/current"
+    },
+    {
+      "route": "/user/tokens",
+      "methods": ["GET", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/user/tokens"
+    },
+    {
+      "route": "/generate-macro",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/generate-macro"
+    },
+    {
+      "route": "/generate-macro-with-file",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/generate-macro-with-file"
+    },
+    {
+      "route": "/download/*",
+      "methods": ["GET", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/download/*"
+    },
+    {
+      "route": "/create-checkout-session",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/create-checkout-session"
+    },
+    {
+      "route": "/webhook",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/webhook"
+    },
+    {
       "route": "/api/*",
       "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       "allowedRoles": ["anonymous"],
       "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/*"
     },
     {
-      "route": "/(login|register|logout|verify-token|csrf-token|health|generate-macro*|download/*|create-checkout-session|webhook|cancel-subscription|subscription-status|generations|reactivate-subscription|schedule-plan-change|cancel-plan-change|send-verification|verify-code|user/current|user/tokens|refresh-token|request-password-reset|reset-password|register/check-email)",
-      "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      "route": "/health",
+      "methods": ["GET", "OPTIONS"],
       "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/$1"
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/health"
+    },
+    {
+      "route": "/refresh-token",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/refresh-token"
     },
     {
       "route": "/*",
@@ -116,12 +212,5 @@
     ".webmanifest": "application/manifest+json",
     ".ico": "image/x-icon",
     ".png": "image/png"
-  },
-  "platformErrorOverrides": [
-    {
-      "errorType": "Unauthenticated",
-      "statusCode": 302,
-      "serve": "/.auth/login/aad"
-    }
-  ]
+  }
 }
