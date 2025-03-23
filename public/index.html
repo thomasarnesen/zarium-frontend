@@ -1,58 +1,265 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zarium - Under Maintenance</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Favicon and App Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="msapplication-TileImage" content="/mstile-144x144.png">
+    <meta name="msapplication-config" content="/browserconfig.xml">
+    
+    <!-- Improved styling for loading state -->
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4efe9 100%);
-            color: #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            padding: 20px;
-            text-align: center;
-        }
-        .maintenance-container {
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            padding: 40px;
-            max-width: 500px;
-            width: 100%;
-        }
-        h1 {
-            color: #057857;
-            margin-bottom: 16px;
-        }
-        p {
-            color: #666;
-            line-height: 1.6;
-            margin-bottom: 24px;
-        }
-        .logo {
-            font-size: 36px;
-            font-weight: bold;
-            color: #057857;
-            margin-bottom: 24px;
-        }
-        .emoji {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      }
+      .initial-loader {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background-color: #f8fafc;
+        flex-direction: column;
+        text-align: center;
+      }
+      .initial-loader-content {
+        padding: 20px;
+        max-width: 500px;
+      }
+      .initial-loader h1 {
+        font-size: 24px;
+        color: #059669;
+        margin-bottom: 16px;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        margin: 20px auto;
+        border: 4px solid rgba(5, 150, 105, 0.2);
+        border-radius: 50%;
+        border-top-color: #059669;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
-</head>
-<body>
-    <div class="maintenance-container">
-        <div class="logo">Zarium</div>
-        <div class="emoji">🛠️</div>
-        <h1>Under Maintenance</h1>
-        <p>We're currently improving our system. Please check back soon.</p>
-        <p>Estimated completion: <strong>Soon</strong></p>
+    
+    <!-- Primary Meta Tags -->
+    <title>Zarium | AI Excel Generator | Create Spreadsheets in Seconds</title>
+    <meta name="description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
+    <meta name="keywords" content="AI Excel generator, spreadsheet creator, Excel automation, AI spreadsheet, Excel formulas, Excel macros" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#057857" />
+    <meta name="msapplication-navbutton-color" content="#057857" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="#057857" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://zarium.dev/" />
+   
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://zarium.dev/" />
+    <meta property="og:title" content="Zarium | AI Excel Generator | Create Spreadsheets in Seconds" />
+    <meta property="og:description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
+    <meta property="og:image" content="https://zarium.dev/og-image.png" />
+    <meta property="og:site_name" content="Zarium" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://zarium.dev/" />
+    <meta name="twitter:title" content="Zarium | AI Excel Generator | Create Spreadsheets in Seconds" />
+    <meta name="twitter:description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
+    <meta name="twitter:image" content="https://zarium.dev/twitter-image.png" />
+
+   
+    <!-- Preload Critical Resources -->
+    <link rel="preconnect" href="https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net" />
+    <link rel="preconnect" href="https://js.stripe.com" crossorigin />
+    
+    <!-- Stripe Integration -->
+    <script src="https://js.stripe.com/v3/" defer></script>
+    
+    <!-- Structured Data - JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Zarium",
+      "applicationCategory": "BusinessApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free trial available"
+      },
+      "operatingSystem": "Web",
+      "description": "AI-powered Excel generator that creates complete spreadsheets with 3D graphs in seconds or enhances your existing Excel files."
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Zarium",
+      "url": "https://zarium.dev/",
+      "logo": "https://zarium.dev/favicon-32x32.png"
+    }
+    </script>
+
+    <!-- Improved error detection script -->
+    <script>
+      // Initialize error tracking
+      window.__zarium_errors = [];
+      window.__zarium_lastErrorTime = 0;
+      
+      // Global error handler to catch JS errors
+      window.addEventListener('error', function(event) {
+        const now = Date.now();
+        window.__zarium_errors.push({
+          message: event.message,
+          time: now
+        });
+        window.__zarium_lastErrorTime = now;
+        
+        console.error('Global error:', event.message);
+      });
+      
+      // If the page is blank after 10 seconds, show an error message
+      window.addEventListener('DOMContentLoaded', function() {
+        var timeout = setTimeout(function() {
+          var root = document.getElementById('root');
+          if (root && (!root.children || root.children.length === 0 || 
+              root.innerHTML.includes('Loading application'))) {
+            console.error('Application load timeout triggered');
+            
+            // Check if we have recent errors
+            const hasRecentErrors = window.__zarium_errors && 
+              window.__zarium_errors.some(err => (Date.now() - err.time) < 10000);
+            
+            // Show an appropriate error message
+            if (hasRecentErrors) {
+              root.innerHTML = `
+                <div class="initial-loader">
+                  <div class="initial-loader-content">
+                    <h1>Error Loading Zarium</h1>
+                    <p>We encountered errors while loading the application.</p>
+                    <p>This could be due to browser compatibility issues or network problems.</p>
+                    <div style="margin-top: 20px;">
+                      <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;margin-right:10px;">
+                        Reload page
+                      </button>
+                      <button onclick="localStorage.clear(); sessionStorage.clear(); document.cookie.split(';').forEach(c => document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')); window.location.href='/';" style="padding:8px 16px;background-color:#f3f4f6;color:#1f2937;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">
+                        Clear data & start fresh
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            } else {
+              root.innerHTML = `
+                <div class="initial-loader">
+                  <div class="initial-loader-content">
+                    <h1>Loading Zarium is taking longer than expected</h1>
+                    <p>This might be due to network issues or high server load.</p>
+                    <div style="margin-top: 20px;">
+                      <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;">
+                        Reload page
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+          }
+        }, 10000);
+        
+        // If the app loads correctly, clear timeout
+        var observer = new MutationObserver(function(mutations) {
+          const root = document.getElementById('root');
+          if (root && root.children.length > 0 && 
+              !root.innerHTML.includes('Loading application') &&
+              !root.innerHTML.includes('initial-loader')) {
+            clearTimeout(timeout);
+            observer.disconnect();
+          }
+        });
+        
+        observer.observe(document.getElementById('root'), { childList: true, subtree: true });
+      });
+    </script>
+  </head>
+  <body> 
+    <div id="root">
+      <!-- Initial loading state shown while React loads -->
+      <div class="initial-loader">
+        <div class="initial-loader-content">
+          <h1>Zarium</h1>
+          <div class="spinner"></div>
+          <p>Loading application...</p>
+        </div>
+      </div>
     </div>
-</body>
+    <noscript>
+      <div style="padding: 20px; text-align: center;">
+        <h1>Zarium AI Excel Generator</h1>
+        <p>Zarium is an AI-powered tool that helps you generate professional Excel spreadsheets.</p>
+        <p>Please enable JavaScript to use Zarium AI.</p>
+      </div>
+    </noscript>
+    <!-- Add cache busting parameter -->
+    <script type="module" src="/src/main.tsx?v=20240320"></script>
+    
+    <script>
+      // Sikkerhetsnett for innlasting
+      window.addEventListener('load', function() {
+        var loadTimeout = setTimeout(function() {
+          var root = document.getElementById('root');
+          var loaderElement = document.querySelector('.initial-loader');
+          
+          // Sjekk om appen fortsatt viser lasteskjermen etter 15 sekunder
+          if (root && loaderElement && root.contains(loaderElement)) {
+            loaderElement.innerHTML = `
+              <div style="max-width:500px;padding:20px;text-align:center;">
+                <h2 style="font-size:20px;color:#059669;margin-bottom:15px;">
+                  Dette tar lengre tid enn forventet
+                </h2>
+                <p style="margin-bottom:20px;color:#555;line-height:1.5;">
+                  Vi beklager forsinkelsen. Dette kan skyldes treg nettverksforbindelse.
+                </p>
+                <div>
+                  <button onclick="window.location.reload()" style="padding:10px 20px;background-color:#059669;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:10px;">
+                    Oppdater siden
+                  </button>
+                  <button onclick="localStorage.clear();sessionStorage.clear();document.cookie.split(';').forEach(c=>document.cookie=c.replace(/^ +/,'').replace(/=.*/,'=;expires='+new Date().toUTCString()+';path=/'));window.location.href='/';" style="padding:10px 20px;background-color:#f3f4f6;color:#333;border:1px solid #ddd;border-radius:4px;cursor:pointer;">
+                    Start på nytt
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+        }, 15000); // 15 sekunder
+
+        // Rydd opp hvis appen laster som den skal
+        var observer = new MutationObserver(function(mutations) {
+          if (!document.querySelector('.initial-loader')) {
+            clearTimeout(loadTimeout);
+            observer.disconnect();
+          }
+        });
+        
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    </script>
+  </body>
 </html>
