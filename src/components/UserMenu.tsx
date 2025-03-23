@@ -18,6 +18,11 @@ export default function UserMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
+  // Get the display name to show in the menu
+  const displayName = user?.displayName && user.displayName !== 'unknown' 
+    ? user.displayName 
+    : user?.email?.split('@')[0];
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -28,6 +33,13 @@ export default function UserMenu() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Redirect to welcome page if no display name
+  useEffect(() => {
+    if (user && (!user.displayName || user.displayName === 'unknown')) {
+      navigate('/welcome');
+    }
+  }, [user, navigate]);
 
   const handleLogout = async () => {
     await logout();
@@ -46,7 +58,6 @@ export default function UserMenu() {
         setIsOpen(false);
       }
     },
-    
   ];
 
   return (
@@ -56,7 +67,7 @@ export default function UserMenu() {
         className="flex items-center space-x-2 text-emerald-800 dark:text-emerald-200 hover:text-emerald-900 dark:hover:text-emerald-100 transition-colors px-3 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/50"
       >
         <User className="h-5 w-5" />
-        <span className="text-sm font-medium">{user?.email?.split('@')[0]}</span>
+        <span className="text-sm font-medium">{displayName}</span>
         <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
@@ -65,14 +76,13 @@ export default function UserMenu() {
           
           <div className="px-4 py-3 border-b border-emerald-100 dark:border-emerald-800">
             <div className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-              {user?.email}
+              {displayName}
             </div>
             <div className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
               {user?.tokens?.toLocaleString()} tokens available
             </div>
           </div>
 
-          
           <div className="py-2">
             <Link
               to="/dashboard"

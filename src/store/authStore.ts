@@ -16,6 +16,7 @@ interface User {
   tokens?: number;
   isAdmin?: boolean; 
   token: string;
+  displayName?: string;  // Added displayName property
   subscription?: {
     plan_type: string;
     status: string;
@@ -45,7 +46,7 @@ interface AuthState {
   lastRefreshTime: number; // Added to track timing
  
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, planType?: 'Demo' | 'Basic' | 'Plus' | 'Pro') => Promise<void>;
+  register: (email: string, password: string, planType?: 'Demo' | 'Basic' | 'Plus' | 'Pro', displayName?: string) => Promise<void>;
   setPendingRegistration: (data: PendingRegistration | null) => void;
   markVerificationComplete: () => void;
   logout: () => Promise<void>;
@@ -60,6 +61,7 @@ interface AuthState {
   setupTokenRefreshInterval: () => void; // Added to interface
   getAuthHeaders: () => Record<string, string>; // New function
   checkSession: () => Promise<boolean>; // New function
+  updateDisplayName: (displayName: string) => Promise<boolean>; // New function for updating display name
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -137,7 +139,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const updatedUser = {
               ...userData,
               token: authUser.token || userData.token,
-              isAdmin: userData.isAdmin
+              isAdmin: userData.isAdmin,
+              displayName: userData.displayName || authUser.displayName // Ensure displayName is included
             };
             
             localStorage.setItem('authUser', JSON.stringify(updatedUser));
@@ -237,6 +240,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         tokens: user.tokens,
         token: user.token,
         isAdmin: user.isAdmin,
+        displayName: user.displayName, // Include displayName
       };
       
       localStorage.setItem('authUser', JSON.stringify(authData));
@@ -309,7 +313,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (email: string, password: string, planType = 'Basic') => {
+  register: async (email: string, password: string, planType = 'Basic', displayName = '') => {
     try {
       // IMPORTANT CHANGE: We're now storing the registration data instead of
       // immediately creating the user. The user will be created in the webhook
@@ -520,7 +524,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                   user: {
                     ...userData,
                     token: JSON.parse(storedAuth).token,
-                    isAdmin: userData.isAdmin
+                    isAdmin: userData.isAdmin,
+                    displayName: userData.displayName || JSON.parse(storedAuth).displayName
                   },
                   tokens: userData.tokens || 0,
                   planType: userData.planType,
@@ -589,4 +594,53 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return false;
     }
   },
+
+  // New function to update display name
+  updateDisplayName: async (displayName: string) => {
+    try {
+      if (!displayName.trim()) {
+        return false;
+      }
+
+      const user = get().user;
+      if (!user) {
+        return false;
+      }
+
+      // Call API to update display name
+      const response = await api.fetch('/api/update-display-name', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ displayName: displayName.trim() }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update display name');
+      }
+
+      // Get updated data from response
+      const userData = await response.json();
+      
+      // Update local storage with new display name
+      const storedUser = JSON.parse(localStorage.getItem('authUser') || '{}');
+      storedUser.displayName = userData.displayName;
+      localStorage.setItem('authUser', JSON.stringify(storedUser));
+
+      // Update state
+      set({
+        user: {
+          ...user,
+          displayName: userData.displayName
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error updating display name:', error);
+      return false;
+    }
+  }
 }));

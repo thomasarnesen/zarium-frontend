@@ -43,6 +43,7 @@ export default function Dashboard() {
   const isAuthenticated = !!user;
   const isBasicPlan = planType === 'Basic';  
   const canUseEnhancedMode = !isBasicPlan;
+  const [greeting, setGreeting] = useState('');
 
   const [prompt, setPrompt] = useState('');
   const [documentType, setDocumentType] = useState<DocumentType>('excel');
@@ -67,6 +68,45 @@ export default function Dashboard() {
   const [isRecording, setIsRecording] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  
+  // Generate time-based greeting
+  useEffect(() => {
+    const generateGreeting = () => {
+      const hour = new Date().getHours();
+      let timeGreeting = '';
+      
+      if (hour >= 5 && hour < 12) {
+        timeGreeting = 'Good morning';
+      } else if (hour >= 12 && hour < 17) {
+        timeGreeting = 'Good afternoon';
+      } else if (hour >= 17 && hour < 21) {
+        timeGreeting = 'Good evening';
+      } else {
+        timeGreeting = 'Good night';
+      }
+      
+      // No fallback - if missing displayName, redirect to welcome page in a separate effect
+      setGreeting(`${timeGreeting}, ${user?.displayName || ''}`);
+    };
+    
+    generateGreeting();
+    
+    // Update greeting every minute
+    const interval = setInterval(generateGreeting, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Add this effect to redirect to welcome page if no display name
+  useEffect(() => {
+    if (user && (!user.displayName || user.displayName === 'unknown')) {
+      navigate('/welcome');
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    // Refresh user data on component mount
+    refreshUserData();
+  }, [refreshUserData]);
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -687,6 +727,12 @@ export default function Dashboard() {
           className="cursor-element"
         />
       )}
+      
+      <div className="container mx-auto px-4 pt-8 pb-6">
+        <h1 className="text-3xl font-bold text-emerald-800 dark:text-emerald-200 mb-8">
+          {greeting}
+        </h1>
+      </div>
       
       <div className="py-16">
         {/* Admin panel */}
