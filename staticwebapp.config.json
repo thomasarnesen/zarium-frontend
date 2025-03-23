@@ -19,6 +19,18 @@
       "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/add-email-claim"
     },
     {
+      "route": "/api/auth/azure-login",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/azure-login"
+    },
+    {
+      "route": "/api/auth/azure-callback",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/azure-callback"
+    },
+    {
       "route": "/api/auth/google/login",
       "methods": ["GET", "POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
@@ -43,10 +55,10 @@
       "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/microsoft/callback"
     },
     {
-      "route": "/api/auth/azure-callback",
+      "route": "/api/auth/session-helper",
       "methods": ["GET", "POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
-      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/azure-callback"
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/session-helper"
     },
     {
       "route": "/api/*",
