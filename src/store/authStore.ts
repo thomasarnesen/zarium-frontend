@@ -323,6 +323,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email,
         password,
         planType,
+        displayName,
         verificationCompleted: false
       };
       

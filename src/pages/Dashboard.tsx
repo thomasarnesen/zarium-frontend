@@ -34,6 +34,19 @@ interface SelectedFileInfo {
 const TOKENS_PER_GENERATION = 1000;
 const TOKENS_PER_UPLOAD = 500;
 
+const AnimatedZLogo = ({ isAnimating = false }) => {
+  return (
+    <div className="relative mr-4">
+      <div 
+        className={`h-10 w-10 rounded-full bg-emerald-600 dark:bg-emerald-500 flex items-center justify-center text-white font-bold text-xl
+          ${isAnimating ? 'z-logo-animation' : ''}`}
+      >
+        Z
+      </div>
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -707,6 +720,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
+      
       {/* Admin cursor element */}
       {user?.isAdmin && (
         <div 
@@ -728,98 +742,85 @@ export default function Dashboard() {
         />
       )}
       
-      <div className="container mx-auto px-4 pt-8 pb-6">
-        <h1 className="text-3xl font-bold text-emerald-800 dark:text-emerald-200 mb-8">
-          {greeting}
-        </h1>
-      </div>
-      
-      <div className="py-16">
-        {/* Admin panel */}
-        {user?.isAdmin && (
-          <div className="container mx-auto px-4 py-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg mb-8">
-            <div className="max-w-3xl mx-auto">
-              <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 mb-4">
-                Admin Automation 
-                <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 rounded-md text-xs font-medium">
-                  Admin Only
-                </span>
-              </h2>
-              <div className="flex flex-col space-y-2">
-                <div className="flex space-x-4">
-                  <input
-                    type="text"
-                    value={adminText}
-                    onChange={(e) => setAdminText(e.target.value)}
-                    placeholder="Enter text to automate..."
-                    className="flex-1 px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white"
-                    disabled={isAutomating}
-                  />
-                  <button
-                    onClick={runAutomation}
-                    disabled={isAutomating || !adminText.trim()}
-                    className={`px-4 py-2 rounded-lg ${
-                      isAutomating || !adminText.trim() 
-                        ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
-                        : 'bg-red-600 hover:bg-red-700 text-white'
-                    }`}
-                  >
-                    {isAutomating ? 'Running...' : 'Run Automation'}
-                  </button>
-                  {isAutomating && (
-                    <button
-                      onClick={goToDownload}
-                      className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      Go to Download
-                    </button>
-                  )}
-                  <button
-                    onClick={toggleRecording}
-                    className={`px-4 py-2 rounded-lg ${
-                      isRecording 
-                        ? 'bg-red-600 text-white' 
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    }`}
-                  >
-                    {isRecording ? 'Stop Recording' : 'Record Screen (1080p)'}
-                  </button>
-                </div>
-                {automationStep !== 'idle' && (
-                  <div className="text-sm px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded-md">
-                    Current step: <span className="font-medium">{automationStep}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="flex justify-center">
-              <div className="inline-flex items-center justify-center px-4 py-2 mb-8 rounded-full bg-emerald-100/80 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
-                <Sparkles className="h-4 w-4 mr-2" />
-                <span className="text-sm font-medium">AI-Powered Generation</span>
-              </div>
-            </div>
-            <h1 className="text-4xl font-bold mb-6 text-emerald-800 dark:text-emerald-200">
-              Excel Generator
-            </h1>
-            <p className="text-lg text-emerald-800 dark:text-emerald-300">
-              Create professional spreadsheets with AI.<br />
-              Just describe what you need.
-            </p>
-            <div className="mt-4 text-emerald-600 dark:text-emerald-400">
-              Available Tokens: {tokens.toLocaleString()}
-            </div>
-          </div>
+      {/* Updated header section - moved up and simplified */}
+      <div className="container mx-auto px-4 pt-6">
+        <div className="flex items-center mb-4">
+          <AnimatedZLogo isAnimating={isGenerating} />
+          <h1 className="text-2xl md:text-3xl font-bold text-emerald-800 dark:text-emerald-200">
+            {greeting}
+          </h1>
+        </div>
+        <div className="flex items-center justify-between mb-8">
+          <p className="text-emerald-700 dark:text-emerald-300">
+            Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
+          </p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pb-16">
-        <div className="max-w-3xl mx-auto mb-12">
-          <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 mb-4 text-center">
+      {/* Admin panel */}
+      {user?.isAdmin && (
+        <div className="container mx-auto px-4 py-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg mb-8">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 mb-4">
+              Admin Automation 
+              <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 rounded-md text-xs font-medium">
+                Admin Only
+              </span>
+            </h2>
+            <div className="flex flex-col space-y-2">
+              <div className="flex space-x-4">
+                <input
+                  type="text"
+                  value={adminText}
+                  onChange={(e) => setAdminText(e.target.value)}
+                  placeholder="Enter text to automate..."
+                  className="flex-1 px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white"
+                  disabled={isAutomating}
+                />
+                <button
+                  onClick={runAutomation}
+                  disabled={isAutomating || !adminText.trim()}
+                  className={`px-4 py-2 rounded-lg ${
+                    isAutomating || !adminText.trim() 
+                      ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`}
+                >
+                  {isAutomating ? 'Running...' : 'Run Automation'}
+                </button>
+                {isAutomating && (
+                  <button
+                    onClick={goToDownload}
+                    className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Go to Download
+                  </button>
+                )}
+                <button
+                  onClick={toggleRecording}
+                  className={`px-4 py-2 rounded-lg ${
+                    isRecording 
+                      ? 'bg-red-600 text-white' 
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  {isRecording ? 'Stop Recording' : 'Record Screen (1080p)'}
+                </button>
+              </div>
+              {automationStep !== 'idle' && (
+                <div className="text-sm px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded-md">
+                  Current step: <span className="font-medium">{automationStep}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="container mx-auto px-4 pb-12">
+        {/* Description Input Section - Moved up */}
+        <div className="max-w-3xl mx-auto mb-8">
+          <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 mb-4">
             Describe Your Spreadsheet
           </h2>
 
@@ -849,6 +850,7 @@ export default function Dashboard() {
             />
             
             <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+              {/* File upload controls - keep this section as is */}
               <div className="flex items-center gap-4">
                 {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
                   <label className="cursor-pointer">
@@ -925,6 +927,7 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Selected files display - keep this section as is */}
           {selectedFiles.length > 0 && (
             <div className="mt-4 space-y-1">
               {selectedFiles.map((fileInfo) => (
@@ -957,7 +960,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="max-w-6xl mx-auto px-4">
+        {/* Spreadsheet Viewer - keep this section as is */}
+        <div className="max-w-6xl mx-auto">
           <SpreadsheetViewer 
             previewImage={previewImage} 
             isGenerating={isGenerating} 

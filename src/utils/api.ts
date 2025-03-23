@@ -29,7 +29,7 @@ const api = {
         
         // Timeout for å unngå at siden henger
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const timeoutId = setTimeout(() => controller.abort(), 240000);
         
         const fetchOptions: RequestInit = {
           ...options,

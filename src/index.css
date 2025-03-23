@@ -100,3 +100,17 @@ body {
 .excel-like-grid .handsontable .htCore thead th {
   border-bottom: 2px solid #d1d5db;
 }
+
+/* Add this to the end of your index.css file */
+@keyframes z-pulse-and-spin {
+  0% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.2) rotate(90deg); }
+  50% { transform: scale(1) rotate(180deg); }
+  75% { transform: scale(0.8) rotate(270deg); }
+  100% { transform: scale(1) rotate(360deg); }
+}
+
+.z-logo-animation {
+  animation: z-pulse-and-spin 2s infinite ease-in-out;
+  transform-origin: center;
+}
