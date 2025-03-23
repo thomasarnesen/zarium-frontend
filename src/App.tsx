@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { Toaster } from 'react-hot-toast';
@@ -33,6 +33,22 @@ function PostPaymentHandler() {
   // Post-payment handling logic goes here 
   // (unchanged from your original code)
   return null;
+}
+
+// Create a wrapper component for automatic redirection
+function AuthRedirectWrapper({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // If user is authenticated and on the home page, redirect to dashboard
+    if (isAuthenticated && location.pathname === '/') {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate, location.pathname]);
+
+  return <>{children}</>;
 }
 
 function App() {
@@ -178,7 +194,11 @@ function App() {
           <PostPaymentHandler />
           
           <Routes>
-            <Route path="/" element={<Layout />}>
+            <Route path="/" element={
+              <AuthRedirectWrapper>
+                <Layout />
+              </AuthRedirectWrapper>
+            }>
               {/* Public routes that don't require login */}
               <Route index element={<Home />} />
               <Route path="logout-callback" element={<LogoutCallback />} />

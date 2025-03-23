@@ -198,3 +198,73 @@ body {
 .dark .zarium-logo-animation::after {
   background-color: #0d9488;
 }
+
+/* Z Logo Animation */
+.zarium-z-animation {
+  position: relative;
+  font-family: Arial, sans-serif;
+  font-size: 36px;
+  font-weight: bold;
+  color: #044a42; /* Dark green like in Zarium logo */
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Z shape with CSS */
+.zarium-z-animation:before,
+.zarium-z-animation:after {
+  content: '';
+  position: absolute;
+  background-color: #044a42;
+  height: 4px;
+  width: 30px;
+}
+
+/* Top horizontal line */
+.zarium-z-animation:before {
+  top: 15px;
+  left: 15px;
+  transform-origin: left center;
+  animation: topLineRotation 3s infinite;
+}
+
+/* Bottom horizontal line */
+.zarium-z-animation:after {
+  bottom: 15px;
+  right: 15px;
+  transform-origin: right center;
+  animation: bottomLineRotation 3s infinite;
+}
+
+/* Animation for top horizontal line */
+@keyframes topLineRotation {
+  0%, 50%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-270deg);
+  }
+}
+
+/* Animation for bottom horizontal line - offset timing */
+@keyframes bottomLineRotation {
+  0%, 25%, 75%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-270deg);
+  }
+}
+
+/* Dark mode adjustments */
+.dark .zarium-z-animation {
+  color: #0d9488; /* Lighter teal for dark mode */
+}
+
+.dark .zarium-z-animation:before,
+.dark .zarium-z-animation:after {
+  background-color: #0d9488;
+}
