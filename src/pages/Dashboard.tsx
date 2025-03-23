@@ -94,7 +94,10 @@ export default function Dashboard() {
   // Add this effect to redirect to welcome page if no display name
   useEffect(() => {
     if (user && (!user.displayName || user.displayName === 'unknown')) {
+      console.log("No display name found, redirecting to welcome page");
       navigate('/welcome');
+    } else if (user && user.displayName) {
+      console.log("User has display name:", user.displayName);
     }
   }, [user, navigate]);
 

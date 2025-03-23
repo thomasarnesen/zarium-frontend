@@ -200,7 +200,7 @@ export function MySubscription() {
 
   const handleUpgrade = async (plan) => {
     try {
-      const response = await api.fetch('/create-checkout-session', {
+      const response = await api.fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${user.token}`,

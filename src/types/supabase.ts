@@ -7,3 +7,5 @@ export type Enums<T extends keyof Database['public']['Enums']> = Database['publi
 export type Profile = Tables<'profiles'>
 export type ExcelRequest = Tables<'excel_requests'>
 export type TokenTransaction = Tables<'token_transactions'>
+
+

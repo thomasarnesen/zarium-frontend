@@ -11,21 +11,31 @@ export default function WelcomePage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // Make sure user data is fresh
+  // Make sure user data is fresh and redirect if needed
   useEffect(() => {
-    refreshUserData();
-  }, [refreshUserData]);
-
-  // If no user is found, redirect to login
-  useEffect(() => {
-    if (!user) {
-      navigate('/');
-    }
-  }, [user, navigate]);
-
-  interface UpdateDisplayNameResponse {
-    displayName: string;
-  }
+    const initWelcomePage = async () => {
+      try {
+        // Refresh user data to ensure it's up to date
+        await refreshUserData();
+        
+        // Check if user is logged in
+        if (!user) {
+          navigate('/');
+          return;
+        }
+        
+        // Check if user already has a display name - if so, redirect to dashboard
+        if (user.displayName && user.displayName !== 'unknown') {
+          console.log("User already has a display name, redirecting to dashboard");
+          navigate('/dashboard');
+        }
+      } catch (error) {
+        console.error("Error initializing welcome page:", error);
+      }
+    };
+    
+    initWelcomePage();
+  }, [user, navigate, refreshUserData]);
 
   const handleNameSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,12 +60,12 @@ export default function WelcomePage() {
       });
 
       if (!response.ok) {
-        const errorData: { error?: string } = await response.json();
+        const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update display name');
       }
 
       // Update local storage with new display name
-      const userData: UpdateDisplayNameResponse = await response.json();
+      const userData = await response.json();
       const storedUser = JSON.parse(localStorage.getItem('authUser') || '{}');
       storedUser.displayName = userData.displayName;
       localStorage.setItem('authUser', JSON.stringify(storedUser));
@@ -64,12 +74,17 @@ export default function WelcomePage() {
       
       // Redirect to dashboard after successful name update
       navigate('/dashboard');
-    } catch (error: unknown) {
+    } catch (error) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   };
+
+  // Guard to prevent unnecessary renders
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
@@ -88,7 +103,8 @@ export default function WelcomePage() {
             
             <p className="text-lg text-emerald-700 dark:text-emerald-300 mb-8">
               You now have access to Zarium's Excel generation features with your demo account.
-              Demo accounts include 50,000 tokens - enough to try out the platform and see how it works.
+              {/* Show actual token amount, not hardcoded value */}
+              You have {user.tokens?.toLocaleString() || '0'} tokens available to try out the platform.
             </p>
           </div>
           
@@ -105,12 +121,12 @@ export default function WelcomePage() {
             <div className="space-y-4 mb-8">
               <div className="flex justify-between py-2 border-b border-emerald-100 dark:border-emerald-800">
                 <span className="text-emerald-700 dark:text-emerald-300">Plan</span>
-                <span className="font-semibold text-emerald-800 dark:text-emerald-200">Demo</span>
+                <span className="font-semibold text-emerald-800 dark:text-emerald-200">{user.planType || 'Demo'}</span>
               </div>
               
               <div className="flex justify-between py-2 border-b border-emerald-100 dark:border-emerald-800">
                 <span className="text-emerald-700 dark:text-emerald-300">Available Tokens</span>
-                <span className="font-semibold text-emerald-800 dark:text-emerald-200">{user?.tokens?.toLocaleString() || '50,000'}</span>
+                <span className="font-semibold text-emerald-800 dark:text-emerald-200">{user.tokens?.toLocaleString() || '0'}</span>
               </div>
               
               <div className="flex justify-between py-2">
