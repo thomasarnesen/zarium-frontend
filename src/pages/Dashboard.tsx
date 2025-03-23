@@ -388,14 +388,88 @@ export default function Dashboard() {
     }
   };
 
+  // Add function to fetch recent spreadsheets
+  const [recentSpreadsheets, setRecentSpreadsheets] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchRecentSpreadsheets = async () => {
+      try {
+        const response = await api.fetch('/generations', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setRecentSpreadsheets(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch recent spreadsheets:", error);
+      }
+    };
+    
+    if (isAuthenticated) {
+      fetchRecentSpreadsheets();
+    }
+  }, [isAuthenticated]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
       <div className={`container mx-auto px-4 transition-all duration-500 ${firstMessageSent ? 'pt-6' : 'pt-24'}`}>
-        {/* Header with greeting */}
-        <div className={`text-center mb-6 transition-opacity duration-500 ${firstMessageSent ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
+        {/* Header with greeting - visible before first message */}
+        <div className={`text-center mb-12 transition-opacity duration-500 ${firstMessageSent ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
           <h1 className="text-4xl font-light text-emerald-800 dark:text-emerald-200">
             {greeting}
           </h1>
+        </div>
+        
+        {/* Recent Spreadsheets - only visible before first message */}
+        <div className={`mb-8 transition-opacity duration-500 ${firstMessageSent ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-medium text-emerald-800 dark:text-emerald-200 flex items-center">
+              <FileSpreadsheet className="h-5 w-5 mr-2" />
+              Your recent Excel spreadsheets
+            </h2>
+            {recentSpreadsheets.length > 0 && (
+              <a href="/generations" className="text-sm text-emerald-600 dark:text-emerald-400 hover:underline">
+                View all <ArrowRight className="inline h-3 w-3 ml-1" />
+              </a>
+            )}
+          </div>
+          
+          {recentSpreadsheets.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {recentSpreadsheets.slice(0, 6).map((item, index) => (
+                <div 
+                  key={index}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-emerald-100 dark:border-emerald-800 p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="mb-2 truncate text-emerald-800 dark:text-emerald-200 font-medium">
+                    {item.prompt.length > 40 ? `${item.prompt.substring(0, 40)}...` : item.prompt}
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs text-emerald-600 dark:text-emerald-400">
+                      {new Date(item.created_at).toLocaleString()}
+                    </div>
+                    {item.download_url && (
+                      <button
+                        onClick={() => window.open(item.download_url, '_blank')}
+                        className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+                        title="Download Excel file"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-emerald-100 dark:border-emerald-800 p-6 text-center">
+              <p className="text-emerald-700 dark:text-emerald-300">
+                No spreadsheets generated yet. Use the prompt below to create your first one!
+              </p>
+            </div>
+          )}
         </div>
         
         {/* Input Form */}
@@ -543,14 +617,15 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Spreadsheet Viewer - smaller gap here */}
-        <div className="max-w-6xl mx-auto mt-4">
+        {/* Spreadsheet Viewer - only visible after first message sent */}
+        <div className={`max-w-6xl mx-auto mt-4 transition-all duration-500 ${!firstMessageSent ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
           <SpreadsheetViewer 
             previewImage={previewImage} 
             isGenerating={isGenerating} 
             generationStatus={generationStatus} 
             formatting={formatting}
             planType={user?.planType}
+            visible={firstMessageSent}
           />
         </div>
       </div>

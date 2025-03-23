@@ -1,15 +1,20 @@
 import { Outlet } from 'react-router-dom';
-import  Navbar  from './Navbar'; // Assuming you have a Navbar component
+import Navbar from './Navbar';
 import { Footer } from './Footer';
+import { useAuthStore } from '../store/authStore';
 
 export const Layout = () => {
+  const { user } = useAuthStore();
+  const isAuthenticated = !!user;
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <main className="flex-grow">
         <Outlet />
       </main>
-      <Footer />
+      {/* Only show footer for non-authenticated users */}
+      {!isAuthenticated && <Footer />}
     </div>
   );
 };

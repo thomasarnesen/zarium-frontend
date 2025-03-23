@@ -12,6 +12,7 @@ interface SpreadsheetViewerProps {
     downloadUrl: string;
   } | null;
   planType?: string;
+  visible?: boolean; // New prop to control visibility
 }
 
 // New base dimensions - increased width by 200px
@@ -33,8 +34,13 @@ export function SpreadsheetViewer({
   isGenerating, 
   generationStatus,
   formatting,
-  planType 
+  planType,
+  visible = true // Default to visible if not specified
 }: SpreadsheetViewerProps) {
+  // Don't render anything if not visible
+  if (!visible && !previewImage && !isGenerating) {
+    return null;
+  }
   const { user } = useAuthStore();
   const token = user?.token;
   const [imageError, setImageError] = useState(false);

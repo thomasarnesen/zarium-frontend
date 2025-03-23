@@ -76,7 +76,7 @@ export default function Navbar() {
                   onClick={handleDirectAuth}
                   className="text-base bg-emerald-800 dark:bg-emerald-700 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-900 dark:hover:bg-emerald-600 shadow-sm hover:shadow-md transition-all"
                 >
-                  Get Started Free
+                  Sign In
                 </button>
               </>
             )}
