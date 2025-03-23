@@ -5,7 +5,6 @@ import { useThemeStore } from './store/themeStore';
 import { Toaster } from 'react-hot-toast';
 import api from './utils/api';
 import { ThemeProvider } from './components/ThemeProvider';
-import toast from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
 import LoadingSpinner from './components/LoadingSpinner';
 
@@ -24,6 +23,7 @@ import { Layout } from './components/Layout';
 import AuthCallback from './components/AuthCallback'; 
 import LogoutCallback from './components/LogoutCallback'; 
 import WelcomePage from './pages/WelcomePage';
+import CompleteProfile from './pages/CompleteProfile';
 
 // Token refresh interval (10 minutes)
 const TOKEN_REFRESH_INTERVAL = 10 * 60 * 1000;
@@ -186,6 +186,9 @@ function App() {
               <Route path="privacy" element={<PrivacyPolicy />} />
               <Route path="help" element={<HelpPage />} />
               <Route path="auth/callback" element={<AuthCallback />} />
+              
+              {/* Add this new route */}
+              <Route path="complete-profile" element={<CompleteProfile />} />
               
               {/* Pricing route - only accessible to authenticated users */}
               <Route path="pricing" element={

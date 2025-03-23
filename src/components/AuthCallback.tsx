@@ -280,7 +280,17 @@ const AuthCallback = () => {
         // Parse user data from response
         const userData = await response.json();
         
-        // Check if we need email confirmation (Google users)
+        // Check if we need to collect email
+        if (userData.needsEmail) {
+          // Store auth data in localStorage for the email collection page
+          localStorage.setItem('pendingAuthData', JSON.stringify(userData));
+          
+          // Redirect to email collection page
+          navigate('/complete-profile');
+          return;
+        }
+        
+        // Previous email form logic (can be kept as a fallback)
         if (idp === 'google.com' && (!userData.email || userData.email.includes('@zarium.dev'))) {
           console.log("Google user needs email confirmation");
           setTokenInfo(userData);

@@ -3,6 +3,8 @@ import { config } from '../config';
 import csrfService from '../store/csrfService';
 
 const api = {
+  apiUrl: config.apiUrl,  // Add this line
+  
   fetch: async (endpoint: string, options: RequestInit = {}) => {
     const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
     const url = `${config.apiUrl}${apiEndpoint}`;
