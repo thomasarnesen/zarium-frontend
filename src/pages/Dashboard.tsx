@@ -617,19 +617,16 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Spreadsheet Viewer - only visible after first message sent and moves above chat input */}
-        {firstMessageSent && (
-          <div className="max-w-6xl mx-auto mb-8 transition-all duration-500 opacity-100">
-            <SpreadsheetViewer 
-              previewImage={previewImage} 
-              isGenerating={isGenerating} 
-              generationStatus={generationStatus} 
-              formatting={formatting}
-              planType={user?.planType}
-              visible={true}
-            />
-          </div>
-        )}
+        {/* Spreadsheet Viewer - smaller gap here */}
+        <div className="max-w-6xl mx-auto mt-4">
+          <SpreadsheetViewer 
+            previewImage={previewImage} 
+            isGenerating={isGenerating} 
+            generationStatus={generationStatus} 
+            formatting={formatting}
+            planType={user?.planType}
+          />
+        </div>
       </div>
     </div>
   );

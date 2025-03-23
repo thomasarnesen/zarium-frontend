@@ -18,10 +18,10 @@ export default function UserMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // Get the display name to show in the menu - display spaces but store with underscores
+  // Get the display name to show in the menu
   const displayName = user?.displayName && user.displayName !== 'unknown' 
-    ? user.displayName.replace(/_/g, ' ') // Replace underscores with spaces for display
-    : null; // Return null instead of email if no display name
+    ? user.displayName 
+    : user?.email?.split('@')[0];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -67,11 +67,7 @@ export default function UserMenu() {
         className="flex items-center space-x-2 text-emerald-800 dark:text-emerald-200 hover:text-emerald-900 dark:hover:text-emerald-100 transition-colors px-3 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/50"
       >
         <User className="h-5 w-5" />
-        {displayName ? (
-          <span className="text-sm font-medium">{displayName}</span>
-        ) : (
-          <span className="text-sm font-medium text-gray-400">Set display name</span>
-        )}
+        <span className="text-sm font-medium">{displayName}</span>
         <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
@@ -80,7 +76,7 @@ export default function UserMenu() {
           
           <div className="px-4 py-3 border-b border-emerald-100 dark:border-emerald-800">
             <div className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-              {displayName || "Welcome!"}
+              {displayName}
             </div>
             <div className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
               {user?.tokens?.toLocaleString()} tokens available
