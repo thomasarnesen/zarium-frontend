@@ -1,4 +1,4 @@
-// AuthCallback.tsx - Enhanced with email confirmation for Google users
+// src/components/AuthCallback.tsx - Completely skip email collection
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -15,10 +15,6 @@ const AuthCallback = () => {
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(true);
   const [debugInfo, setDebugInfo] = useState<any>({});
-  const [showEmailForm, setShowEmailForm] = useState(false);
-  const [emailInput, setEmailInput] = useState('');
-  const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
-  const [tokenInfo, setTokenInfo] = useState<any>(null);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -30,68 +26,6 @@ const AuthCallback = () => {
            navigator.userAgent.includes('WebView') ||
            !('cookieEnabled' in navigator) || 
            !navigator.cookieEnabled;
-  };
-
-  // Handle email submission
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!emailInput || !emailInput.includes('@')) {
-      return;
-    }
-    
-    try {
-      setIsSubmittingEmail(true);
-      
-      // Call API to update the email
-      const response = await api.fetch('/api/update-user-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: emailInput }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update email');
-      }
-      
-      const userData = await response.json();
-      
-      // Update user data
-      if (tokenInfo) {
-        const updatedUserData = {
-          ...tokenInfo,
-          email: userData.email
-        };
-        
-        // Update auth store
-        setUser(updatedUserData);
-        
-        // Store in local storage
-        localStorage.setItem('authUser', JSON.stringify(updatedUserData));
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.removeItem('manualLogout'); // Clear any logout flag
-        
-        // Navigate based on user status
-        if (tokenInfo.isNewUser) {
-          console.log("Redirecting to welcome page for new user");
-          navigate('/welcome');
-        } else {
-          console.log("Redirecting to dashboard for existing user");
-          navigate('/dashboard');
-        }
-      }
-      
-      setShowEmailForm(false);
-      setProcessing(false);
-    } catch (error) {
-      console.error('Error updating email:', error);
-      setError(`Failed to update email: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsSubmittingEmail(false);
-    }
   };
 
   useEffect(() => {
@@ -280,24 +214,7 @@ const AuthCallback = () => {
         // Parse user data from response
         const userData = await response.json();
         
-        // Check if we need to collect email
-        if (userData.needsEmail) {
-          // Store auth data in localStorage for the email collection page
-          localStorage.setItem('pendingAuthData', JSON.stringify(userData));
-          
-          // Redirect to email collection page
-          navigate('/complete-profile');
-          return;
-        }
-        
-        // Previous email form logic (can be kept as a fallback)
-        if (idp === 'google.com' && (!userData.email || userData.email.includes('@zarium.dev'))) {
-          console.log("Google user needs email confirmation");
-          setTokenInfo(userData);
-          setShowEmailForm(true);
-          return; // Stop processing until email is provided
-        }
-        
+        // MODIFIED: Always skip email collection and proceed directly
         // Store in local storage
         localStorage.setItem('authUser', JSON.stringify(userData));
         localStorage.setItem('isAuthenticated', 'true');
@@ -311,15 +228,16 @@ const AuthCallback = () => {
         // Update auth store
         setUser(userData);
         
-        // Get saved redirect URL if it exists
-        const redirectUrl = sessionStorage.getItem('authRedirectUrl');
-        sessionStorage.removeItem('authRedirectUrl');
-        
-        // Navigate based on user status
-        if (userData.isNewUser) {
-          console.log("Redirecting to welcome page for new user");
+        // MODIFIED: Always direct new users to welcome page for name collection,
+        // existing users to dashboard
+        if (!userData.displayName || userData.displayName === 'unknown') {
+          console.log("Redirecting to welcome page to collect display name");
           navigate('/welcome');
         } else {
+          // Get saved redirect URL if it exists
+          const redirectUrl = sessionStorage.getItem('authRedirectUrl');
+          sessionStorage.removeItem('authRedirectUrl');
+          
           console.log("Redirecting to dashboard or saved URL for existing user");
           navigate(redirectUrl || '/dashboard');
         }
@@ -339,52 +257,6 @@ const AuthCallback = () => {
     
     processAuthCallback();
   }, [location, navigate, setUser]);
- 
-  if (showEmailForm) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-emerald-800 dark:text-emerald-200 mb-4">
-            Complete Your Registration
-          </h2>
-          <p className="text-emerald-700 dark:text-emerald-300 mb-6">
-            Please provide your email address to complete your account setup:
-          </p>
-          
-          <form onSubmit={handleEmailSubmit}>
-            <div className="mb-6">
-              <label htmlFor="email" className="block text-sm font-medium text-emerald-800 dark:text-emerald-200 mb-2">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                placeholder="your@email.com"
-                className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-            
-            {error && (
-              <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg">
-                {error}
-              </div>
-            )}
-            
-            <button
-              type="submit"
-              disabled={isSubmittingEmail || !emailInput.includes('@')}
-              className="w-full py-3 px-4 rounded-lg bg-emerald-800 dark:bg-emerald-700 text-white hover:bg-emerald-900 dark:hover:bg-emerald-600 transition-colors disabled:opacity-50"
-            >
-              {isSubmittingEmail ? "Processing..." : "Continue"}
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (

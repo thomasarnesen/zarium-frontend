@@ -106,7 +106,7 @@ export default function WelcomePage() {
             Your Demo Account is Ready
           </h1>
           
-          {/* Name Collection Form */}
+          {/* Name Collection Form - Always shown first if name not submitted */}
           {!nameSubmitted && (
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-emerald-100 dark:border-emerald-800 p-8 mb-10">
               <h2 className="text-2xl font-bold text-emerald-800 dark:text-emerald-200 mb-4">
@@ -166,7 +166,8 @@ export default function WelcomePage() {
                   <div className="flex justify-between py-2 border-b border-emerald-100 dark:border-emerald-800">
                     <span className="text-emerald-700 dark:text-emerald-300">Name</span>
                     <span className="font-semibold text-emerald-800 dark:text-emerald-200">
-                      {user.displayName || displayName}
+                      {/* Display name with underscores converted to spaces for display */}
+                      {(user.displayName || displayName).replace(/_/g, ' ')}
                     </span>
                   </div>
                   
