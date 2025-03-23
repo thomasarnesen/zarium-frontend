@@ -114,3 +114,87 @@ body {
   animation: z-pulse-and-spin 2s infinite ease-in-out;
   transform-origin: center;
 }
+
+/* Zarium Logo Styling */
+.zarium-logo-animation {
+  font-family: 'Arial', sans-serif;
+  font-size: 32px;
+  font-weight: bold;
+  color: #044a42; /* Dark green like in the Zarium logo */
+  display: inline-block;
+  position: relative;
+  margin-right: 10px;
+  width: 40px;
+  height: 40px;
+  text-align: center;
+  line-height: 40px;
+}
+
+/* Animation for the Z Logo */
+.zarium-logo-animation::before,
+.zarium-logo-animation::after {
+  content: "";
+  position: absolute;
+  background-color: #044a42;
+  height: 3px;
+}
+
+/* Top line of Z */
+.zarium-logo-animation::before {
+  width: 24px;
+  top: 10px;
+  left: 8px;
+  transform-origin: left center;
+  animation: topLineRotate 2s infinite;
+}
+
+/* Bottom line of Z */
+.zarium-logo-animation::after {
+  width: 24px;
+  bottom: 10px;
+  right: 8px;
+  transform-origin: right center;
+  animation: bottomLineRotate 2s infinite;
+}
+
+@keyframes topLineRotate {
+  0%, 50% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-270deg) translate(0, -3px);
+  }
+}
+
+@keyframes bottomLineRotate {
+  0%, 25%, 75%, 100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(-270deg) translate(0, 3px);
+  }
+}
+
+/* Optional animation for the Z character itself */
+@keyframes pulseZ {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.9);
+  }
+}
+
+.zarium-logo-animation {
+  animation: pulseZ 2s infinite ease-in-out;
+}
+
+/* Dark mode adjustments */
+.dark .zarium-logo-animation {
+  color: #0d9488; /* Lighter teal for dark mode */
+}
+
+.dark .zarium-logo-animation::before,
+.dark .zarium-logo-animation::after {
+  background-color: #0d9488;
+}

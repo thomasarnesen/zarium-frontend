@@ -57,6 +57,7 @@ export default function Dashboard() {
   const isBasicPlan = planType === 'Basic';  
   const canUseEnhancedMode = !isBasicPlan;
   const [greeting, setGreeting] = useState('');
+  const [initialInput, setInitialInput] = useState(true);
 
   const [prompt, setPrompt] = useState('');
   const [documentType, setDocumentType] = useState<DocumentType>('excel');
@@ -98,8 +99,12 @@ export default function Dashboard() {
         timeGreeting = 'Good night';
       }
       
-      // No fallback - if missing displayName, redirect to welcome page in a separate effect
-      setGreeting(`${timeGreeting}, ${user?.displayName || ''}`);
+      // Use displayName with underscores converted to spaces
+      const displayName = user?.displayName 
+        ? user.displayName.replace(/_/g, ' ') 
+        : '';
+      
+      setGreeting(`${timeGreeting}, ${displayName}`);
     };
     
     generateGreeting();
@@ -120,6 +125,20 @@ export default function Dashboard() {
     // Refresh user data on component mount
     refreshUserData();
   }, [refreshUserData]);
+
+  // Focus on text area when the component mounts
+  useEffect(() => {
+    if (promptTextareaRef.current) {
+      promptTextareaRef.current.focus();
+    }
+  }, []);
+
+  // Handle first input - when user starts typing, move things up
+  const handleInputStart = () => {
+    if (initialInput) {
+      setInitialInput(false);
+    }
+  };
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -720,7 +739,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
-      
       {/* Admin cursor element */}
       {user?.isAdmin && (
         <div 
@@ -729,7 +747,6 @@ export default function Dashboard() {
             position: 'fixed',
             width: '32px',
             height: '32px',
-            // White fill cursor
             backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\' viewBox=\'0 0 32 32\'%3E%3Cpath d=\'M8.5,2 L8.5,25 L13,20 L19,24 L19,19 L13,15 L8.5,20 Z\' fill=\'white\' stroke=\'black\' stroke-width=\'1\'/%3E%3C/svg%3E")',
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
@@ -742,24 +759,9 @@ export default function Dashboard() {
         />
       )}
       
-      {/* Updated header section - moved up and simplified */}
-      <div className="container mx-auto px-4 pt-6">
-        <div className="flex items-center mb-4">
-          <AnimatedZLogo isAnimating={isGenerating} />
-          <h1 className="text-2xl md:text-3xl font-bold text-emerald-800 dark:text-emerald-200">
-            {greeting}
-          </h1>
-        </div>
-        <div className="flex items-center justify-between mb-8">
-          <p className="text-emerald-700 dark:text-emerald-300">
-            Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
-          </p>
-        </div>
-      </div>
-
       {/* Admin panel */}
       {user?.isAdmin && (
-        <div className="container mx-auto px-4 py-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg mb-8">
+        <div className="container mx-auto px-4 py-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg mb-8 mt-4">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 mb-4">
               Admin Automation 
@@ -817,119 +819,124 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="container mx-auto px-4 pb-12">
-        {/* Description Input Section - Moved up */}
-        <div className="max-w-3xl mx-auto mb-8">
-          <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 mb-4">
-            Describe Your Spreadsheet
-          </h2>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-lg text-center">
-              {error}
-            </div>
-          )}
-
-          <div className="relative w-full">
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyPress={handleKeyPress}
-              onPaste={handlePaste}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              placeholder="E.g., Create a monthly budget tracker with income and expense categories..."
-              className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white min-h-[120px] pb-14 resize-none outline-none focus:border-emerald-300 dark:focus:border-emerald-700"
-              style={{ height: 'auto', minHeight: '120px' }}
-              ref={promptTextareaRef}
-              onInput={(e) => {
-                const target = e.target as HTMLTextAreaElement;
-                target.style.height = 'auto';
-                target.style.height = `${target.scrollHeight}px`;
-              }}
-            />
-            
-            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-              {/* File upload controls - keep this section as is */}
-              <div className="flex items-center gap-4">
-                {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
-                  <label className="cursor-pointer">
-                    <Upload 
-                      className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-                    />
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept=".xlsx,.xls,.csv,.ods,image/*" 
-                      onChange={handleFileChange}
-                      multiple
-                      aria-label="Upload files"
-                    />
-                  </label>
-                ) : (
-                  <div
-                    className="cursor-not-allowed"
-                    title="Upgrade to Plus or Pro to upload files"
-                  >
-                    <Upload className="h-4 w-4 text-gray-400" />
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  {canUseEnhancedMode ? (
-                    <Switch
-                      checked={enhancedMode}
-                      onCheckedChange={toggleEnhancedMode}
-                      className="data-[state=checked]:bg-emerald-600 h-4 w-7"
-                    />
+      <div className={`container mx-auto px-4 transition-all duration-500 ease-in-out ${initialInput ? 'pt-32' : 'pt-12'}`}>
+        {/* Centered Header Section */}
+        <div className="text-center mb-8">
+          <div className="flex justify-center items-center gap-4 mb-3">
+            {isGenerating && (
+              <AnimatedZLogo isAnimating={true} />
+            )}
+            <h1 className="text-4xl font-light text-emerald-800 dark:text-emerald-200">
+              {greeting}
+            </h1>
+          </div>
+          
+          {/* Input Box - Styled similar to Claude */}
+          <div className="max-w-2xl mx-auto mb-6 border border-emerald-200 dark:border-emerald-800 rounded-xl bg-white dark:bg-gray-900 shadow-sm">
+            <div className="relative">
+              <textarea
+                value={prompt}
+                onChange={(e) => {
+                  setPrompt(e.target.value);
+                  handleInputStart();
+                }}
+                onFocus={handleInputStart}
+                onKeyPress={handleKeyPress}
+                onPaste={handlePaste}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                placeholder="How can I help you today?"
+                className="w-full px-5 py-4 rounded-xl bg-white dark:bg-gray-900 text-emerald-800 dark:text-white min-h-[100px] resize-none outline-none"
+                style={{ height: 'auto', minHeight: '100px' }}
+                ref={promptTextareaRef}
+              />
+              
+              <div className="p-3 border-t border-emerald-100 dark:border-emerald-800 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
+                    <label className="cursor-pointer">
+                      <Upload 
+                        className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                      />
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept=".xlsx,.xls,.csv,.ods,image/*" 
+                        onChange={handleFileChange}
+                        multiple
+                        aria-label="Upload files"
+                      />
+                    </label>
                   ) : (
                     <div
                       className="cursor-not-allowed"
-                      title="Upgrade to Plus or Pro to use enhanced mode"
+                      title="Upgrade to Plus or Pro to upload files"
                     >
-                      <Switch
-                        checked={false}
-                        disabled
-                        className="opacity-50 h-4 w-7"
-                      />
+                      <Upload className="h-4 w-4 text-gray-400" />
                     </div>
                   )}
-                  <span className="text-sm text-emerald-700 dark:text-emerald-300">
-                    Enhanced
-                  </span>
-                  <div 
-                    className="relative group"
-                    title="Enhanced mode information"
-                  >
-                    <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
-                      {isBasicPlan 
-                        ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans."
-                        : "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans. Uses more tokens per generation. Ideal for important projects where quality matters most."}
+
+                  <div className="flex items-center gap-2">
+                    {canUseEnhancedMode ? (
+                      <Switch
+                        checked={enhancedMode}
+                        onCheckedChange={toggleEnhancedMode}
+                        className="data-[state=checked]:bg-emerald-600 h-4 w-7"
+                      />
+                    ) : (
+                      <div
+                        className="cursor-not-allowed"
+                        title="Upgrade to Plus or Pro to use enhanced mode"
+                      >
+                        <Switch
+                          checked={false}
+                          disabled
+                          className="opacity-50 h-4 w-7"
+                        />
+                      </div>
+                    )}
+                    <span className="text-sm text-emerald-700 dark:text-emerald-300">
+                      Enhanced
+                    </span>
+                    <div 
+                      className="relative group"
+                      title="Enhanced mode information"
+                    >
+                      <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
+                        {isBasicPlan 
+                          ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans."
+                          : "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans. Uses more tokens per generation. Ideal for important projects where quality matters most."}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating || !prompt.trim()}
-                className={`p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors ${
-                  isGenerating || !prompt.trim() 
-                    ? 'opacity-50 cursor-not-allowed' 
-                    : ''
-                }`}
-                aria-label="Generate Excel"
-                ref={generateButtonRef}
-              >
-                <ArrowRight className="h-5 w-5 text-white" />
-              </button>
+                <button
+                  onClick={handleGenerate}
+                  disabled={isGenerating || !prompt.trim()}
+                  className={`p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors ${
+                    isGenerating || !prompt.trim() 
+                      ? 'opacity-50 cursor-not-allowed' 
+                      : ''
+                  }`}
+                  aria-label="Generate Excel"
+                  ref={generateButtonRef}
+                >
+                  <ArrowRight className="h-5 w-5 text-white" />
+                </button>
+              </div>
             </div>
+          </div>
+          
+          {/* Centered Tokens Display */}
+          <div className="text-center text-emerald-700 dark:text-emerald-300 mb-8">
+            Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
           </div>
 
           {/* Selected files display - keep this section as is */}
           {selectedFiles.length > 0 && (
-            <div className="mt-4 space-y-1">
+            <div className="max-w-2xl mx-auto space-y-1 mb-4">
               {selectedFiles.map((fileInfo) => (
                 <div 
                   key={fileInfo.id}
@@ -952,7 +959,7 @@ export default function Dashboard() {
           )}
 
           {isBasicPlan && (
-            <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center">
+            <div className="max-w-2xl mx-auto mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center">
               <Lock className="h-4 w-4 inline-block mr-2" />
               File upload is available in Plus and Pro plans. 
               <a href="/subscription" className="underline ml-1">Upgrade now</a>
@@ -960,7 +967,14 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Spreadsheet Viewer - keep this section as is */}
+        {/* Error display */}
+        {error && (
+          <div className="max-w-2xl mx-auto mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-lg text-center">
+            {error}
+          </div>
+        )}
+
+        {/* Spreadsheet Viewer */}
         <div className="max-w-6xl mx-auto">
           <SpreadsheetViewer 
             previewImage={previewImage} 
