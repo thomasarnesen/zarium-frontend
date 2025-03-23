@@ -145,7 +145,13 @@ const AuthCallback = () => {
               const payload = parts[1];
               const decodedPayload = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
               const tokenData = JSON.parse(decodedPayload);
-              userEmail = tokenData.email || tokenData.preferred_username || tokenData.name;
+              
+              // Try various possible email field names
+              userEmail = tokenData.email || 
+                         tokenData['signInNames.emailAddress'] ||
+                         (tokenData.emails && tokenData.emails.length > 0 ? tokenData.emails[0] : null) ||
+                         tokenData.preferred_username;
+                         
               console.log("Extracted email from token:", userEmail);
             }
           } catch (decodeError) {
