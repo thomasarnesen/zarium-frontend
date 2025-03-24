@@ -214,35 +214,32 @@ const AuthCallback = () => {
         // Parse user data from response
         const userData = await response.json();
         
-        // Modified condition to check for display name properly
-        if (userData) {
-          // Store in local storage
-          localStorage.setItem('authUser', JSON.stringify(userData));
-          localStorage.setItem('isAuthenticated', 'true');
-          localStorage.removeItem('manualLogout'); // Clear any logout flag
-          
-          // Clean up any session storage items we might have used
-          sessionStorage.removeItem('auth_pending_data');
-          sessionStorage.removeItem('auth_provider');
-          sessionStorage.removeItem('auth_session_id');
-          
-          // Update auth store
-          setUser(userData);
-          
+        // MODIFIED: Always skip email collection and proceed directly
+        // Store in local storage
+        localStorage.setItem('authUser', JSON.stringify(userData));
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.removeItem('manualLogout'); // Clear any logout flag
+        
+        // Clean up any session storage items we might have used
+        sessionStorage.removeItem('auth_pending_data');
+        sessionStorage.removeItem('auth_provider');
+        sessionStorage.removeItem('auth_session_id');
+        
+        // Update auth store
+        setUser(userData);
+        
+        // MODIFIED: Always direct new users to welcome page for name collection,
+        // existing users to dashboard
+        if (!userData.displayName || userData.displayName === 'unknown') {
+          console.log("Redirecting to welcome page to collect display name");
+          navigate('/welcome');
+        } else {
           // Get saved redirect URL if it exists
           const redirectUrl = sessionStorage.getItem('authRedirectUrl');
           sessionStorage.removeItem('authRedirectUrl');
           
-          // Only redirect to welcome page if user doesn't have a display name
-          // or display name is 'unknown'
-          if (!userData.displayName || userData.displayName === 'unknown') {
-            console.log("User needs to set a display name, redirecting to welcome page");
-            navigate('/welcome');
-          } else {
-            // User already has a display name, go directly to dashboard
-            console.log("User already has a display name, redirecting to dashboard");
-            navigate(redirectUrl || '/dashboard');
-          }
+          console.log("Redirecting to dashboard or saved URL for existing user");
+          navigate(redirectUrl || '/dashboard');
         }
         
         setProcessing(false);
