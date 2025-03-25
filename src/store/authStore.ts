@@ -166,18 +166,45 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               });
               
               if (tokenInfoResponse.ok) {
-                const tokenData = await tokenInfoResponse.json();
-                
-                set({ 
-                  user: updatedUser,
-                  isAuthenticated: true,
-                  tokens: tokenData.current_tokens || userData.tokens || 0,
-                  planType: userData.planType,
-                  isDemoUser: userData.planType === 'Demo'
-                });
-                
-                // Log successful update
-                console.log("User data updated with server values, displayName:", updatedUser.displayName);
+                try {
+                  // Modify tokenResponse before JSON parsing
+                  const responseText = await tokenInfoResponse.text();
+                  
+                  // Replace Infinity and NaN with string representation that can be handled by JSON
+                  const cleanedJson = responseText
+                    .replace(/:Infinity/g, ':"Infinity"')
+                    .replace(/:NaN/g, ':"NaN"');
+                  
+                  let tokenData;
+                  try {
+                    tokenData = JSON.parse(cleanedJson);
+                  } catch (parseError) {
+                    console.warn('Error parsing token data JSON:', parseError);
+                    // Use a fallback object to prevent failures
+                    tokenData = { current_tokens: userData.tokens || 0 };
+                  }
+                  
+                  set({ 
+                    user: updatedUser,
+                    isAuthenticated: true,
+                    tokens: tokenData.current_tokens || userData.tokens || 0,
+                    planType: userData.planType,
+                    isDemoUser: userData.planType === 'Demo'
+                  });
+                  
+                  // Log successful update
+                  console.log("User data updated with server values, displayName:", updatedUser.displayName);
+                } catch (e) {
+                  // Even if everything fails, still update the user data
+                  console.warn('Error processing token response:', e);
+                  set({ 
+                    user: updatedUser,
+                    isAuthenticated: true,
+                    tokens: userData.tokens || 0,
+                    planType: userData.planType,
+                    isDemoUser: userData.planType === 'Demo'
+                  });
+                }
               } else {
                 set({ 
                   user: updatedUser,
