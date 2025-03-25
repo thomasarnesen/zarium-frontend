@@ -1,36 +1,36 @@
+// vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import autoprefixer from 'autoprefixer';
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
-  const isProd = mode === 'production';
-
-  return {
-    plugins: [react()],
+export default defineConfig({
+  plugins: [react()],
+  
+  build: {
+    // Disable source maps in production (eller behold dem hvis du trenger debugging)
+    sourcemap: process.env.NODE_ENV !== 'production',
     
-    build: {
-      // Disable source maps in production for better performance and security
-      sourcemap: !isProd,
-    },
-    css: {
-      devSourcemap: true,
-      postcss: {
-        plugins: [
-          require('tailwindcss'),
-          autoprefixer({
-            overrideBrowserslist: [
-              "defaults",
-              "not IE 11",
-              "> 1%",
-              "last 2 versions",
-              "Firefox ESR",
-              "Safari >= 10"
-            ],
-            grid: true
-          })
-        ]
+    // Simplified rollup options - bare det nødvendige
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom']
+        }
       }
     }
-  }
-})
+  },
+  
+  server: {
+    port: 5176,
+    strictPort: true,
+    cors: true
+  },
+  
+  optimizeDeps: {
+    include: ['@stripe/stripe-js'],
+    exclude: ['fsevents']
+  },
+  
+  // Ensure proper path handling
+  base: '/'
+});
