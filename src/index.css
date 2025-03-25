@@ -699,3 +699,147 @@ body {
 .dark .z-reflection {
   background: linear-gradient(to bottom, rgba(13, 148, 136, 0.3), rgba(13, 148, 136, 0));
 }
+
+/* Elegant Z-logo animasjon */
+.zarium-loading {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  margin: 20px auto;
+}
+
+.z-logo {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  font-family: 'Arial', sans-serif;
+  font-weight: bold;
+  font-size: 38px;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center;
+  animation: z-spin-and-pulse 2.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.z-logo::before {
+  content: 'Z';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.z-border {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 2px solid #10b981;
+  border-radius: 12px;
+  box-sizing: border-box;
+  animation: z-border-pulse 2.5s infinite alternate ease-in-out;
+}
+
+@keyframes z-spin-and-pulse {
+  0% {
+    transform: rotate(0deg) scale(0.95);
+    color: #10b981;
+  }
+  25% {
+    transform: rotate(90deg) scale(1);
+    color: #0ea271;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.05);
+    color: #10b981;
+  }
+  75% {
+    transform: rotate(270deg) scale(1);
+    color: #0ea271;
+  }
+  100% {
+    transform: rotate(360deg) scale(0.95);
+    color: #10b981;
+  }
+}
+
+@keyframes z-border-pulse {
+  0% {
+    transform: rotate(0deg);
+    border-radius: 12px;
+    border-color: rgba(16, 185, 129, 0.7);
+  }
+  50% {
+    transform: rotate(180deg);
+    border-radius: 50%;
+    border-color: rgba(16, 185, 129, 1);
+  }
+  100% {
+    transform: rotate(360deg);
+    border-radius: 12px;
+    border-color: rgba(16, 185, 129, 0.7);
+  }
+}
+
+/* Mørk modus-justeringer */
+.dark .z-logo {
+  color: #0d9488;
+}
+
+.dark .z-border {
+  border-color: #0d9488;
+}
+
+.dark .z-logo {
+  animation: z-spin-and-pulse-dark 2.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .z-border {
+  animation: z-border-pulse-dark 2.5s infinite alternate ease-in-out;
+}
+
+@keyframes z-spin-and-pulse-dark {
+  0% {
+    transform: rotate(0deg) scale(0.95);
+    color: #0d9488;
+  }
+  25% {
+    transform: rotate(90deg) scale(1);
+    color: #0f766e;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.05);
+    color: #0d9488;
+  }
+  75% {
+    transform: rotate(270deg) scale(1);
+    color: #0f766e;
+  }
+  100% {
+    transform: rotate(360deg) scale(0.95);
+    color: #0d9488;
+  }
+}
+
+@keyframes z-border-pulse-dark {
+  0% {
+    transform: rotate(0deg);
+    border-radius: 12px;
+    border-color: rgba(13, 148, 136, 0.7);
+  }
+  50% {
+    transform: rotate(180deg);
+    border-radius: 50%;
+    border-color: rgba(13, 148, 136, 1);
+  }
+  100% {
+    transform: rotate(360deg);
+    border-radius: 12px;
+    border-color: rgba(13, 148, 136, 0.7);
+  }
+}
