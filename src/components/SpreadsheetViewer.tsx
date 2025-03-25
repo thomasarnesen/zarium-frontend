@@ -279,8 +279,123 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
             />
           </div>
         ) : (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-            Enter a prompt to generate your Excel spreadsheet.
+          // Default Excel grid view when not generating and no preview image
+          <div 
+            className="excel-like-grid relative bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded overflow-hidden"
+            style={{ width: '100%', height: '600px', maxWidth: '1200px', margin: '0 auto' }}
+          >
+            <div 
+              ref={containerRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              className="overflow-auto h-full"
+              style={{ 
+                position: 'relative',
+                width: '100%',
+                height: '100%'
+              }}
+            >
+              {/* Excel grid container */}
+              <div 
+                style={{ 
+                  width: scale * BASE_WIDTH,
+                  height: scale * BASE_HEIGHT,
+                  transform: `scale(${scale})`,
+                  transformOrigin: '0 0'
+                }}
+                className="bg-white dark:bg-gray-900"
+              >
+                {/* Header row with columns A, B, C... */}
+                <div className="flex bg-gray-100 dark:bg-gray-800 sticky top-0 z-10">
+                  {/* Empty cell in the top-left corner */}
+                  <div className={`
+                    w-${CELL_WIDTH} h-${HEADER_HEIGHT} 
+                    flex items-center justify-center
+                    border-b border-r border-gray-300 dark:border-gray-700
+                    bg-gray-200 dark:bg-gray-700
+                  `}></div>
+                  
+                  {/* Column headers (A-Z, AA-BA) */}
+                  {[...Array(TOTAL_COLUMNS)].map((_, index) => {
+                    let colName = '';
+                    if (index < A_Z_COUNT) {
+                      // A-Z columns
+                      colName = String.fromCharCode(65 + index);
+                    } else {
+                      // AA-BA columns
+                      const firstChar = String.fromCharCode(65 + Math.floor((index - A_Z_COUNT) / 26));
+                      const secondChar = String.fromCharCode(65 + ((index - A_Z_COUNT) % 26));
+                      colName = `${firstChar}${secondChar}`;
+                    }
+                    
+                    return (
+                      <div 
+                        key={`col-${index}`}
+                        className={`
+                          w-${CELL_WIDTH} h-${HEADER_HEIGHT} 
+                          flex items-center justify-center
+                          border-b border-r border-gray-300 dark:border-gray-700
+                          bg-gray-200 dark:bg-gray-700
+                          text-xs font-medium text-gray-700 dark:text-gray-300
+                        `}
+                      >
+                        {colName}
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Row headers (1, 2, 3...) and cells */}
+                {[...Array(ROW_COUNT)].map((_, rowIndex) => (
+                  <div key={`row-${rowIndex}`} className="flex">
+                    {/* Row number */}
+                    <div 
+                      className={`
+                        w-${CELL_WIDTH} h-${CELL_HEIGHT} 
+                        flex items-center justify-center
+                        border-b border-r border-gray-300 dark:border-gray-700
+                        bg-gray-200 dark:bg-gray-700
+                        sticky left-0 z-10
+                        text-xs font-medium text-gray-700 dark:text-gray-300
+                      `}
+                    >
+                      {rowIndex + 1}
+                    </div>
+                    
+                    {/* Regular cells */}
+                    {[...Array(TOTAL_COLUMNS)].map((_, colIndex) => (
+                      <div 
+                        key={`cell-${rowIndex}-${colIndex}`}
+                        className={`
+                          w-${CELL_WIDTH} h-${CELL_HEIGHT} 
+                          border-b border-r border-gray-300 dark:border-gray-700
+                          text-xs text-gray-800 dark:text-gray-200
+                          truncate
+                        `}
+                      ></div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Zoom slider at the bottom */}
+            <div className="absolute bottom-4 right-4 flex items-center space-x-2 bg-white dark:bg-gray-800 bg-opacity-75 dark:bg-opacity-75 rounded-full px-3 py-1 shadow-md">
+              <label htmlFor="zoom-slider" className="text-xs text-gray-600 dark:text-gray-300">Zoom</label>
+              <input 
+                id="zoom-slider"
+                type="range"
+                min={getMinZoomValue()}
+                max="150"
+                value={Math.round((scale - 0.3) / 0.012 + 50)}
+                onChange={handleZoomChange}
+                onClick={handleZoomClick}
+                className="w-24 h-2 bg-gray-300 dark:bg-gray-600 rounded-full appearance-none slider-thumb"
+                aria-label="Zoom level control"
+                title="Adjust zoom level"
+              />
+            </div>
           </div>
         )}
       </div>
