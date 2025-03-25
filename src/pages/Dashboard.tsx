@@ -542,10 +542,13 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Z Logo animation during loading */}
+        {/* Z Logo animation during loading - Updated animation */}
         {isGenerating && (
           <div className="flex justify-center mb-4">
-            <div className="zarium-logo-animation">Z</div>
+            <div className="zarium-logo-animation" aria-label="Loading">
+              Z
+              <span className="sr-only">Processing your request</span>
+            </div>
           </div>
         )}
 
