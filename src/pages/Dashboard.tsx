@@ -73,7 +73,7 @@ export default function Dashboard() {
       } else if (hour >= 17 && hour < 21) {
         timeGreeting = 'Good evening';
       } else {
-        timeGreeting = 'Good night';
+        timeGreeting = 'Happy late night';
       }
       
       // Use displayName with underscores converted to spaces
