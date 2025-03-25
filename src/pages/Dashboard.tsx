@@ -95,10 +95,10 @@ export default function Dashboard() {
   // Add this effect to redirect to welcome page if no display name
   useEffect(() => {
     if (user && (!user.displayName || user.displayName === 'unknown')) {
-      console.log("No display name found, redirecting to welcome page");
+  
       navigate('/welcome');
     } else if (user && user.displayName) {
-      console.log("User has display name:", user.displayName);
+  
     }
   }, [user, navigate]);
 
@@ -177,7 +177,7 @@ export default function Dashboard() {
             if (data.formatting) setFormatting(data.formatting);
           }
         } catch (error) {
-          console.error('Error polling status:', error);
+  
         }
       }, 1000);
     }
@@ -539,6 +539,13 @@ export default function Dashboard() {
         {error && (
           <div className="max-w-3xl mx-auto mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-lg text-center">
             {error}
+          </div>
+        )}
+
+        {/* Z Logo animation during loading */}
+        {isGenerating && (
+          <div className="flex justify-center mb-4">
+            <div className="zarium-logo-animation">Z</div>
           </div>
         )}
 
