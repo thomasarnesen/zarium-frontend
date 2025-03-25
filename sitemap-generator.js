@@ -7,10 +7,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Your site URL
-const SITE_URL = 'https://zarium.dev';
+// Updated site URL with www
+const SITE_URL = 'https://www.zarium.dev';
 
-// Define your routes
+// Define your routes - removed login and register
 const routes = [
   {
     path: '/',
@@ -21,18 +21,6 @@ const routes = [
   {
     path: '/pricing',
     priority: 0.8,
-    changefreq: 'monthly',
-    lastmod: new Date().toISOString().split('T')[0]
-  },
-  {
-    path: '/login',
-    priority: 0.5,
-    changefreq: 'monthly',
-    lastmod: new Date().toISOString().split('T')[0]
-  },
-  {
-    path: '/register',
-    priority: 0.7,
     changefreq: 'monthly',
     lastmod: new Date().toISOString().split('T')[0]
   },
@@ -60,7 +48,7 @@ const routes = [
 function generateSitemap(routes) {
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
-  
+ 
   routes.forEach(route => {
     xml += '  <url>\n';
     xml += `    <loc>${SITE_URL}${route.path}</loc>\n`;
@@ -69,7 +57,7 @@ function generateSitemap(routes) {
     xml += `    <priority>${route.priority}</priority>\n`;
     xml += '  </url>\n';
   });
-  
+ 
   xml += '</urlset>';
   return xml;
 }
@@ -84,6 +72,5 @@ if (!fs.existsSync(publicDir)) {
 }
 
 const outputPath = path.resolve(publicDir, 'sitemap.xml');
-
 fs.writeFileSync(outputPath, sitemap);
 console.log(`Sitemap generated at ${outputPath}`);
