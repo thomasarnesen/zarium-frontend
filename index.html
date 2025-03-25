@@ -203,6 +203,160 @@
         observer.observe(document.getElementById('root'), { childList: true, subtree: true });
       });
     </script>
+    
+    <!-- Safari/iOS Authentication Fix - Final Version -->
+    <script>
+      // Safari/iOS detection and fix for authentication issues
+      document.addEventListener('DOMContentLoaded', function() {
+        // Detect Safari or iOS devices
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
+                        /iphone|ipad|ipod/i.test(navigator.userAgent);
+        
+        if (isSafari) {
+          console.log("Safari/iOS browser detected - enabling compatibility mode");
+          
+          // Fix the token duplication issue
+          const originalFetch = window.fetch;
+          window.fetch = function(url, options = {}) {
+            // Default options
+            options = options || {};
+            
+            if (typeof url === 'string') {
+              // Special handling for authentication endpoints
+              if (url.includes('/api/') && !url.includes('/api/debug')) {
+                console.log("Processing request to:", url);
+                
+                // Get token from localStorage
+                let token = null;
+                try {
+                  const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                  token = authData.token;
+                } catch (e) {
+                  console.warn("Error accessing localStorage:", e);
+                }
+                
+                // Only proceed with token modifications if we have a token
+                if (token) {
+                  // Create URL object for manipulation
+                  const urlObj = new URL(url, window.location.origin);
+                  
+                  // Check if token is already in URL, only add if not present
+                  if (!urlObj.searchParams.has('token')) {
+                    urlObj.searchParams.append('token', token);
+                    console.log("Added token to URL params");
+                  }
+                  
+                  // Update URL with our modifications
+                  url = urlObj.toString();
+                  
+                  // Initialize headers if not already set
+                  options.headers = options.headers || {};
+                  
+                  // Add Authorization header if not already present
+                  if (!options.headers.Authorization) {
+                    options.headers.Authorization = `Bearer ${token}`;
+                    console.log("Added Authorization header");
+                  }
+                }
+                
+                // Always include credentials
+                options.credentials = 'include';
+                
+                // Special case for refresh-token on Safari
+                if (url.includes('/api/refresh-token') && options.method === 'POST') {
+                  // Use GET method instead of POST for Safari
+                  options.method = 'GET';
+                  console.log("Converting POST to GET for refresh-token on Safari");
+                }
+              }
+            }
+            
+            // Call original fetch with our modifications
+            return originalFetch.call(window, url, options)
+              .then(response => {
+                // If this was a token refresh, extract and store the new token
+                if (typeof url === 'string' && url.includes('/api/refresh-token') && response.ok) {
+                  response.clone().json().then(data => {
+                    if (data && data.token) {
+                      try {
+                        console.log("Storing new token from refresh response");
+                        const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                        authData.token = data.token;
+                        localStorage.setItem('authUser', JSON.stringify(authData));
+                        
+                        // Update auth info with other data too
+                        if (data.id) authData.id = data.id;
+                        if (data.email) authData.email = data.email;
+                        if (data.planType) authData.planType = data.planType;
+                        if (data.tokens) authData.tokens = data.tokens;
+                        if (data.displayName) authData.displayName = data.displayName;
+                        
+                        localStorage.setItem('authUser', JSON.stringify(authData));
+                      } catch (e) {
+                        console.error("Error storing refreshed token:", e);
+                      }
+                    }
+                  }).catch(e => console.error("Error parsing token refresh response:", e));
+                }
+                
+                return response;
+              });
+          };
+          
+          // Implement a function to immediately apply the stored token to all subsequent requests
+          window.applyStoredToken = function() {
+            let token = null;
+            try {
+              const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+              token = authData.token;
+              
+              if (token) {
+                console.log("Applied stored token to future requests");
+                // This function will be used after successful token refresh
+                return true;
+              }
+            } catch (e) {
+              console.error("Error in applyStoredToken:", e);
+            }
+            return false;
+          };
+          
+          // Force a token refresh on page load for Safari
+          setTimeout(function() {
+            // Get token from localStorage
+            let token = null;
+            try {
+              const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+              token = authData.token;
+              
+              if (token) {
+                console.log("Performing initial token refresh for Safari");
+                fetch('/api/refresh-token', {
+                  method: 'GET',
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  },
+                  credentials: 'include'
+                })
+                .then(response => response.json())
+                .then(data => {
+                  if (data && data.token) {
+                    console.log("Initial token refresh successful");
+                    const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                    authData.token = data.token;
+                    localStorage.setItem('authUser', JSON.stringify(authData));
+                    window.applyStoredToken();
+                  }
+                })
+                .catch(e => console.error("Initial token refresh failed:", e));
+              }
+            } catch (e) {
+              console.error("Error in initial token refresh:", e);
+            }
+          }, 1000);
+        }
+      });
+    </script>
   </head>
   <body> 
     <div id="root">
