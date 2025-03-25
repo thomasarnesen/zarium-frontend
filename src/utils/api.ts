@@ -1,9 +1,9 @@
 // src/utils/api.ts
 import { config } from '../config';
-import csrfService from '../store/csrfService';
+import { useAuthStore } from '../store/authStore'; // Adjust path if needed
 
 const api = {
-  apiUrl: config.apiUrl,  // Add this line
+  apiUrl: config.apiUrl,
   
   fetch: async (endpoint: string, options: RequestInit = {}) => {
     const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
@@ -15,19 +15,29 @@ const api = {
     
     const executeRequest = async (): Promise<Response> => {
       try {
-        // Enkle headers, uten komplisert CSRF-håndtering som kan feile
+        // Get auth token with enhanced getter (supports Safari fallback)
+        const token = useAuthStore.getState().getAuthToken ? 
+          useAuthStore.getState().getAuthToken() : 
+          api.getAuthToken();
+        
+        // Prepare headers with auth token if available
         let headers: Record<string, string> = {
           ...(options.headers as Record<string, string> || {}),
           'Accept': 'application/json',
           'Cache-Control': 'no-cache'
         };
         
-        // Bare legg til Content-Type hvis det ikke er FormData
+        // Add Authorization header if token exists - critical for Safari/iOS
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        // Only add Content-Type if not FormData
         if (!(options.body instanceof FormData)) {
           headers['Content-Type'] = 'application/json';
         }
         
-        // Timeout for å unngå at siden henger
+        // Timeout to prevent page hanging
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 240000);
         
@@ -41,8 +51,13 @@ const api = {
         const response = await fetch(url, fetchOptions);
         clearTimeout(timeoutId);
         
-        // Retry bare for spesifikke feilkoder
+        // Retry only for specific error codes
         if ([401, 403, 0].includes(response.status) && retryCount < maxRetries) {
+          // Try to refresh auth
+          if (response.status === 401 && useAuthStore.getState().refreshUserData) {
+            await useAuthStore.getState().refreshUserData();
+          }
+          
           retryCount++;
           await new Promise(resolve => setTimeout(resolve, 500));
           return executeRequest();
@@ -67,7 +82,7 @@ const api = {
     return executeRequest();
   },
   
-  // Helper method for direct access to auth token
+  // Helper method for direct access to auth token - crucial for Safari/iOS support
   getAuthToken: (): string | null => {
     try {
       const storedAuth = localStorage.getItem('authUser');
@@ -175,12 +190,14 @@ const api = {
       });
     }
     
-    // Get CSRF headers with better error handling
-    let csrfHeaders = {};
-    try {
-      csrfHeaders = await csrfService.getHeaders();
-    } catch (csrfError) {
-      console.warn('Failed to get CSRF headers for file upload, continuing without them:', csrfError);
+    // Get token for authorization - Safari/iOS support
+    const token = useAuthStore.getState().getAuthToken ? 
+      useAuthStore.getState().getAuthToken() : 
+      api.getAuthToken();
+    
+    let headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
     
     // Use AbortController for timeout
@@ -190,10 +207,7 @@ const api = {
     try {
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          ...csrfHeaders,
-          // Let browser set Content-Type with boundary
-        },
+        headers,
         body: formData,
         credentials: 'include',
         signal: controller.signal,

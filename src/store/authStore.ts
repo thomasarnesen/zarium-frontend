@@ -64,6 +64,7 @@ interface AuthState {
   getAuthHeaders: () => Record<string, string>; // New function
   checkSession: () => Promise<boolean>; // New function
   updateDisplayName: (displayName: string) => Promise<boolean>; // New function for updating display name
+  getAuthToken: () => string | null; // Added new method for getting auth token
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -95,6 +96,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return true;
     }
 
+    // Add backoff mechanism for failed refreshes
+    const { failedRefreshCount, lastFailureTime } = get();
+    if (failedRefreshCount > 0) {
+      // Exponential backoff: wait longer between attempts based on failure count
+      const backoffTime = Math.min(30000, 1000 * Math.pow(2, failedRefreshCount - 1)); 
+      if (now - lastFailureTime < backoffTime) {
+        console.log(`Skipping refresh - in backoff period (${Math.round((backoffTime - (now - lastFailureTime))/1000)}s remaining)`);
+        return false;
+      }
+    }
+    
     try {
       set({ isRefreshing: true, lastRefreshTime: now });
       console.log("Refreshing user data...");
@@ -112,23 +124,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         
         if (!tokenResponse.ok) {
-          console.warn("Token refresh failed, but continuing with client-side data");
-          // Continue anyway - don't return or update failure counters
+          // Track this failure and apply backoff strategy
+          const currentFailures = get().failedRefreshCount + 1;
+          set({ 
+            failedRefreshCount: currentFailures, 
+            lastFailureTime: Date.now() 
+          });
+
+          // If we've failed 3+ times, stop the refresh interval
+          if (currentFailures >= 3) {
+            console.warn(`Token refresh failed ${currentFailures} times, stopping automatic refreshes`);
+            if (window.tokenRefreshInterval) {
+              clearInterval(window.tokenRefreshInterval);
+              window.tokenRefreshInterval = undefined;
+            }
+          }
+
+          console.warn("Token refresh failed:", await tokenResponse.text());
+          return false; // Return early on token refresh failure
         } else {
           // Reset failure counter on success
           set({ failedRefreshCount: 0 });
         }
       } catch (error) {
-        console.warn('Token refresh during data refresh failed, continuing with client-side data:', error);
-        // Continue anyway - don't return
+        console.warn('Token refresh during data refresh failed:', error);
+        set({ 
+          failedRefreshCount: get().failedRefreshCount + 1,
+          lastFailureTime: Date.now()
+        });
+        return false; // Return early on token refresh error
       }
 
       // Get user information with retries
       let attempts = 0;
       const maxAttempts = 2;
-      let serverDataRetrieved = false;
       
-      while (attempts < maxAttempts && !serverDataRetrieved) {
+      while (attempts < maxAttempts) {
         try {
           const tokenResponse = await api.fetch('/api/verify-token', {
             cache: 'no-store',
@@ -140,17 +171,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           if (tokenResponse.ok) {
             const userData = await tokenResponse.json();
-            serverDataRetrieved = true;
             
             // Update localStorage with latest user data
             const authUser = JSON.parse(localStorage.getItem('authUser') || '{}');
+            
+            // Log displayName values for debugging
+            console.log("DisplayName from server:", userData.displayName);
+            console.log("DisplayName from localStorage:", authUser.displayName);
             
             const updatedUser = {
               ...userData,
               token: authUser.token || userData.token,
               isAdmin: userData.isAdmin || authUser.isAdmin,
+              // Important: Only use localStorage displayName as fallback
+              // Always prioritize server data when available
               displayName: userData.displayName || authUser.displayName
             };
+            
+            // Log the final displayName value
+            console.log("Final displayName after merge:", updatedUser.displayName);
             
             localStorage.setItem('authUser', JSON.stringify(updatedUser));
             localStorage.setItem('isAuthenticated', 'true');
@@ -234,45 +273,52 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (!currentUser?.displayName || currentUser.displayName === 'unknown') {
               console.log("User missing display name, may need welcome page redirect");
             }
+            
+            return true;
           }
           
           // If we got a 401/403, increase attempt count and retry after delay
           attempts++;
-          if (attempts < maxAttempts && !serverDataRetrieved) {
+          if (attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
         } catch (error) {
-          console.warn(`Attempt ${attempts + 1} failed, will use local data:`, error);
+          console.warn(`Attempt ${attempts + 1} failed:`, error);
           attempts++;
-        }
-      }
-      
-      // If we didn't get server data, use local data if available
-      if (!serverDataRetrieved) {
-        const authUser = localStorage.getItem('authUser');
-        if (authUser) {
-          try {
-            const userData = JSON.parse(authUser);
-            set({
-              user: userData,
-              isAuthenticated: true,
-              tokens: userData.tokens || 0,
-              planType: userData.planType,
-              isDemoUser: userData.planType === 'Demo'
-            });
-            console.log('Using cached user data due to API failure, displayName:', userData.displayName);
-          } catch (parseError) {
-            console.error('Error parsing cached user data:', parseError);
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
       }
       
-      // Always return true to keep app functioning
-      return true;
+      // If we've exhausted retries, check if we have local data
+      const authUser = localStorage.getItem('authUser');
+      if (authUser) {
+        try {
+          const userData = JSON.parse(authUser);
+          set({
+            user: userData,
+            isAuthenticated: true,
+            tokens: userData.tokens || 0,
+            planType: userData.planType,
+            isDemoUser: userData.planType === 'Demo'
+          });
+          console.log('Using cached user data due to API failure, displayName:', userData.displayName);
+          return true;
+        } catch (parseError) {
+          console.error('Error parsing cached user data:', parseError);
+        }
+      }
+      
+      return false;
     } catch (error) {
-      console.error('Error refreshing user data, continuing with client-side data:', error);
-      // We still want to return true to keep the app functioning
-      return true;
+      console.error('Error refreshing user data:', error);
+      // Track this failure for backoff
+      set({ 
+        failedRefreshCount: get().failedRefreshCount + 1,
+        lastFailureTime: Date.now()
+      });
+      return false;
     } finally {
       set({ isRefreshing: false });
     }
@@ -524,16 +570,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     
     // Set up a new interval (every 10 minutes)
     window.tokenRefreshInterval = setInterval(() => {
-      // Continue refresh attempts as long as user appears authenticated locally
-      const { isAuthenticated } = get();
+      // Only refresh if we're still authenticated and failure count is acceptable
+      const { isAuthenticated, failedRefreshCount } = get();
       
-      if (isAuthenticated) {
-        // Always attempt to refresh regardless of previous failures
+      if (isAuthenticated && failedRefreshCount < 3) {
         get().refreshUserData();
       } else {
-        // Only clear if not authenticated locally
+        // Clear the interval if we're no longer authenticated or too many failures
         if (window.tokenRefreshInterval) {
-          console.log("Stopping token refresh interval - user not authenticated locally");
+          console.log("Stopping token refresh interval - user not authenticated or too many failures");
           clearInterval(window.tokenRefreshInterval);
           window.tokenRefreshInterval = undefined;
         }
@@ -605,11 +650,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // Add this function to safely get authentication headers for API requests
   getAuthHeaders: () => {
     try {
-      const user = get().user;
-      if (!user || !user.token) return {} as Record<string, string>;
+      const token = get().getAuthToken();
+      if (!token) return {} as Record<string, string>;
       
       return {
-        'Authorization': `Bearer ${user.token}`
+        'Authorization': `Bearer ${token}`
       };
     } catch (e) {
       console.warn('Error getting auth headers:', e);
@@ -617,20 +662,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  // Modify checkSession to always return true if local auth data exists
+  // Improve session check function
   checkSession: async () => {
-    // Check if we have local auth data
-    const storedAuth = localStorage.getItem('authUser');
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    
-    // If we have local auth data and manual logout hasn't occurred, always consider session valid
-    if (storedAuth && isAuthenticated && localStorage.getItem('manualLogout') !== 'true') {
-      console.log("Using local authentication data, session considered valid");
-      return true;
+    // Prevent check if manual logout occurred
+    if (localStorage.getItem('manualLogout') === 'true') {
+      return false;
     }
     
-    // Otherwise, try server check but don't fail if server is unavailable
     try {
+      // Check both token and verify-token endpoints with timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       
@@ -655,13 +695,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return true;
       }
       
-      // Even if server check fails, keep user logged in if local data exists
-      return !!(storedAuth && isAuthenticated);
+      // If session check fails, increment the failure count
+      set({ 
+        failedRefreshCount: get().failedRefreshCount + 1,
+        lastFailureTime: Date.now() 
+      });
       
+      return false;
     } catch (e) {
-      console.warn('Session check failed, continuing with local data:', e);
-      // Keep user logged in if we have local data
-      return !!(storedAuth && isAuthenticated);
+      console.warn('Session check failed:', e);
+      set({ 
+        failedRefreshCount: get().failedRefreshCount + 1,
+        lastFailureTime: Date.now() 
+      });
+      return false;
     }
   },
 
@@ -712,5 +759,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error('Error updating display name:', error);
       return false;
     }
+  },
+
+  // Add new method to get auth token
+  getAuthToken: () => {
+    // First try to get from cookie (standard flow)
+    // If that fails, try localStorage as fallback for Safari/iOS
+    const storedUser = localStorage.getItem('authUser');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        return userData.token;
+      } catch (e) {
+        console.warn('Failed to parse stored auth data');
+      }
+    }
+    return null;
   }
 }));
