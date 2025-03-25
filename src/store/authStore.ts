@@ -166,7 +166,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               });
               
               if (tokenInfoResponse.ok) {
-                const tokenData = await tokenInfoResponse.json();
+                // Modify tokenResponse before JSON parsing
+                const responseText = await tokenInfoResponse.text();
+                
+                // Replace Infinity and NaN with string representation that can be handled by JSON
+                const cleanedJson = responseText
+                  .replace(/:Infinity/g, ':"Infinity"')
+                  .replace(/:NaN/g, ':"NaN"');
+                
+                const tokenData = JSON.parse(cleanedJson);
                 
                 set({ 
                   user: updatedUser,
