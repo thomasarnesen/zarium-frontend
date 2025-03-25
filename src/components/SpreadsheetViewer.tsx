@@ -254,17 +254,20 @@ export const SpreadsheetViewer: React.FC<SpreadsheetViewerProps> = ({
       {/* Content */}
       <div className="p-4">
         {isGenerating ? (
-          <div className="spreadsheet-loading">
-            <div>
-              {/* Z-logo animasjon plassert i lasteområdet */}
-              <div className="zarium-loading">
-                <div className="z-logo"></div>
-              </div>
-              
-              {/* Status tekst under logo */}
-              <div className="text-center mt-4 text-emerald-700 dark:text-emerald-300">
-                {generationStatus}
-              </div>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            {/* Add the Z logo animation here */}
+            <div className="zarium-loading mb-4">
+              <div className="z-logo"></div>
+            </div>
+            
+            {/* Status message */}
+            <div className="text-emerald-700 dark:text-emerald-300 mt-4">
+              {generationStatus}
+            </div>
+            
+            {/* Status description */}
+            <div className="text-sm text-gray-500 dark:text-gray-400 mt-2 whitespace-pre-line">
+              {getStatusDescription(generationStatus)}
             </div>
           </div>
         ) : previewImage ? (
