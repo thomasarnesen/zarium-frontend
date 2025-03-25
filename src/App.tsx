@@ -73,7 +73,7 @@ function App() {
         }, 1500);
         
       } catch (err) {
-        console.error("App initialization error:", err);
+
         setError("Failed to initialize application");
         setIsLoading(false);
       }
@@ -87,7 +87,7 @@ function App() {
     // Don't do token refresh if user is not logged in
     if (!isAuthenticated) return;
     
-    console.log("Setting up token refresh interval");
+
     
     const refreshInterval = setInterval(async () => {
       try {
@@ -107,7 +107,7 @@ function App() {
             'Pragma': 'no-cache'
           }
         });
-        console.log("Token refreshed successfully by interval");
+
       } catch (err) {
         console.warn("Scheduled token refresh failed:", err);
         // Don't log out automatically on failed refresh
@@ -130,7 +130,7 @@ function App() {
       if (window.location.hash && window.location.hash.includes('id_token=')) {
         // Determine if we're already on the callback page
         if (window.location.pathname !== '/auth/callback') {
-          console.log("Detected auth redirect with token in hash, redirecting to callback handler");
+
           
           // Get the full hash including the '#' character
           const fullHash = window.location.hash;
@@ -144,7 +144,7 @@ function App() {
       // Check for code parameter (OAuth2 authorization code flow, typically used by Google)
       if (window.location.search && window.location.search.includes('code=')) {
         if (window.location.pathname !== '/auth/callback') {
-          console.log("Detected auth code in URL, redirecting to callback handler");
+
           
           // Add provider=google to help the callback determine the correct flow
           const separator = window.location.search.includes('?') ? '&' : '?';

@@ -40,9 +40,6 @@ const AuthCallback = () => {
           isTikTok: isTikTokBrowser(),
           userAgent: navigator.userAgent
         };
-        setDebugInfo(debug);
-        console.log("Auth callback started with URL:", 
-          window.location.pathname + window.location.search + window.location.hash);
 
         // Check if there's an error in the hash (common with Azure AD)
         if (location.hash && location.hash.includes('error=')) {
@@ -50,7 +47,7 @@ const AuthCallback = () => {
           const errorCode = hashParams.get('error');
           const errorDescription = hashParams.get('error_description');
           
-          console.error(`Authentication error: ${errorCode} - ${errorDescription}`);
+
           throw new Error(`Authentication failed: ${errorDescription || errorCode}`);
         }
         
@@ -59,23 +56,23 @@ const AuthCallback = () => {
         let provider = 'azure';
         
         if (window.location.hash && window.location.hash.length > 1) {
-          console.log("Found hash in URL");
+
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
           token = hashParams.get('id_token');
           
           if (token) {
-            console.log("Successfully extracted token from hash");
+
           } else {
-            console.error("No id_token found in hash parameters");
+
           }
         } else {
-          console.log("No hash fragment in URL, checking search parameters");
+
           
           // Fall back to query parameters (for OAuth2 code flow with Google)
           const searchParams = new URLSearchParams(location.search);
           token = searchParams.get('code');
           if (token) {
-            console.log("Found code in search parameters");
+
             provider = 'google';
           }
         }
@@ -84,7 +81,7 @@ const AuthCallback = () => {
         const isAuthSuccess = new URLSearchParams(location.search).get('auth_success') === 'true';
         
         if (!token && isAuthSuccess) {
-          console.log("TikTok browser special case detected: auth_success=true but no token");
+  
           
           // In TikTok browser, we'd use session storage or special endpoint to get the auth data
           const sessionAuthData = sessionStorage.getItem('auth_pending_data');
@@ -96,10 +93,10 @@ const AuthCallback = () => {
               if (parsedData.id_token) {
                 token = parsedData.id_token;
                 provider = sessionProvider;
-                console.log(`Successfully retrieved token from session storage for ${provider}`);
+     
               }
             } catch (e) {
-              console.error("Failed to parse session auth data:", e);
+
             }
           }
           
@@ -108,7 +105,7 @@ const AuthCallback = () => {
             try {
               const sessionId = sessionStorage.getItem('auth_session_id');
               if (sessionId) {
-                console.log(`Attempting to retrieve auth data from session helper with ID: ${sessionId}`);
+        
                 const sessionResponse = await fetch(`/api/auth/session-helper?session_id=${sessionId}`);
                 
                 if (sessionResponse.ok) {
@@ -116,14 +113,14 @@ const AuthCallback = () => {
                   if (sessionData.token) {
                     token = sessionData.token;
                     provider = sessionData.provider || 'azure';
-                    console.log(`Successfully retrieved token from session helper for ${provider}`);
+
                   }
                 } else {
-                  console.error("Failed to retrieve auth data from session helper:", await sessionResponse.text());
+  
                 }
               }
             } catch (sessionError) {
-              console.error("Error fetching from session helper:", sessionError);
+
             }
           }
         }
@@ -153,7 +150,7 @@ const AuthCallback = () => {
               const displayData = { ...tokenData };
               delete displayData.sub;
               delete displayData.oid;
-              console.log("Token data:", displayData);
+
               
               userEmail = tokenData.email || 
                         tokenData.preferred_username || 
@@ -162,11 +159,10 @@ const AuthCallback = () => {
                         
               idp = tokenData.idp;
               
-              console.log("Extracted email from token:", userEmail);
-              console.log("Identity provider:", idp);
+
             }
           } catch (decodeError) {
-            console.warn("Could not decode token payload:", decodeError);
+
           }
         }
         
@@ -189,7 +185,7 @@ const AuthCallback = () => {
             ? '/api/auth/google/callback' 
             : '/api/auth/azure-callback';
         
-        console.log(`Using callback endpoint: ${callbackEndpoint}`);
+
             
         const response = await api.fetch(callbackEndpoint, {
           method: 'POST',
@@ -231,20 +227,20 @@ const AuthCallback = () => {
         // MODIFIED: Always direct new users to welcome page for name collection,
         // existing users to dashboard
         if (!userData.displayName || userData.displayName === 'unknown') {
-          console.log("Redirecting to welcome page to collect display name");
+
           navigate('/welcome');
         } else {
           // Get saved redirect URL if it exists
           const redirectUrl = sessionStorage.getItem('authRedirectUrl');
           sessionStorage.removeItem('authRedirectUrl');
           
-          console.log("Redirecting to dashboard or saved URL for existing user");
+
           navigate(redirectUrl || '/dashboard');
         }
         
         setProcessing(false);
       } catch (error) {
-        console.error('Auth callback error:', error);
+
         const errorMessage = error instanceof Error ? error.message : String(error);
         setError(`Authentication error: ${errorMessage}`);
         setDebugInfo((prev: DebugInfo) => ({...prev, finalError: errorMessage}));

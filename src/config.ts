@@ -17,8 +17,3 @@ export const config = {
   }
 };
 
-console.log('🔧 Application configuration:', {
-  apiUrl: config.apiUrl,
-  environment: config.environment,
-  isDevelopment
-});
