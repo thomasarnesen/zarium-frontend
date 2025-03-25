@@ -42,7 +42,8 @@ export default function Dashboard() {
   const token = user?.token;
   const isAuthenticated = !!user;
   const isBasicPlan = planType === 'Basic';  
-  const canUseEnhancedMode = !isBasicPlan;
+  const isDemoPlan = planType === 'Demo';
+  const canUseEnhancedMode = !isBasicPlan && !isDemoPlan;
   const [greeting, setGreeting] = useState('');
   const [firstMessageSent, setFirstMessageSent] = useState(false);
 
@@ -454,7 +455,7 @@ export default function Dashboard() {
                   ) : (
                     <div
                       className="cursor-not-allowed"
-                      title="Upgrade to Plus or Pro to use enhanced mode"
+                      title={isDemoPlan ? "Demo users can't use enhanced mode. Upgrade to Plus or Pro." : "Upgrade to Plus or Pro to use enhanced mode"}
                     >
                       <Switch
                         checked={false}
@@ -472,7 +473,7 @@ export default function Dashboard() {
                   >
                     <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
-                      {isBasicPlan 
+                      {isBasicPlan || isDemoPlan
                         ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans."
                         : "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans. Uses more tokens per generation. Ideal for important projects where quality matters most."}
                     </div>
