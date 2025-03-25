@@ -318,3 +318,384 @@ body {
 .dark .zarium-z-animation:after {
   background-color: #0d9488;
 }
+
+/* Ny Z-bokstav animasjon - roterende linjer */
+.zarium-logo-animation {
+  position: relative;
+  font-size: 48px;
+  font-weight: bold;
+  color: transparent;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+/* Z karakteren selv */
+.zarium-logo-animation::before {
+  content: 'Z';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #10b981;
+  font-size: 48px;
+}
+
+/* Øvre horisontale linje */
+.zarium-logo-animation .top-line {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  width: 30px;
+  height: 4px;
+  background-color: #10b981;
+  transform-origin: left center;
+  animation: topLineRotate 3s infinite ease-in-out;
+}
+
+/* Nedre horisontale linje */
+.zarium-logo-animation .bottom-line {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  width: 30px;
+  height: 4px;
+  background-color: #10b981;
+  transform-origin: right center;
+  animation: bottomLineRotate 3s infinite ease-in-out;
+}
+
+/* Diagonale linjen (valgfri - vil være dekket av Z-tegnet) */
+.zarium-logo-animation .diagonal-line {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 35px;
+  height: 4px;
+  background-color: #10b981;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+@keyframes topLineRotate {
+  0%, 50%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(270deg);
+  }
+}
+
+@keyframes bottomLineRotate {
+  0%, 25%, 75%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(270deg);
+  }
+}
+
+/* Dark mode adjustments */
+.dark .zarium-logo-animation .top-line,
+.dark .zarium-logo-animation .bottom-line,
+.dark .zarium-logo-animation .diagonal-line,
+.dark .zarium-logo-animation::before {
+  color: #0d9488;
+  background-color: #0d9488;
+}
+
+/* Avansert Z-loading animasjon */
+.zarium-loading {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 30px auto;
+  perspective: 600px;
+}
+
+.zarium-z {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: z-float 3s infinite ease-in-out;
+}
+
+/* Z-form skapt med pseudo-elementer */
+.zarium-z:before, 
+.zarium-z:after,
+.zarium-z .diagonal {
+  content: '';
+  position: absolute;
+  background: linear-gradient(90deg, #10b981, #059669);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.7);
+  border-radius: 4px;
+}
+
+/* Øvre linje */
+.zarium-z:before {
+  top: 10px;
+  left: 12px;
+  width: 75%;
+  height: 6px;
+  transform-origin: left center;
+  animation: 
+    z-top-pulse 3s infinite ease-in-out,
+    z-glow 2s infinite alternate;
+}
+
+/* Nedre linje */
+.zarium-z:after {
+  bottom: 10px;
+  right: 12px;
+  width: 75%;
+  height: 6px;
+  transform-origin: right center;
+  animation: 
+    z-bottom-pulse 3s infinite ease-in-out,
+    z-glow 2s infinite alternate reverse;
+}
+
+/* Diagonal linje */
+.zarium-z .diagonal {
+  top: 50%;
+  left: 25%;
+  width: 82px;
+  height: 6px;
+  transform: translate(-15%, -50%) rotate(45deg);
+  animation: 
+    z-diagonal-pulse 3s infinite ease-in-out,
+    z-glow 2s infinite alternate;
+}
+
+/* Partikkel-container */
+.z-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Lag 30 partikler med forskjellige animasjoner */
+.z-particle {
+  position: absolute;
+  background-color: rgba(16, 185, 129, 0.6);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+/* Generer 30 partikler med forskjellige egenskaper via CSS variabler */
+@property --particle-index {
+  syntax: '<integer>';
+  initial-value: 0;
+  inherits: false;
+}
+
+/* Partikkel-genererings selector */
+.z-particles div {
+  --particle-index: 0;
+}
+
+.z-particles div:nth-child(1) { --particle-index: 1; }
+.z-particles div:nth-child(2) { --particle-index: 2; }
+.z-particles div:nth-child(3) { --particle-index: 3; }
+.z-particles div:nth-child(4) { --particle-index: 4; }
+.z-particles div:nth-child(5) { --particle-index: 5; }
+.z-particles div:nth-child(6) { --particle-index: 6; }
+.z-particles div:nth-child(7) { --particle-index: 7; }
+.z-particles div:nth-child(8) { --particle-index: 8; }
+.z-particles div:nth-child(9) { --particle-index: 9; }
+.z-particles div:nth-child(10) { --particle-index: 10; }
+.z-particles div:nth-child(11) { --particle-index: 11; }
+.z-particles div:nth-child(12) { --particle-index: 12; }
+
+.z-particle {
+  --size: calc(4px + (var(--particle-index) * 0.3px));
+  --delay: calc(var(--particle-index) * 0.1s);
+  --duration: calc(2s + (var(--particle-index) * 0.1s));
+  width: var(--size);
+  height: var(--size);
+  animation: particle-float var(--duration) calc(var(--delay)) infinite ease-out;
+  filter: blur(1px);
+}
+
+/* Pulserende glød rundt Z */
+.z-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0) 70%);
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  animation: z-pulse-glow 2s infinite alternate ease-in-out;
+}
+
+/* 3D-refleksjon */
+.z-reflection {
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  width: 100%;
+  height: 15px;
+  background: linear-gradient(to bottom, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0));
+  filter: blur(3px);
+  transform: scaleY(-0.3) rotateX(30deg);
+  transform-origin: bottom;
+  opacity: 0.5;
+  animation: z-reflection 3s infinite ease-in-out;
+}
+
+/* Hovedanimasjon - svevende effekt */
+@keyframes z-float {
+  0%, 100% { 
+    transform: translateY(0) rotateX(5deg) rotateY(0deg);
+  }
+  25% { 
+    transform: translateY(-10px) rotateX(0deg) rotateY(5deg);
+  }
+  50% { 
+    transform: translateY(0) rotateX(-5deg) rotateY(0deg);
+  }
+  75% { 
+    transform: translateY(10px) rotateX(0deg) rotateY(-5deg);
+  }
+}
+
+/* Øvre linjeanimasjon */
+@keyframes z-top-pulse {
+  0%, 100% { 
+    transform: scale(1) rotate(0deg); 
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+  }
+  25% { 
+    transform: scale(1.1) rotate(0deg); 
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.9);
+  }
+  50% { 
+    transform: scale(1) rotate(0deg);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.7);
+  }
+  75% { 
+    transform: scale(0.95) rotate(0deg);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  }
+}
+
+/* Nedre linjeanimasjon */
+@keyframes z-bottom-pulse {
+  0%, 100% { 
+    transform: scale(1) rotate(0deg);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+  }
+  25% { 
+    transform: scale(0.95) rotate(0deg);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  }
+  50% { 
+    transform: scale(1) rotate(0deg);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.7);
+  }
+  75% { 
+    transform: scale(1.1) rotate(0deg);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.9);
+  }
+}
+
+/* Diagonal linjeanimasjon */
+@keyframes z-diagonal-pulse {
+  0%, 100% { 
+    transform: translate(-15%, -50%) rotate(45deg) scale(1);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.7);
+  }
+  50% { 
+    transform: translate(-15%, -50%) rotate(45deg) scale(1.05);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.9);
+  }
+}
+
+/* Glødanimasjon */
+@keyframes z-glow {
+  0% {
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.9);
+  }
+}
+
+/* Pulserende glød-animasjon */
+@keyframes z-pulse-glow {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.3;
+  }
+}
+
+/* Partikkelanimasjon */
+@keyframes particle-float {
+  0% {
+    transform: translate(
+      calc(var(--particle-index) * 5px),
+      calc(var(--particle-index) * 5px)
+    );
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(
+      calc(var(--particle-index) * 10px - 50px),
+      calc(var(--particle-index) * -15px - 50px)
+    );
+    opacity: 0;
+  }
+}
+
+/* Refleksjonsanimasjon */
+@keyframes z-reflection {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scaleY(-0.3) rotateX(30deg);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scaleY(-0.4) rotateX(30deg);
+  }
+}
+
+/* Mørk modus-justeringer */
+.dark .zarium-z:before, 
+.dark .zarium-z:after,
+.dark .zarium-z .diagonal {
+  background: linear-gradient(90deg, #0d9488, #059669);
+  box-shadow: 0 0 15px rgba(13, 148, 136, 0.7);
+}
+
+.dark .z-particle {
+  background-color: rgba(13, 148, 136, 0.6);
+}
+
+.dark .z-glow {
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.3) 0%, rgba(13, 148, 136, 0) 70%);
+}
+
+.dark .z-reflection {
+  background: linear-gradient(to bottom, rgba(13, 148, 136, 0.3), rgba(13, 148, 136, 0));
+}

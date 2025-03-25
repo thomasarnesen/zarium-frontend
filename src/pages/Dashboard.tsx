@@ -542,12 +542,25 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Z Logo animation during loading - Updated animation */}
+        {/* Avansert Z-loading animasjon */}
         {isGenerating && (
           <div className="flex justify-center mb-4">
-            <div className="zarium-logo-animation" aria-label="Loading">
-              Z
-              <span className="sr-only">Processing your request</span>
+            <div className="zarium-loading" aria-label="Laster innhold">
+              <div className="z-glow"></div>
+              <div className="zarium-z">
+                <div className="diagonal"></div>
+              </div>
+              <div className="z-reflection"></div>
+              <div className="z-particles">
+                {/* 12 partikler */}
+                {[...Array(12)].map((_, i) => (
+                  <div key={i} className="z-particle" style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`
+                  }}></div>
+                ))}
+              </div>
+              <span className="sr-only">Behandler forespørselen din</span>
             </div>
           </div>
         )}
