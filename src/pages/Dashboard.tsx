@@ -95,10 +95,9 @@ export default function Dashboard() {
   // Add this effect to redirect to welcome page if no display name
   useEffect(() => {
     if (user && (!user.displayName || user.displayName === 'unknown')) {
-  
       navigate('/welcome');
     } else if (user && user.displayName) {
-  
+      // User has a valid display name
     }
   }, [user, navigate]);
 
@@ -177,7 +176,7 @@ export default function Dashboard() {
             if (data.formatting) setFormatting(data.formatting);
           }
         } catch (error) {
-  
+          // Error handling
         }
       }, 1000);
     }
@@ -389,175 +388,180 @@ export default function Dashboard() {
     }
   };
 
-  // Add function to fetch recent spreadsheets
-
-  
-
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
-      <div className={`container mx-auto px-4 transition-all duration-500 ${firstMessageSent ? 'pt-6' : 'pt-24'}`}>
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 flex flex-col">
+      <div className="container mx-auto px-4 transition-all duration-500 flex flex-col h-full">
         {/* Header with greeting - visible before first message */}
-        <div className={`text-center mb-12 transition-opacity duration-500 ${firstMessageSent ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
+        <div className={`text-center transition-all duration-500 ${firstMessageSent ? 'opacity-0 h-0 overflow-hidden mb-0' : 'opacity-100 pt-24 mb-12'}`}>
           <h1 className="text-4xl font-light text-emerald-800 dark:text-emerald-200">
             {greeting}
           </h1>
         </div>
         
-        {/* Input Form */}
-        <div className="max-w-3xl mx-auto mb-6">
-          <div className="relative w-full">
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyPress={handleKeyPress}
-              onPaste={handlePaste}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              placeholder="How can I help you today?"
-              className="w-full px-5 py-4 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white min-h-[120px] pb-14 resize-none outline-none shadow-sm"
-              style={{ height: 'auto', minHeight: '120px' }}
-              ref={promptTextareaRef}
-            />
-            
-            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
-                  <label className="cursor-pointer">
-                    <Upload 
-                      className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-                    />
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept=".xlsx,.xls,.csv,.ods,image/*" 
-                      onChange={handleFileChange}
-                      multiple
-                      aria-label="Upload files"
-                    />
-                  </label>
-                ) : (
-                  <div
-                    className="cursor-not-allowed"
-                    title="Upgrade to Plus or Pro to upload files"
-                  >
-                    <Upload className="h-4 w-4 text-gray-400" />
-                  </div>
-                )}
+        {/* Dynamic content area */}
+        <div className={`flex flex-col ${firstMessageSent ? 'flex-grow justify-between' : ''}`}>
+          {/* Error display */}
+          {error && (
+            <div className="max-w-3xl mx-auto mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-lg text-center">
+              {error}
+            </div>
+          )}
 
-                <div className="flex items-center gap-2">
-                  {canUseEnhancedMode ? (
-                    <Switch
-                      checked={enhancedMode}
-                      onCheckedChange={toggleEnhancedMode}
-                      className="data-[state=checked]:bg-emerald-600 h-4 w-7"
-                    />
-                  ) : (
-                    <div
-                      className="cursor-not-allowed"
-                      title={isDemoPlan ? "Demo users can't use enhanced mode. Upgrade to Plus or Pro." : "Upgrade to Plus or Pro to use enhanced mode"}
-                    >
-                      <Switch
-                        checked={false}
-                        disabled
-                        className="opacity-50 h-4 w-7"
-                      />
-                    </div>
-                  )}
-                  <span className="text-sm text-emerald-700 dark:text-emerald-300">
-                    Enhanced
-                  </span>
-                  <div 
-                    className="relative group"
-                    title="Enhanced mode information"
-                  >
-                    <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
-                      {isBasicPlan || isDemoPlan
-                        ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans."
-                        : "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans. Uses more tokens per generation. Ideal for important projects where quality matters most."}
+          {/* Z Logo animation during loading */}
+          {isGenerating && (
+            <div className="flex justify-center mb-4">
+              <div className="zarium-logo-animation">Z</div>
+            </div>
+          )}
+
+          {/* Spreadsheet Viewer - appears above chat after first message */}
+          <div className={`max-w-6xl mx-auto w-full transition-all duration-500 ${
+            firstMessageSent ? 'opacity-100 mb-6 order-1' : 'opacity-0 h-0 overflow-hidden'
+          }`}>
+            <SpreadsheetViewer 
+              previewImage={previewImage} 
+              isGenerating={isGenerating} 
+              generationStatus={generationStatus} 
+              formatting={formatting}
+              planType={user?.planType}
+            />
+          </div>
+
+          {/* Bottom section with chat input - anchored to bottom after first message */}
+          <div className={`max-w-3xl mx-auto w-full transition-all duration-500 ${
+            firstMessageSent ? 'mt-auto order-2' : 'mt-0'
+          }`}>
+            {/* Input Form */}
+            <div className="w-full mb-6">
+              <div className="relative w-full">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  onPaste={handlePaste}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  placeholder="How can I help you today?"
+                  className="w-full px-5 py-4 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white min-h-[120px] pb-14 resize-none outline-none shadow-sm"
+                  style={{ height: 'auto', minHeight: '120px' }}
+                  ref={promptTextareaRef}
+                />
+                
+                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
+                      <label className="cursor-pointer">
+                        <Upload 
+                          className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                        />
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept=".xlsx,.xls,.csv,.ods,image/*" 
+                          onChange={handleFileChange}
+                          multiple
+                          aria-label="Upload files"
+                        />
+                      </label>
+                    ) : (
+                      <div
+                        className="cursor-not-allowed"
+                        title="Upgrade to Plus or Pro to upload files"
+                      >
+                        <Upload className="h-4 w-4 text-gray-400" />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      {canUseEnhancedMode ? (
+                        <Switch
+                          checked={enhancedMode}
+                          onCheckedChange={toggleEnhancedMode}
+                          className="data-[state=checked]:bg-emerald-600 h-4 w-7"
+                        />
+                      ) : (
+                        <div
+                          className="cursor-not-allowed"
+                          title={isDemoPlan ? "Demo users can't use enhanced mode. Upgrade to Plus or Pro." : "Upgrade to Plus or Pro to use enhanced mode"}
+                        >
+                          <Switch
+                            checked={false}
+                            disabled
+                            className="opacity-50 h-4 w-7"
+                          />
+                        </div>
+                      )}
+                      <span className="text-sm text-emerald-700 dark:text-emerald-300">
+                        Enhanced
+                      </span>
+                      <div 
+                        className="relative group"
+                        title="Enhanced mode information"
+                      >
+                        <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
+                          {isBasicPlan || isDemoPlan
+                            ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans."
+                            : "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans. Uses more tokens per generation. Ideal for important projects where quality matters most."}
+                        </div>
+                      </div>
                     </div>
                   </div>
+
+                  <button
+                    onClick={handleGenerate}
+                    disabled={isGenerating || !prompt.trim()}
+                    className={`p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors ${
+                      isGenerating || !prompt.trim() 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : ''
+                    }`}
+                    aria-label="Generate Excel"
+                    ref={generateButtonRef}
+                  >
+                    <ArrowRight className="h-5 w-5 text-white" />
+                  </button>
                 </div>
               </div>
 
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating || !prompt.trim()}
-                className={`p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors ${
-                  isGenerating || !prompt.trim() 
-                    ? 'opacity-50 cursor-not-allowed' 
-                    : ''
-                }`}
-                aria-label="Generate Excel"
-                ref={generateButtonRef}
-              >
-                <ArrowRight className="h-5 w-5 text-white" />
-              </button>
-            </div>
-          </div>
-
-          {/* Selected files display */}
-          {selectedFiles.length > 0 && (
-            <div className="mt-4 space-y-1">
-              {selectedFiles.map((fileInfo) => (
-                <div 
-                  key={fileInfo.id}
-                  className="flex items-center justify-between py-1 px-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-sm"
-                >
-                  <span className="text-emerald-800 dark:text-emerald-200 truncate">
-                    {fileInfo.name}
-                  </span>
-                  <button
-                    onClick={() => setSelectedFiles(prev => 
-                      prev.filter(f => f.id !== fileInfo.id)
-                    )}
-                    className="ml-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                  >
-                    ×
-                  </button>
+              {/* Selected files display */}
+              {selectedFiles.length > 0 && (
+                <div className="mt-4 space-y-1">
+                  {selectedFiles.map((fileInfo) => (
+                    <div 
+                      key={fileInfo.id}
+                      className="flex items-center justify-between py-1 px-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-sm"
+                    >
+                      <span className="text-emerald-800 dark:text-emerald-200 truncate">
+                        {fileInfo.name}
+                      </span>
+                      <button
+                        onClick={() => setSelectedFiles(prev => 
+                          prev.filter(f => f.id !== fileInfo.id)
+                        )}
+                        className="ml-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+
+              {isBasicPlan && (
+                <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center">
+                  <Lock className="h-4 w-4 inline-block mr-2" />
+                  File upload is available in Plus and Pro plans. 
+                  <a href="/subscription" className="underline ml-1">Upgrade now</a>
+                </div>
+              )}
+              
+              {/* Tokens display - centered */}
+              <div className="text-center text-emerald-700 dark:text-emerald-300 mt-4">
+                Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
+              </div>
             </div>
-          )}
-
-          {isBasicPlan && (
-            <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center">
-              <Lock className="h-4 w-4 inline-block mr-2" />
-              File upload is available in Plus and Pro plans. 
-              <a href="/subscription" className="underline ml-1">Upgrade now</a>
-            </div>
-          )}
-          
-          {/* Tokens display - centered */}
-          <div className="text-center text-emerald-700 dark:text-emerald-300 mt-4">
-            Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
           </div>
-        </div>
-
-        {/* Error display */}
-        {error && (
-          <div className="max-w-3xl mx-auto mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-lg text-center">
-            {error}
-          </div>
-        )}
-
-        {/* Z Logo animation during loading */}
-        {isGenerating && (
-          <div className="flex justify-center mb-4">
-            <div className="zarium-logo-animation">Z</div>
-          </div>
-        )}
-
-        {/* Spreadsheet Viewer - smaller gap here */}
-        <div className="max-w-6xl mx-auto mt-4">
-          <SpreadsheetViewer 
-            previewImage={previewImage} 
-            isGenerating={isGenerating} 
-            generationStatus={generationStatus} 
-            formatting={formatting}
-            planType={user?.planType}
-          />
         </div>
       </div>
     </div>
