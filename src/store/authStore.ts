@@ -136,12 +136,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // Update localStorage with latest user data
             const authUser = JSON.parse(localStorage.getItem('authUser') || '{}');
             
+            // Log displayName values for debugging
+            console.log("DisplayName from server:", userData.displayName);
+            console.log("DisplayName from localStorage:", authUser.displayName);
+            
             const updatedUser = {
               ...userData,
               token: authUser.token || userData.token,
-              isAdmin: userData.isAdmin,
-              displayName: userData.displayName || authUser.displayName // Ensure displayName is included
+              isAdmin: userData.isAdmin || authUser.isAdmin,
+              // Important: Only use localStorage displayName as fallback
+              // Always prioritize server data when available
+              displayName: userData.displayName || authUser.displayName
             };
+            
+            // Log the final displayName value
+            console.log("Final displayName after merge:", updatedUser.displayName);
             
             localStorage.setItem('authUser', JSON.stringify(updatedUser));
             localStorage.setItem('isAuthenticated', 'true');
@@ -166,6 +175,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                   planType: userData.planType,
                   isDemoUser: userData.planType === 'Demo'
                 });
+                
+                // Log successful update
+                console.log("User data updated with server values, displayName:", updatedUser.displayName);
               } else {
                 set({ 
                   user: updatedUser,
@@ -174,6 +186,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                   planType: userData.planType,
                   isDemoUser: userData.planType === 'Demo'
                 });
+                
+                console.log("User data updated without token info, displayName:", updatedUser.displayName);
               }
             } catch (tokenInfoError) {
               console.warn('Error fetching token info:', tokenInfoError);
@@ -184,6 +198,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 planType: userData.planType,
                 isDemoUser: userData.planType === 'Demo'
               });
+              
+              console.log("User data updated with auth only, displayName:", updatedUser.displayName);
+            }
+            
+            // Check if welcome page redirection is needed
+            const currentUser = get().user;
+            if (!currentUser?.displayName || currentUser.displayName === 'unknown') {
+              console.log("User missing display name, may need welcome page redirect");
             }
             
             return true;
@@ -215,7 +237,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             planType: userData.planType,
             isDemoUser: userData.planType === 'Demo'
           });
-          console.log('Using cached user data due to API failure');
+          console.log('Using cached user data due to API failure, displayName:', userData.displayName);
           return true;
         } catch (parseError) {
           console.error('Error parsing cached user data:', parseError);
