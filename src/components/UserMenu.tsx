@@ -104,13 +104,13 @@ export default function UserMenu() {
               My Subscription
             </Link>
 
-            <button
-              onClick={menuItems[0].action}
+            <Link
+              to="/tokens"
               className="flex items-center w-full px-4 py-2 text-sm text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/50"
             >
               <Coins className="h-4 w-4 mr-3" />
               Tokens
-            </button>
+            </Link>
 
             <div className="border-t border-emerald-100 dark:border-emerald-800 my-2"></div>
 
