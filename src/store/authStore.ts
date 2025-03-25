@@ -96,6 +96,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return true;
     }
 
+    // Add special handling for Safari/iOS
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
+                   /iphone|ipad|ipod/i.test(navigator.userAgent);
+                   
+    if (isSafari) {
+      console.log("Using Safari-specific refresh method");
+      try {
+        // Use the special Safari method
+        const result = await api.refreshTokenSafari();
+        
+        if (result) {
+          // Update state with the fresh data
+          set({ 
+            user: { ...result },
+            isAuthenticated: true,
+            tokens: result.tokens || 0,
+            planType: result.planType,
+            isDemoUser: result.planType === 'Demo'
+          });
+          
+          return true;
+        }
+      } catch (safariError) {
+        console.error("Safari refresh method failed:", safariError);
+      }
+    }
+
     // Add backoff mechanism for failed refreshes
     const { failedRefreshCount, lastFailureTime } = get();
     if (failedRefreshCount > 0) {
@@ -107,6 +134,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     }
     
+    // Continue with regular flow if Safari method failed or not needed
     try {
       set({ isRefreshing: true, lastRefreshTime: now });
       console.log("Refreshing user data...");

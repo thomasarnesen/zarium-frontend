@@ -53,6 +53,11 @@
       }
     </style>
     
+    <!-- Cache control for Safari/iOS -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <!-- Primary Meta Tags -->
     <title>Zarium | AI Excel Generator | Create Spreadsheets in Seconds</title>
     <meta name="description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
@@ -64,23 +69,23 @@
     <meta name="msapplication-navbutton-color" content="#057857" />
     <meta name="apple-mobile-web-app-status-bar-style" content="#057857" />
     
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://zarium.dev/" />
+    <!-- Canonical URL - support both www and non-www -->
+    <link rel="canonical" href="https://www.zarium.dev/" />
    
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://zarium.dev/" />
+    <meta property="og:url" content="https://www.zarium.dev/" />
     <meta property="og:title" content="Zarium | AI Excel Generator | Create Spreadsheets in Seconds" />
     <meta property="og:description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
-    <meta property="og:image" content="https://zarium.dev/og-image.png" />
+    <meta property="og:image" content="https://www.zarium.dev/og-image.png" />
     <meta property="og:site_name" content="Zarium" />
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://zarium.dev/" />
+    <meta name="twitter:url" content="https://www.zarium.dev/" />
     <meta name="twitter:title" content="Zarium | AI Excel Generator | Create Spreadsheets in Seconds" />
     <meta name="twitter:description" content="Transform ideas into professional Excel spreadsheets with AI in seconds. Upload existing files or create new ones from scratch with Zarium." />
-    <meta name="twitter:image" content="https://zarium.dev/twitter-image.png" />
+    <meta name="twitter:image" content="https://www.zarium.dev/twitter-image.png" />
 
    
     <!-- Preload Critical Resources -->
@@ -112,8 +117,8 @@
       "@context": "https://schema.org",
       "@type": "Organization",
       "name": "Zarium",
-      "url": "https://zarium.dev/",
-      "logo": "https://zarium.dev/favicon-32x32.png"
+      "url": "https://www.zarium.dev/",
+      "logo": "https://www.zarium.dev/favicon-32x32.png"
     }
     </script>
 
@@ -218,7 +223,7 @@
       </div>
     </noscript>
     <!-- Add cache busting parameter -->
-    <script type="module" src="/src/main.tsx?v=20240320"></script>
+    <script type="module" src="/src/main.tsx?v=20240325_2"></script>
     
     <script>
       // Sikkerhetsnett for innlasting
@@ -259,6 +264,200 @@
         });
         
         observer.observe(document.body, { childList: true, subtree: true });
+      });
+    </script>
+    
+    <!-- Multi-domain Safari/iOS Authentication Fix -->
+    <script>
+      // Safari/iOS detection and multi-domain compatibility
+      document.addEventListener('DOMContentLoaded', function() {
+        // Domain compatibility - support both www and non-www
+        const currentHost = window.location.hostname;
+        const supportedDomains = ["www.zarium.dev", "zarium.dev"];
+        const isKnownDomain = supportedDomains.includes(currentHost);
+        
+        console.log("Current domain:", currentHost);
+        console.log("Using known domain:", isKnownDomain);
+        
+        // Add currentHost to list of supported domains if not already recognized
+        if (!isKnownDomain) {
+          supportedDomains.push(currentHost);
+          console.log("Added current domain to supported list:", currentHost);
+        }
+        
+        // Store domain info
+        localStorage.setItem('current_domain', currentHost);
+        localStorage.setItem('supported_domains', JSON.stringify(supportedDomains));
+        
+        // Detect Safari or iOS devices
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
+                        /iphone|ipad|ipod/i.test(navigator.userAgent);
+        
+        // Initialize compatibility mode if needed
+        if (isSafari) {
+          console.log("Safari/iOS browser detected - enabling compatibility mode");
+          // Set flag for Safari compatibility
+          localStorage.setItem('using_safari_auth', 'true');
+          
+          // Patch fetch API for Safari compatibility
+          const originalFetch = window.fetch;
+          window.fetch = function(url, options = {}) {
+            // Default options
+            options = options || {};
+            
+            // Convert URL string to URL object if it's a string
+            if (typeof url === 'string') {
+              // Handle auth endpoints specially
+              if ((url.includes('/api/refresh-token') || 
+                  url.includes('/api/verify-token') ||
+                  url.includes('/api/auth/')) && 
+                  (options.method === 'POST' || !options.method)) {
+                
+                console.log("Safari compatibility: Modifying auth request", url);
+                
+                // Get token from localStorage if available
+                let token = null;
+                try {
+                  const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                  token = authData.token;
+                  console.log("Found token in localStorage:", token ? "Yes" : "No");
+                } catch (e) {
+                  console.warn("Error accessing localStorage:", e);
+                }
+                
+                // Create URL object for manipulation
+                const urlObj = new URL(url, window.location.origin);
+                
+                // Add token as query parameter if available
+                if (token) {
+                  urlObj.searchParams.append('token', token);
+                  console.log("Added token to URL params");
+                }
+                
+                // Special handling for refresh-token endpoint on Safari
+                if (isSafari && url.includes('/api/refresh-token')) {
+                  // Use GET for refresh token on Safari
+                  options.method = 'GET';
+                  console.log("Forced GET method for Safari compatibility");
+                }
+                
+                // Update URL with our modifications
+                url = urlObj.toString();
+                
+                // Initialize headers if not already set
+                options.headers = options.headers || {};
+                
+                // Add Authorization header if token available
+                if (token && !options.headers.Authorization) {
+                  options.headers.Authorization = `Bearer ${token}`;
+                  console.log("Added Authorization header");
+                }
+                
+                // Always include credentials for auth endpoints
+                options.credentials = 'include';
+              }
+            }
+            
+            // Log the request for debugging
+            const reqMethod = options.method || 'GET';
+            console.log(`${reqMethod} request to: ${typeof url === 'string' ? url : url.toString()}`);
+            
+            // Call original fetch with modified parameters
+            return originalFetch.call(window, url, options).then(response => {
+              // Log response status for debugging
+              console.log(`Response status: ${response.status} for ${reqMethod} ${typeof url === 'string' ? url : url.toString()}`);
+              return response;
+            }).catch(error => {
+              console.error("Fetch error:", error);
+              throw error;
+            });
+          };
+          
+          // Log success message
+          console.log("Safari/iOS compatibility mode enabled successfully");
+          
+          // Add special token refresh function for Safari
+          window.refreshTokenSafari = async function() {
+            try {
+              // Get current token
+              let token = null;
+              try {
+                const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                token = authData.token;
+              } catch (e) {
+                console.error("Failed to retrieve token:", e);
+                return false;
+              }
+              
+              if (!token) {
+                console.error("No token available to refresh");
+                return false;
+              }
+              
+              // Build URL with token parameter for GET request
+              const refreshUrl = `${window.location.origin}/api/refresh-token?token=${encodeURIComponent(token)}`;
+              
+              console.log("Attempting Safari token refresh...");
+              const response = await fetch(refreshUrl, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/json'
+                },
+                credentials: 'include'
+              });
+              
+              if (!response.ok) {
+                console.error("Safari token refresh failed:", response.status);
+                return false;
+              }
+              
+              const data = await response.json();
+              
+              if (data.token) {
+                // Update token in localStorage
+                console.log("Received new token, updating storage");
+                const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                authData.token = data.token;
+                localStorage.setItem('authUser', JSON.stringify(authData));
+                return true;
+              } else {
+                console.error("No token in refresh response");
+                return false;
+              }
+            } catch (error) {
+              console.error("Safari token refresh error:", error);
+              return false;
+            }
+          };
+        }
+        
+        // Add debug function for both Safari and domain issues
+        window.debugAuth = function() {
+          let token = "";
+          try {
+            const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+            token = authData.token;
+          } catch (e) {
+            console.error("Error reading token:", e);
+          }
+          
+          const debugInfo = {
+            currentDomain: window.location.hostname,
+            supportedDomains: supportedDomains,
+            userAgent: navigator.userAgent,
+            isSafari: isSafari,
+            hasToken: !!token,
+            tokenPrefix: token ? token.substring(0, 10) + "..." : "None",
+            localStorage: Object.keys(localStorage),
+            cookies: document.cookie.split(';').map(c => c.trim())
+          };
+          
+          console.log("Auth Debug Info:", debugInfo);
+          alert("Auth debug info printed to console");
+          
+          return debugInfo;
+        };
       });
     </script>
   </body>

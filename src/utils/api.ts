@@ -7,7 +7,7 @@ const api = {
   
   fetch: async (endpoint: string, options: RequestInit = {}) => {
     const apiEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
-    const url = `${config.apiUrl}${apiEndpoint}`;
+    let url = `${config.apiUrl}${apiEndpoint}`;
     
     // Maksimalt 1 retry for å unngå kaskadeeffekter
     let retryCount = 0;
@@ -15,7 +15,7 @@ const api = {
     
     const executeRequest = async (): Promise<Response> => {
       try {
-        // Get auth token with enhanced getter (supports Safari fallback)
+        // Get auth token with enhanced getter
         const token = useAuthStore.getState().getAuthToken ? 
           useAuthStore.getState().getAuthToken() : 
           api.getAuthToken();
@@ -37,6 +37,20 @@ const api = {
           headers['Content-Type'] = 'application/json';
         }
         
+        // Safari/iPhone workaround for token refresh
+        // If the path is refresh-token and it's a POST, make sure we can handle GET conversion
+        if (url.includes('/api/refresh-token') && options.method === 'POST') {
+          const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
+                          /iphone|ipad|ipod/i.test(navigator.userAgent);
+                          
+          if (isSafari) {
+            console.log("Using Safari/iOS token refresh workaround");
+            // For Safari, add token as a query parameter as well
+            const separator = url.includes('?') ? '&' : '?';
+            url = `${url}${separator}token=${encodeURIComponent(token || '')}`;
+          }
+        }
+        
         // Timeout to prevent page hanging
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 240000);
@@ -52,12 +66,11 @@ const api = {
         clearTimeout(timeoutId);
         
         // Retry only for specific error codes
-        if ([401, 403, 0].includes(response.status) && retryCount < maxRetries) {
-          // Try to refresh auth
-          if (response.status === 401 && useAuthStore.getState().refreshUserData) {
-            await useAuthStore.getState().refreshUserData();
-          }
+        if ([401, 403, 405, 0].includes(response.status) && retryCount < maxRetries) {
+          // Log for debugging
+          console.warn(`Request failed with status ${response.status}, retrying...`);
           
+          // Add delay before retry
           retryCount++;
           await new Promise(resolve => setTimeout(resolve, 500));
           return executeRequest();
@@ -230,6 +243,50 @@ const api = {
       
       console.error('Upload Error:', error);
       throw error;
+    }
+  },
+  
+  // Add this method to your api object
+  refreshTokenSafari: async () => {
+    try {
+      const token = api.getAuthToken();
+      if (!token) {
+        console.error("No token available for refresh");
+        return null;
+      }
+      
+      // For iOS Safari, use GET method with token in URL
+      const url = `${config.apiUrl}/api/refresh-token?token=${encodeURIComponent(token)}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',  // Explicitly use GET for Safari
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        console.error("Safari token refresh failed:", response.status);
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      // Update localStorage with new token
+      if (data.token) {
+        const authUser = JSON.parse(localStorage.getItem('authUser') || '{}');
+        authUser.token = data.token;
+        localStorage.setItem('authUser', JSON.stringify(authUser));
+        console.log("Token refreshed via Safari workaround");
+        return data;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Safari token refresh error:", error);
+      return null;
     }
   }
 };
