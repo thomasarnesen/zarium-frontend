@@ -542,17 +542,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Elegant Z-logo animasjon */}
-        {isGenerating && (
-          <div className="flex justify-center mb-4">
-            <div className="zarium-loading" aria-label="Laster innhold">
-              <div className="z-logo"></div>
-              <div className="z-border"></div>
-              <span className="sr-only">Behandler forespørselen din</span>
-            </div>
-          </div>
-        )}
-
         {/* Spreadsheet Viewer - smaller gap here */}
         <div className="max-w-6xl mx-auto mt-4">
           <SpreadsheetViewer 
