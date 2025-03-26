@@ -31,6 +31,15 @@ interface SelectedFileInfo {
   name: string;
 }
 
+// Suggestion prompts to show before first message
+const SUGGESTION_PROMPTS = [
+  "Lag en månedlig budsjettmal for personlig økonomi",
+  "Lag en salgsoversikt med grafisk framstilling",
+  "Generer en timeregistrering med automatiske beregninger",
+  "Opprett en investeringsportefølje-sporer med avkastningsberegninger",
+  "Lag en prosjektstyringsmal med Gantt-diagram"
+];
+
 const TOKENS_PER_GENERATION = 1000;
 const TOKENS_PER_UPLOAD = 500;
 
@@ -60,6 +69,7 @@ export default function Dashboard() {
   // Refs for the textarea and buttons
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const generateButtonRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   
   // Generate time-based greeting
   useEffect(() => {
@@ -68,13 +78,13 @@ export default function Dashboard() {
       let timeGreeting = '';
       
       if (hour >= 5 && hour < 12) {
-        timeGreeting = 'Good morning';
+        timeGreeting = 'God morgen';
       } else if (hour >= 12 && hour < 17) {
-        timeGreeting = 'Good afternoon';
+        timeGreeting = 'God ettermiddag';
       } else if (hour >= 17 && hour < 21) {
-        timeGreeting = 'Good evening';
+        timeGreeting = 'God kveld';
       } else {
-        timeGreeting = 'Happy late night';
+        timeGreeting = 'God natt';
       }
       
       // Use displayName with underscores converted to spaces
@@ -96,8 +106,6 @@ export default function Dashboard() {
   useEffect(() => {
     if (user && (!user.displayName || user.displayName === 'unknown')) {
       navigate('/welcome');
-    } else if (user && user.displayName) {
-      // User has a valid display name
     }
   }, [user, navigate]);
 
@@ -126,13 +134,13 @@ export default function Dashboard() {
     
     // Define all the messages we want to show in sequence
     const messages = [
-      'Processing',
-      'Analyzing your requirements...',
-      'Thinking',
-      'Designing spreadsheet structure...',
-      'Generating',
-      'Generating Excel file...',
-      'Finalizing'
+      'Bearbeider',
+      'Analyserer krav...',
+      'Tenker',
+      'Designer regnearkstruktur...',
+      'Genererer',
+      'Genererer Excel-fil...',
+      'Ferdigstiller'
     ];
 
     // Clear all timeouts on unmount or when dependencies change
@@ -207,8 +215,21 @@ export default function Dashboard() {
       setGenerationStatus('');
       setSessionId(null);
       setFirstMessageSent(true);
+      
+      // Scroll the content to show the preview
+      if (contentRef.current) {
+        contentRef.current.scrollTop = 0;
+      }
     }
   }, [previewImage]);
+
+  // Effect to handle body overflow when chat is active
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const currentPlanType = user?.planType;
@@ -218,7 +239,7 @@ export default function Dashboard() {
         if (files) {
             const totalCost = files.length * TOKENS_PER_UPLOAD;
             if (!useTokens(totalCost)) {
-                setError('Insufficient tokens for file upload');
+                setError('Ikke nok tokens for filopplasting');
                 return;
             }
 
@@ -234,7 +255,7 @@ export default function Dashboard() {
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     if (isBasicPlan) {
-      setError('Upgrade to Plus or Pro to paste images');
+      setError('Oppgrader til Plus eller Pro for å lime inn bilder');
       return;
     }
     
@@ -250,7 +271,7 @@ export default function Dashboard() {
     if (imageCount > 0) {
       const totalCost = imageCount * TOKENS_PER_UPLOAD;
       if (!useTokens(totalCost)) {
-        setError('Insufficient tokens for image paste');
+        setError('Ikke nok tokens for innliming av bilde');
         return;
       }
 
@@ -263,10 +284,10 @@ export default function Dashboard() {
             const newFile = {
               file,
               id: Math.random().toString(36).substr(2, 9),
-              name: `Pasted Image ${new Date().toLocaleTimeString()}`
+              name: `Innlimt bilde ${new Date().toLocaleTimeString()}`
             };
             setSelectedFiles(prev => [...prev, newFile]);
-            setPrompt(prev => prev + `\n[Image "${newFile.name}" added]`);
+            setPrompt(prev => prev + `\n[Bilde "${newFile.name}" lagt til]`);
           }
         }
       }
@@ -276,7 +297,7 @@ export default function Dashboard() {
   const handleDrop = async (e: React.DragEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
     if (isBasicPlan) {
-      setError('Upgrade to Plus or Pro to drop files');
+      setError('Oppgrader til Plus eller Pro for å slippe filer');
       return;
     }
     
@@ -286,7 +307,7 @@ export default function Dashboard() {
     if (imageFiles.length > 0) {
       const totalCost = imageFiles.length * TOKENS_PER_UPLOAD;
       if (!useTokens(totalCost)) {
-        setError('Insufficient tokens for file upload');
+        setError('Ikke nok tokens for filopplasting');
         return;
       }
     }
@@ -299,7 +320,7 @@ export default function Dashboard() {
     
     if (newFiles.length > 0) {
       setSelectedFiles(prev => [...prev, ...newFiles]);
-      setPrompt(prev => prev + `\n[${newFiles.length} images added]`);
+      setPrompt(prev => prev + `\n[${newFiles.length} bilder lagt til]`);
     }
   };
 
@@ -312,6 +333,12 @@ export default function Dashboard() {
       e.preventDefault();
       handleGenerate();
     }
+  };
+  
+  // Handler for suggestion clicks
+  const handleSuggestionClick = (suggestion: string) => {
+    setPrompt(suggestion);
+    handleGenerate();
   };
 
   const handleGenerate = async () => {
@@ -330,7 +357,7 @@ export default function Dashboard() {
       });
 
       if (!tokenResponse.ok) {
-        throw new Error('Failed to refresh session');
+        throw new Error('Kunne ikke oppdatere økten');
       }
 
       const endpoint = selectedFiles.length > 0 ? '/generate-macro-with-file' : '/generate-macro';
@@ -381,7 +408,7 @@ export default function Dashboard() {
 
     } catch (error: any) {
       console.error('Generation error:', error);
-      setError(error.message || 'Failed to generate document. Please try again.');
+      setError(error.message || 'Kunne ikke generere dokument. Vennligst prøv igjen.');
       setIsGenerating(false);
       setGenerationStatus('');
       setSessionId(null);
@@ -390,16 +417,19 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 flex flex-col">
-      <div className="container mx-auto px-4 transition-all duration-500 flex flex-col h-full">
-        {/* Header with greeting - visible before first message */}
-        <div className={`text-center transition-all duration-500 ${firstMessageSent ? 'opacity-0 h-0 overflow-hidden mb-0' : 'opacity-100 pt-24 mb-12'}`}>
-          <h1 className="text-4xl font-light text-emerald-800 dark:text-emerald-200">
-            {greeting}
-          </h1>
-        </div>
-        
-        {/* Dynamic content area */}
-        <div className={`flex flex-col ${firstMessageSent ? 'flex-grow justify-between' : ''}`}>
+      {/* Main scrollable content area */}
+      <div 
+        ref={contentRef}
+        className="flex-1 overflow-auto pb-32" // Add padding at bottom for the fixed chat box
+      >
+        <div className="container mx-auto px-4 pt-6">
+          {/* Header with greeting - visible before first message */}
+          <div className={`text-center mb-12 transition-opacity duration-500 ${firstMessageSent ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100 pt-12'}`}>
+            <h1 className="text-4xl font-light text-emerald-800 dark:text-emerald-200">
+              {greeting}
+            </h1>
+          </div>
+          
           {/* Error display */}
           {error && (
             <div className="max-w-3xl mx-auto mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-lg text-center">
@@ -407,16 +437,9 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Z Logo animation during loading */}
-          {isGenerating && (
-            <div className="flex justify-center mb-4">
-              <div className="zarium-logo-animation">Z</div>
-            </div>
-          )}
-
-          {/* Spreadsheet Viewer - appears above chat after first message */}
-          <div className={`max-w-6xl mx-auto w-full transition-all duration-500 ${
-            firstMessageSent ? 'opacity-100 mb-6 order-1' : 'opacity-0 h-0 overflow-hidden'
+          {/* Spreadsheet Viewer - appears with spacing from top */}
+          <div className={`max-w-6xl mx-auto w-full transition-all duration-500 mt-6 ${
+            firstMessageSent ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'
           }`}>
             <SpreadsheetViewer 
               previewImage={previewImage} 
@@ -426,144 +449,165 @@ export default function Dashboard() {
               planType={user?.planType}
             />
           </div>
+        </div>
+      </div>
+      
+      {/* Fixed chat box container at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 shadow-lg border-t border-emerald-100 dark:border-emerald-900 z-10">
+        <div className="container mx-auto px-4 py-4">
+          {/* Tokens display - right above chat */}
+          <div className="text-center text-emerald-700 dark:text-emerald-300 mb-3">
+            Tilgjengelige Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
+          </div>
+          
+          {/* Input Form */}
+          <div className="max-w-3xl mx-auto relative">
+            {/* Loading spinner - smaller and to the left */}
+            {isGenerating && (
+              <div className="absolute -left-12 top-1/2 transform -translate-y-1/2">
+                <div className="simple-z-spinner text-emerald-600 dark:text-emerald-400">Z</div>
+              </div>
+            )}
+            
+            <div className="relative w-full">
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyPress={handleKeyPress}
+                onPaste={handlePaste}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                placeholder="Hvordan kan jeg hjelpe deg i dag?"
+                className="w-full px-5 py-4 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white min-h-[120px] pb-14 resize-none outline-none shadow-sm"
+                style={{ height: 'auto', minHeight: '120px' }}
+                ref={promptTextareaRef}
+              />
+              
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
+                    <label className="cursor-pointer">
+                      <Upload 
+                        className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                      />
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept=".xlsx,.xls,.csv,.ods,image/*" 
+                        onChange={handleFileChange}
+                        multiple
+                        aria-label="Upload files"
+                      />
+                    </label>
+                  ) : (
+                    <Upload className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 cursor-pointer" />
+                  )}
 
-          {/* Bottom section with chat input - anchored to bottom after first message */}
-          <div className={`max-w-3xl mx-auto w-full transition-all duration-500 ${
-            firstMessageSent ? 'mt-auto order-2' : 'mt-0'
-          }`}>
-            {/* Input Form */}
-            <div className="w-full mb-6">
-              <div className="relative w-full">
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  onPaste={handlePaste}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  placeholder="How can I help you today?"
-                  className="w-full px-5 py-4 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white min-h-[120px] pb-14 resize-none outline-none shadow-sm"
-                  style={{ height: 'auto', minHeight: '120px' }}
-                  ref={promptTextareaRef}
-                />
-                
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
-                      <label className="cursor-pointer">
-                        <Upload 
-                          className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-                        />
-                        <input 
-                          type="file" 
-                          className="hidden" 
-                          accept=".xlsx,.xls,.csv,.ods,image/*" 
-                          onChange={handleFileChange}
-                          multiple
-                          aria-label="Upload files"
-                        />
-                      </label>
+                  <div className="flex items-center gap-2">
+                    {canUseEnhancedMode ? (
+                      <Switch
+                        checked={enhancedMode}
+                        onCheckedChange={toggleEnhancedMode}
+                        className="data-[state=checked]:bg-emerald-600 h-4 w-7"
+                      />
                     ) : (
-                      <div
-                        className="cursor-not-allowed"
-                        title="Upgrade to Plus or Pro to upload files"
-                      >
-                        <Upload className="h-4 w-4 text-gray-400" />
-                      </div>
+                      <Switch
+                        checked={false}
+                        disabled
+                        className="data-[state=checked]:bg-emerald-600 h-4 w-7 opacity-50"
+                      />
                     )}
-
-                    <div className="flex items-center gap-2">
-                      {canUseEnhancedMode ? (
-                        <Switch
-                          checked={enhancedMode}
-                          onCheckedChange={toggleEnhancedMode}
-                          className="data-[state=checked]:bg-emerald-600 h-4 w-7"
-                        />
-                      ) : (
-                        <div
-                          className="cursor-not-allowed"
-                          title={isDemoPlan ? "Demo users can't use enhanced mode. Upgrade to Plus or Pro." : "Upgrade to Plus or Pro to use enhanced mode"}
-                        >
-                          <Switch
-                            checked={false}
-                            disabled
-                            className="opacity-50 h-4 w-7"
-                          />
-                        </div>
-                      )}
-                      <span className="text-sm text-emerald-700 dark:text-emerald-300">
-                        Enhanced
-                      </span>
-                      <div 
-                        className="relative group"
-                        title="Enhanced mode information"
-                      >
-                        <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
-                          {isBasicPlan || isDemoPlan
-                            ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans."
-                            : "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans. Uses more tokens per generation. Ideal for important projects where quality matters most."}
-                        </div>
+                    <span className="text-sm text-emerald-700 dark:text-emerald-300">
+                      Enhanced
+                    </span>
+                    <div 
+                      className="relative group"
+                      title="Enhanced mode information"
+                    >
+                      <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
+                        {isBasicPlan || isDemoPlan
+                          ? "Enhanced Mode leverer mer pålitelige og komplekse regneark, eksklusivt for Plus og Pro-planer."
+                          : "Enhanced Mode leverer mer pålitelige og komplekse regneark, eksklusivt for Plus og Pro-planer. Bruker flere tokens per generering. Ideelt for viktige prosjekter der kvalitet betyr mest."}
                       </div>
                     </div>
                   </div>
-
-                  <button
-                    onClick={handleGenerate}
-                    disabled={isGenerating || !prompt.trim()}
-                    className={`p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors ${
-                      isGenerating || !prompt.trim() 
-                        ? 'opacity-50 cursor-not-allowed' 
-                        : ''
-                    }`}
-                    aria-label="Generate Excel"
-                    ref={generateButtonRef}
-                  >
-                    <ArrowRight className="h-5 w-5 text-white" />
-                  </button>
                 </div>
-              </div>
 
-              {/* Selected files display */}
-              {selectedFiles.length > 0 && (
-                <div className="mt-4 space-y-1">
-                  {selectedFiles.map((fileInfo) => (
-                    <div 
-                      key={fileInfo.id}
-                      className="flex items-center justify-between py-1 px-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-sm"
-                    >
-                      <span className="text-emerald-800 dark:text-emerald-200 truncate">
-                        {fileInfo.name}
-                      </span>
-                      <button
-                        onClick={() => setSelectedFiles(prev => 
-                          prev.filter(f => f.id !== fileInfo.id)
-                        )}
-                        className="ml-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {isBasicPlan && (
-                <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center">
-                  <Lock className="h-4 w-4 inline-block mr-2" />
-                  File upload is available in Plus and Pro plans. 
-                  <a href="/subscription" className="underline ml-1">Upgrade now</a>
-                </div>
-              )}
-              
-              {/* Tokens display - centered */}
-              <div className="text-center text-emerald-700 dark:text-emerald-300 mt-4">
-                Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
+                <button
+                  onClick={handleGenerate}
+                  disabled={isGenerating || !prompt.trim()}
+                  className={`p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors ${
+                    isGenerating || !prompt.trim() 
+                      ? 'opacity-50 cursor-not-allowed' 
+                      : ''
+                  }`}
+                  aria-label="Generate Excel"
+                  ref={generateButtonRef}
+                >
+                  <ArrowRight className="h-5 w-5 text-white" />
+                </button>
               </div>
             </div>
+
+            {/* Selected files display */}
+            {selectedFiles.length > 0 && (
+              <div className="mt-4 space-y-1">
+                {selectedFiles.map((fileInfo) => (
+                  <div 
+                    key={fileInfo.id}
+                    className="flex items-center justify-between py-1 px-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-sm"
+                  >
+                    <span className="text-emerald-800 dark:text-emerald-200 truncate">
+                      {fileInfo.name}
+                    </span>
+                    <button
+                      onClick={() => setSelectedFiles(prev => 
+                        prev.filter(f => f.id !== fileInfo.id)
+                      )}
+                      className="ml-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Suggestions - visible only before first message */}
+            {!firstMessageSent && (
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+                {SUGGESTION_PROMPTS.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 text-left transition-colors text-sm shadow-sm hover:shadow"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
+      
+      {/* Custom style for the simple Z spinner */}
+      <style>{`
+        .simple-z-spinner {
+          font-family: 'Arial', sans-serif;
+          font-size: 28px;
+          font-weight: bold;
+          animation: spin-and-pulse 2s infinite ease-in-out;
+          display: inline-block;
+        }
+        
+        @keyframes spin-and-pulse {
+          0% { transform: rotate(0deg) scale(1); }
+          50% { transform: rotate(180deg) scale(1.2); }
+          100% { transform: rotate(360deg) scale(1); }
+        }
+      `}</style>
     </div>
   );
 }
