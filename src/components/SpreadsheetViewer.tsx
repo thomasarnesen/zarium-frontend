@@ -160,7 +160,7 @@ export function SpreadsheetViewer({
       case 'Thinking':
         return "Charts and graphs may appear over data in the preview...\nThis can be adjustet when downloading xlsx file";
       case 'Generating':
-        return "Charts and graphs may appear over data in the preview...\nThis can be adjustet when downloading xlsx file"; 
+        return "Tip: Don't miss the Quick Start Guide in your downloaded Excel file \nit contains important setup instructions for optimal use."; 
       case 'Finalizing':
         return "Finalizing your document...\nAlmost there!";
       case 'Analyzing your requirements...':
@@ -168,7 +168,7 @@ export function SpreadsheetViewer({
       case 'Designing spreadsheet structure...':
         return "Designing spreadsheet structure...";
       case 'Generating Excel file...':
-        return "Charts and graphs may appear over data in the preview...\nThis can be adjustet when downloading xlsx file";
+        return "Charts and graphs may appear over data in the preview \nCharts and graphs may appear over data in the preview";
       case 'Complete':
         return "Generation complete!";
       default:
