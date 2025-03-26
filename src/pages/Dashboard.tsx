@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, CSSProperties } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FileSpreadsheet, Download, Sparkles, Upload, Lock, HelpCircle, ArrowRight } from 'lucide-react';
 import { SpreadsheetViewer } from '../components/SpreadsheetViewer';
@@ -33,15 +33,41 @@ interface SelectedFileInfo {
 
 // Suggestion prompts to show before first message
 const SUGGESTION_PROMPTS = [
-  "Lag en månedlig budsjettmal for personlig økonomi",
-  "Lag en salgsoversikt med grafisk framstilling",
-  "Generer en timeregistrering med automatiske beregninger",
-  "Opprett en investeringsportefølje-sporer med avkastningsberegninger",
-  "Lag en prosjektstyringsmal med Gantt-diagram"
+  "Create a monthly budget template for personal finances",
+  "Make a sales dashboard with graphical representation",
+  "Generate a timesheet with automatic calculations",
+  "Create an investment portfolio tracker with ROI calculations",
+  "Create a project management template with Gantt chart"
 ];
 
 const TOKENS_PER_GENERATION = 1000;
 const TOKENS_PER_UPLOAD = 500;
+
+// Define styles for Z spinner animation
+const spinnerStyle: CSSProperties = {
+  fontFamily: 'Arial, sans-serif',
+  fontSize: '28px',
+  fontWeight: 'bold',
+  display: 'inline-block',
+  animation: 'spin-and-pulse 2s infinite ease-in-out'
+};
+
+// Add the keyframes animation to the document head
+useEffect(() => {
+  const style = document.createElement('style');
+  style.innerHTML = `
+    @keyframes spin-and-pulse {
+      0% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(180deg) scale(1.2); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  return () => {
+    document.head.removeChild(style);
+  };
+}, []);
 
 export default function Dashboard() {
   const location = useLocation();
@@ -78,13 +104,13 @@ export default function Dashboard() {
       let timeGreeting = '';
       
       if (hour >= 5 && hour < 12) {
-        timeGreeting = 'God morgen';
+        timeGreeting = 'Good morning';
       } else if (hour >= 12 && hour < 17) {
-        timeGreeting = 'God ettermiddag';
+        timeGreeting = 'Good afternoon';
       } else if (hour >= 17 && hour < 21) {
-        timeGreeting = 'God kveld';
+        timeGreeting = 'Good evening';
       } else {
-        timeGreeting = 'God natt';
+        timeGreeting = 'Happy late night';
       }
       
       // Use displayName with underscores converted to spaces
@@ -101,6 +127,23 @@ export default function Dashboard() {
     const interval = setInterval(generateGreeting, 60000);
     return () => clearInterval(interval);
   }, [user]);
+
+  // Add the keyframes animation to the document head
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @keyframes spin-and-pulse {
+        0% { transform: rotate(0deg) scale(1); }
+        50% { transform: rotate(180deg) scale(1.2); }
+        100% { transform: rotate(360deg) scale(1); }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   // Add this effect to redirect to welcome page if no display name
   useEffect(() => {
@@ -134,13 +177,13 @@ export default function Dashboard() {
     
     // Define all the messages we want to show in sequence
     const messages = [
-      'Bearbeider',
-      'Analyserer krav...',
-      'Tenker',
-      'Designer regnearkstruktur...',
-      'Genererer',
-      'Genererer Excel-fil...',
-      'Ferdigstiller'
+      'Processing',
+      'Analyzing your requirements...',
+      'Thinking',
+      'Designing spreadsheet structure...',
+      'Generating',
+      'Generating Excel file...',
+      'Finalizing'
     ];
 
     // Clear all timeouts on unmount or when dependencies change
@@ -239,7 +282,7 @@ export default function Dashboard() {
         if (files) {
             const totalCost = files.length * TOKENS_PER_UPLOAD;
             if (!useTokens(totalCost)) {
-                setError('Ikke nok tokens for filopplasting');
+                setError('Insufficient tokens for file upload');
                 return;
             }
 
@@ -255,7 +298,7 @@ export default function Dashboard() {
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     if (isBasicPlan) {
-      setError('Oppgrader til Plus eller Pro for å lime inn bilder');
+      setError('Upgrade to Plus or Pro to paste images');
       return;
     }
     
@@ -271,7 +314,7 @@ export default function Dashboard() {
     if (imageCount > 0) {
       const totalCost = imageCount * TOKENS_PER_UPLOAD;
       if (!useTokens(totalCost)) {
-        setError('Ikke nok tokens for innliming av bilde');
+        setError('Insufficient tokens for image paste');
         return;
       }
 
@@ -284,10 +327,10 @@ export default function Dashboard() {
             const newFile = {
               file,
               id: Math.random().toString(36).substr(2, 9),
-              name: `Innlimt bilde ${new Date().toLocaleTimeString()}`
+              name: `Pasted Image ${new Date().toLocaleTimeString()}`
             };
             setSelectedFiles(prev => [...prev, newFile]);
-            setPrompt(prev => prev + `\n[Bilde "${newFile.name}" lagt til]`);
+            setPrompt(prev => prev + `\n[Image "${newFile.name}" added]`);
           }
         }
       }
@@ -297,7 +340,7 @@ export default function Dashboard() {
   const handleDrop = async (e: React.DragEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
     if (isBasicPlan) {
-      setError('Oppgrader til Plus eller Pro for å slippe filer');
+      setError('Upgrade to Plus or Pro to drop files');
       return;
     }
     
@@ -307,7 +350,7 @@ export default function Dashboard() {
     if (imageFiles.length > 0) {
       const totalCost = imageFiles.length * TOKENS_PER_UPLOAD;
       if (!useTokens(totalCost)) {
-        setError('Ikke nok tokens for filopplasting');
+        setError('Insufficient tokens for file upload');
         return;
       }
     }
@@ -320,7 +363,7 @@ export default function Dashboard() {
     
     if (newFiles.length > 0) {
       setSelectedFiles(prev => [...prev, ...newFiles]);
-      setPrompt(prev => prev + `\n[${newFiles.length} bilder lagt til]`);
+      setPrompt(prev => prev + `\n[${newFiles.length} images added]`);
     }
   };
 
@@ -357,7 +400,7 @@ export default function Dashboard() {
       });
 
       if (!tokenResponse.ok) {
-        throw new Error('Kunne ikke oppdatere økten');
+        throw new Error('Failed to refresh session');
       }
 
       const endpoint = selectedFiles.length > 0 ? '/generate-macro-with-file' : '/generate-macro';
@@ -408,7 +451,7 @@ export default function Dashboard() {
 
     } catch (error: any) {
       console.error('Generation error:', error);
-      setError(error.message || 'Kunne ikke generere dokument. Vennligst prøv igjen.');
+      setError(error.message || 'Failed to generate document. Please try again.');
       setIsGenerating(false);
       setGenerationStatus('');
       setSessionId(null);
@@ -420,7 +463,7 @@ export default function Dashboard() {
       {/* Main scrollable content area */}
       <div 
         ref={contentRef}
-        className="flex-1 overflow-auto pb-32" // Add padding at bottom for the fixed chat box
+        className={`flex-1 overflow-auto ${firstMessageSent ? 'pb-32' : ''}`} // Add padding only when chat is fixed
       >
         <div className="container mx-auto px-4 pt-6">
           {/* Header with greeting - visible before first message */}
@@ -449,165 +492,273 @@ export default function Dashboard() {
               planType={user?.planType}
             />
           </div>
-        </div>
-      </div>
-      
-      {/* Fixed chat box container at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 shadow-lg border-t border-emerald-100 dark:border-emerald-900 z-10">
-        <div className="container mx-auto px-4 py-4">
-          {/* Tokens display - right above chat */}
-          <div className="text-center text-emerald-700 dark:text-emerald-300 mb-3">
-            Tilgjengelige Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
-          </div>
           
-          {/* Input Form */}
-          <div className="max-w-3xl mx-auto relative">
-            {/* Loading spinner - smaller and to the left */}
-            {isGenerating && (
-              <div className="absolute -left-12 top-1/2 transform -translate-y-1/2">
-                <div className="simple-z-spinner text-emerald-600 dark:text-emerald-400">Z</div>
+          {/* Chat box - in normal document flow before first message */}
+          {!firstMessageSent && (
+            <div className="max-w-3xl mx-auto mt-12">
+              {/* Tokens display - right above chat */}
+              <div className="text-center text-emerald-700 dark:text-emerald-300 mb-3">
+                Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
               </div>
-            )}
-            
-            <div className="relative w-full">
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyPress={handleKeyPress}
-                onPaste={handlePaste}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                placeholder="Hvordan kan jeg hjelpe deg i dag?"
-                className="w-full px-5 py-4 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white min-h-[120px] pb-14 resize-none outline-none shadow-sm"
-                style={{ height: 'auto', minHeight: '120px' }}
-                ref={promptTextareaRef}
-              />
-              
-              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
-                    <label className="cursor-pointer">
-                      <Upload 
-                        className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-                      />
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        accept=".xlsx,.xls,.csv,.ods,image/*" 
-                        onChange={handleFileChange}
-                        multiple
-                        aria-label="Upload files"
-                      />
-                    </label>
-                  ) : (
-                    <Upload className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 cursor-pointer" />
-                  )}
+          
+              {/* Input Form */}
+              <div className="relative">
+                {/* Loading spinner - smaller and to the left */}
+                {isGenerating && (
+                  <div className="absolute -left-12 top-1/2 transform -translate-y-1/2">
+                    <div style={spinnerStyle}>Z</div>
+                  </div>
+                )}
+                
+                <div className="relative w-full">
+                  <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    onPaste={handlePaste}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    placeholder="How can I help you today?"
+                    className="w-full px-5 py-4 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white min-h-[120px] pb-14 resize-none outline-none shadow-sm"
+                    style={{ height: 'auto', minHeight: '120px' }}
+                    ref={promptTextareaRef}
+                  />
+                  
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
+                        <label className="cursor-pointer">
+                          <Upload 
+                            className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                          />
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept=".xlsx,.xls,.csv,.ods,image/*" 
+                            onChange={handleFileChange}
+                            multiple
+                            aria-label="Upload files"
+                          />
+                        </label>
+                      ) : (
+                        <Upload className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 cursor-pointer" />
+                      )}
 
-                  <div className="flex items-center gap-2">
-                    {canUseEnhancedMode ? (
-                      <Switch
-                        checked={enhancedMode}
-                        onCheckedChange={toggleEnhancedMode}
-                        className="data-[state=checked]:bg-emerald-600 h-4 w-7"
-                      />
-                    ) : (
-                      <Switch
-                        checked={false}
-                        disabled
-                        className="data-[state=checked]:bg-emerald-600 h-4 w-7 opacity-50"
-                      />
-                    )}
-                    <span className="text-sm text-emerald-700 dark:text-emerald-300">
-                      Enhanced
-                    </span>
-                    <div 
-                      className="relative group"
-                      title="Enhanced mode information"
-                    >
-                      <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
-                        {isBasicPlan || isDemoPlan
-                          ? "Enhanced Mode leverer mer pålitelige og komplekse regneark, eksklusivt for Plus og Pro-planer."
-                          : "Enhanced Mode leverer mer pålitelige og komplekse regneark, eksklusivt for Plus og Pro-planer. Bruker flere tokens per generering. Ideelt for viktige prosjekter der kvalitet betyr mest."}
+                      <div className="flex items-center gap-2">
+                        {canUseEnhancedMode ? (
+                          <Switch
+                            checked={enhancedMode}
+                            onCheckedChange={toggleEnhancedMode}
+                            className="data-[state=checked]:bg-emerald-600 h-4 w-7"
+                          />
+                        ) : (
+                          <Switch
+                            checked={false}
+                            disabled
+                            className="data-[state=checked]:bg-emerald-600 h-4 w-7 opacity-50"
+                          />
+                        )}
+                        <span className="text-sm text-emerald-700 dark:text-emerald-300">
+                          Enhanced
+                        </span>
+                        <div 
+                          className="relative group"
+                          title="Enhanced mode information"
+                        >
+                          <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
+                            {isBasicPlan || isDemoPlan
+                              ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans."
+                              : "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans. Uses more tokens per generation. Ideal for important projects where quality matters most."}
+                          </div>
+                        </div>
                       </div>
                     </div>
+
+                    <button
+                      onClick={handleGenerate}
+                      disabled={isGenerating || !prompt.trim()}
+                      className={`p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors ${
+                        isGenerating || !prompt.trim() 
+                          ? 'opacity-50 cursor-not-allowed' 
+                          : ''
+                      }`}
+                      aria-label="Generate Excel"
+                      ref={generateButtonRef}
+                    >
+                      <ArrowRight className="h-5 w-5 text-white" />
+                    </button>
                   </div>
                 </div>
 
-                <button
-                  onClick={handleGenerate}
-                  disabled={isGenerating || !prompt.trim()}
-                  className={`p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors ${
-                    isGenerating || !prompt.trim() 
-                      ? 'opacity-50 cursor-not-allowed' 
-                      : ''
-                  }`}
-                  aria-label="Generate Excel"
-                  ref={generateButtonRef}
-                >
-                  <ArrowRight className="h-5 w-5 text-white" />
-                </button>
+                {/* Selected files display */}
+                {selectedFiles.length > 0 && (
+                  <div className="mt-4 space-y-1">
+                    {selectedFiles.map((fileInfo) => (
+                      <div 
+                        key={fileInfo.id}
+                        className="flex items-center justify-between py-1 px-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-sm"
+                      >
+                        <span className="text-emerald-800 dark:text-emerald-200 truncate">
+                          {fileInfo.name}
+                        </span>
+                        <button
+                          onClick={() => setSelectedFiles(prev => 
+                            prev.filter(f => f.id !== fileInfo.id)
+                          )}
+                          className="ml-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Suggestions - visible only before first message */}
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {SUGGESTION_PROMPTS.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 text-left transition-colors text-sm shadow-sm hover:shadow"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-
-            {/* Selected files display */}
-            {selectedFiles.length > 0 && (
-              <div className="mt-4 space-y-1">
-                {selectedFiles.map((fileInfo) => (
-                  <div 
-                    key={fileInfo.id}
-                    className="flex items-center justify-between py-1 px-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-sm"
-                  >
-                    <span className="text-emerald-800 dark:text-emerald-200 truncate">
-                      {fileInfo.name}
-                    </span>
-                    <button
-                      onClick={() => setSelectedFiles(prev => 
-                        prev.filter(f => f.id !== fileInfo.id)
-                      )}
-                      className="ml-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {/* Suggestions - visible only before first message */}
-            {!firstMessageSent && (
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
-                {SUGGESTION_PROMPTS.map((suggestion, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 text-left transition-colors text-sm shadow-sm hover:shadow"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
       
-      {/* Custom style for the simple Z spinner */}
-      <style>{`
-        .simple-z-spinner {
-          font-family: 'Arial', sans-serif;
-          font-size: 28px;
-          font-weight: bold;
-          animation: spin-and-pulse 2s infinite ease-in-out;
-          display: inline-block;
-        }
-        
-        @keyframes spin-and-pulse {
-          0% { transform: rotate(0deg) scale(1); }
-          50% { transform: rotate(180deg) scale(1.2); }
-          100% { transform: rotate(360deg) scale(1); }
-        }
-      `}</style>
+      {/* Fixed chat box container - only after first message is sent */}
+      {firstMessageSent && (
+        <div className="fixed bottom-0 left-0 right-0 z-10">
+          <div className="container mx-auto px-4 py-4">
+            {/* Tokens display - right above chat */}
+            <div className="text-center text-emerald-700 dark:text-emerald-300 mb-3">
+              Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
+            </div>
+            
+            {/* Input Form */}
+            <div className="max-w-3xl mx-auto relative">
+              {/* Loading spinner - smaller and to the left */}
+              {isGenerating && (
+                <div className="absolute -left-12 top-1/2 transform -translate-y-1/2">
+                  <div style={spinnerStyle}>Z</div>
+                </div>
+              )}
+              
+              <div className="relative w-full">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  onPaste={handlePaste}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  placeholder="How can I help you today?"
+                  className="w-full px-5 py-4 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white min-h-[120px] pb-14 resize-none outline-none shadow-sm"
+                  style={{ height: 'auto', minHeight: '120px' }}
+                  ref={promptTextareaRef}
+                />
+                
+                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
+                      <label className="cursor-pointer">
+                        <Upload 
+                          className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                        />
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept=".xlsx,.xls,.csv,.ods,image/*" 
+                          onChange={handleFileChange}
+                          multiple
+                          aria-label="Upload files"
+                        />
+                      </label>
+                    ) : (
+                      <Upload className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 cursor-pointer" />
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      {canUseEnhancedMode ? (
+                        <Switch
+                          checked={enhancedMode}
+                          onCheckedChange={toggleEnhancedMode}
+                          className="data-[state=checked]:bg-emerald-600 h-4 w-7"
+                        />
+                      ) : (
+                        <Switch
+                          checked={false}
+                          disabled
+                          className="data-[state=checked]:bg-emerald-600 h-4 w-7 opacity-50"
+                        />
+                      )}
+                      <span className="text-sm text-emerald-700 dark:text-emerald-300">
+                        Enhanced
+                      </span>
+                      <div 
+                        className="relative group"
+                        title="Enhanced mode information"
+                      >
+                        <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-emerald-100 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300">
+                          {isBasicPlan || isDemoPlan
+                            ? "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans."
+                            : "Enhanced Mode delivers more reliable and complex spreadsheets, exclusive to Plus and Pro plans. Uses more tokens per generation. Ideal for important projects where quality matters most."}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleGenerate}
+                    disabled={isGenerating || !prompt.trim()}
+                    className={`p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors ${
+                      isGenerating || !prompt.trim() 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : ''
+                    }`}
+                    aria-label="Generate Excel"
+                    ref={generateButtonRef}
+                  >
+                    <ArrowRight className="h-5 w-5 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Selected files display */}
+              {selectedFiles.length > 0 && (
+                <div className="mt-4 space-y-1">
+                  {selectedFiles.map((fileInfo) => (
+                    <div 
+                      key={fileInfo.id}
+                      className="flex items-center justify-between py-1 px-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-sm"
+                    >
+                      <span className="text-emerald-800 dark:text-emerald-200 truncate">
+                        {fileInfo.name}
+                      </span>
+                      <button
+                        onClick={() => setSelectedFiles(prev => 
+                          prev.filter(f => f.id !== fileInfo.id)
+                        )}
+                        className="ml-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
