@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, MouseEvent } from 'react';
 import { Download } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../utils/api';
+import { Link, useNavigate } from 'react-router-dom'; // Added useNavigate import
 
 interface SpreadsheetViewerProps {
   previewImage: string | null;
@@ -51,6 +52,7 @@ export function SpreadsheetViewer({
   const [startY, setStartY] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
+  const navigate = useNavigate(); // Added for navigation
 
   // Add custom style for the slider thumb
   useEffect(() => {
@@ -118,7 +120,15 @@ export function SpreadsheetViewer({
     e.stopPropagation();
   };
 
+  // Modified handleDownload function to handle Demo users
   const handleDownload = async () => {
+    // If Demo user, redirect to subscription page
+    if (planType === 'Demo') {
+      navigate('/subscription');
+      return;
+    }
+
+    // For other users, proceed with download if URL is available
     if (!formatting?.downloadUrl) {
       console.error("No download URL available");
       return;
@@ -414,24 +424,24 @@ export function SpreadsheetViewer({
           
           {/* Absolute-positioned controls */}
           <div className="absolute" style={{ right: '-41px', top: 0 }}>
-            {/* Download Button - always visible but disabled if no downloadUrl */}
+            {/* Download Button - now clickable for Demo users */}
             <button
-              onClick={formatting?.downloadUrl ? handleDownload : undefined}
+              onClick={handleDownload} // Always use handleDownload (it will redirect Demo users)
               className={`inline-flex items-center justify-center p-1.5 w-8 h-8 ${
-                !formatting?.downloadUrl
+                !formatting?.downloadUrl 
                   ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
                   : 'bg-white dark:bg-gray-800 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer download-button'
               } rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800 shadow-sm`}
               title={!formatting?.downloadUrl
                 ? 'Generate a spreadsheet first'
                 : planType === 'Demo'
-                  ? 'Upgrade to Basic or higher to download files'
+                  ? 'Upgrade to download this file'
                   : 'Download Excel file to edit, reposition charts, or customize formatting'
               }
-              disabled={!formatting?.downloadUrl || planType === 'Demo'}
+              disabled={!formatting?.downloadUrl} // Only disabled if no download URL is available
             >
               <Download className={`h-5 w-5 ${
-                !formatting?.downloadUrl || planType === 'Demo'
+                !formatting?.downloadUrl 
                   ? 'text-gray-400' 
                   : ''
               }`} />
