@@ -13,6 +13,9 @@
     <meta name="msapplication-TileImage" content="/mstile-144x144.png">
     <meta name="msapplication-config" content="/browserconfig.xml">
     
+    <!-- reCAPTCHA API -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    
     <!-- Improved styling for loading state -->
     <style>
       body {
@@ -368,6 +371,11 @@
           <p>Loading application...</p>
         </div>
       </div>
+      
+      <!-- reCAPTCHA container - can be positioned via CSS as needed -->
+      <div id="recaptcha-container" style="display: none;">
+        <div class="g-recaptcha" data-sitekey="6LdbBQErAAAAAOJtIXNhnHqRGoknYPxoa6C3oyzG"></div>
+      </div>
     </div>
     <noscript>
       <div style="padding: 20px; text-align: center;">
@@ -419,6 +427,60 @@
         
         observer.observe(document.body, { childList: true, subtree: true });
       });
+    </script>
+    
+    <!-- reCAPTCHA initialization script -->
+    <script>
+      // Make reCAPTCHA available to your React application
+      window.onLoadRecaptcha = function() {
+        console.log("reCAPTCHA ready!");
+        // Expose methods for your React app to use reCAPTCHA
+        window.executeRecaptcha = function(callback) {
+          try {
+            grecaptcha.ready(function() {
+              grecaptcha.execute('6LdbBQErAAAAAOJtIXNhnHqRGoknYPxoa6C3oyzG', {action: 'submit'})
+                .then(function(token) {
+                  console.log("reCAPTCHA token obtained");
+                  if (typeof callback === 'function') {
+                    callback(token);
+                  }
+                });
+            });
+          } catch (error) {
+            console.error("reCAPTCHA execution error:", error);
+            if (typeof callback === 'function') {
+              callback(null, error);
+            }
+          }
+        };
+        
+        // Method to get reCAPTCHA response manually
+        window.getRecaptchaResponse = function() {
+          try {
+            return grecaptcha.getResponse();
+          } catch (error) {
+            console.error("Error getting reCAPTCHA response:", error);
+            return null;
+          }
+        };
+        
+        // Method to reset reCAPTCHA
+        window.resetRecaptcha = function() {
+          try {
+            grecaptcha.reset();
+            console.log("reCAPTCHA reset");
+          } catch (error) {
+            console.error("Error resetting reCAPTCHA:", error);
+          }
+        };
+      };
+      
+      // Add global callback for reCAPTCHA
+      window.recaptchaCallback = function(token) {
+        console.log("reCAPTCHA callback executed with token");
+        const captchaEvent = new CustomEvent('recaptchaComplete', { detail: { token: token } });
+        window.dispatchEvent(captchaEvent);
+      };
     </script>
     
     <!-- Multi-domain Safari/iOS Authentication Fix -->

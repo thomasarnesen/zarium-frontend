@@ -1,40 +1,89 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { Sun, Moon, FileSpreadsheet } from 'lucide-react';
 import UserMenu from './UserMenu';
 
+// TypeScript declaration for reCAPTCHA
+declare global {
+  interface Window {
+    executeRecaptcha?: (callback: (token: string) => void) => void;
+  }
+}
+
 export default function Navbar() {
   const { user } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
-
-  // Direct to Azure CIAM authentication
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Direct to Azure CIAM authentication with reCAPTCHA
   const handleDirectAuth = () => {
-    const redirectUrl = `${window.location.origin}/auth/callback`;
+    setIsLoading(true);
     
-    // Store the current URL for potential redirect after login
-    sessionStorage.setItem('authRedirectUrl', window.location.pathname);
-    
-    // Generate nonce for security
-    const nonce = Date.now().toString();
-    const state = Math.random().toString(36).substring(2, 15);
-    
-    // Azure CIAM authorization URL
-    const authUrl = `https://zariumai.ciamlogin.com/zariumai.onmicrosoft.com/oauth2/v2.0/authorize`;
-    
-    const params = new URLSearchParams({
-      client_id: 'a0432355-cca6-450f-b415-a4c3c4e5d55b',
-      response_type: 'id_token',
-      redirect_uri: redirectUrl,
-      scope: 'openid profile email',
-      response_mode: 'fragment',
-      nonce: nonce,
-      state: state,
-      prompt: 'login'
-    });
-    
-    // Redirect to Azure CIAM login page
-    window.location.href = `${authUrl}?${params.toString()}`;
+    // If reCAPTCHA is available, verify before auth
+    if (window.executeRecaptcha) {
+      window.executeRecaptcha((token) => {
+        // Proceed with authentication after reCAPTCHA verification
+        proceedWithAuth(token);
+      });
+    } else {
+      // Fallback if reCAPTCHA isn't available
+      console.warn("reCAPTCHA not available, proceeding without verification");
+      proceedWithAuth(null);
+    }
+  };
+
+  // Function to handle authentication after reCAPTCHA verification
+  const proceedWithAuth = async (recaptchaToken: string | null) => {
+    try {
+      // Verify the reCAPTCHA token with your backend
+      if (recaptchaToken) {
+        const response = await fetch(`${window.location.origin}/api/auth/verify-recaptcha`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ recaptchaToken }),
+        });
+
+        // If verification fails, stop the auth process
+        if (!response.ok) {
+          setIsLoading(false);
+          console.error('reCAPTCHA verification failed');
+          return;
+        }
+      }
+
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+     
+      // Store the current URL for potential redirect after login
+      sessionStorage.setItem('authRedirectUrl', window.location.pathname);
+     
+      // Generate nonce for security
+      const nonce = Date.now().toString();
+      const state = Math.random().toString(36).substring(2, 15);
+     
+      // Azure CIAM authorization URL
+      const authUrl = `https://zariumai.ciamlogin.com/zariumai.onmicrosoft.com/oauth2/v2.0/authorize`;
+     
+      const params = new URLSearchParams({
+        client_id: 'a0432355-cca6-450f-b415-a4c3c4e5d55b',
+        response_type: 'id_token',
+        redirect_uri: redirectUrl,
+        scope: 'openid profile email',
+        response_mode: 'fragment',
+        nonce: nonce,
+        state: state,
+        prompt: 'login'
+      });
+     
+      // Redirect to Azure CIAM login page
+      window.location.href = `${authUrl}?${params.toString()}`;
+    } catch (error) {
+      console.error('Authentication error:', error);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -71,12 +120,13 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                {/* For non-authenticated users, just show "Get Started" button */}
+                {/* For non-authenticated users, just show "Sign In" button */}
                 <button
                   onClick={handleDirectAuth}
-                  className="text-base bg-emerald-800 dark:bg-emerald-700 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-900 dark:hover:bg-emerald-600 shadow-sm hover:shadow-md transition-all"
+                  disabled={isLoading}
+                  className="text-base bg-emerald-800 dark:bg-emerald-700 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-900 dark:hover:bg-emerald-600 shadow-sm hover:shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  Sign In
+                  {isLoading ? 'Verifying...' : 'Sign In'}
                 </button>
               </>
             )}
