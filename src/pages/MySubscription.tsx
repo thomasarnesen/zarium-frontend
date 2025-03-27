@@ -14,29 +14,15 @@ interface Plan {
   features: string[];
 }
 
-interface SubscriptionProps {
-  user: {
-    token: string;
-    subscription?: {
-      plan_type: string;
-      status: string;
-      end_date?: string;
-    };
-  };
-}
 
-
-const PLAN_RANKS = {
+const PLAN_RANKS: { [key in 'Basic' | 'Plus' | 'Pro' | 'Demo']: number } = {
   'Basic': 0,
   'Plus': 1,
-  'Pro': 2
+  'Pro': 2,
+  'Demo': -1
 };
 
-const PLAN_TOKENS = {
-  'Basic': 100000,
-  'Plus': 300000,
-  'Pro': 1000000
-};
+// Removing the unused PLAN_TOKENS constant
 
 const PLANS = [
   {
@@ -164,11 +150,11 @@ export function MySubscription() {
       fetchTokenInfo();
     }
   }, [user]);
-
-  
-  const currentPlanRank = PLAN_RANKS[currentPlan || 'Basic'];
+  const currentPlanRank = PLAN_RANKS[(currentPlan as keyof typeof PLAN_RANKS) || 'Basic'];
 
   const handleBuyTokens = async () => {
+    if (!user || !user.token) return;
+    
     try {
       const response = await api.fetch('/api/create-checkout-session', {
         method: 'POST',
@@ -198,12 +184,18 @@ export function MySubscription() {
     }
   };
 
-  const handleUpgrade = async (plan) => {
+  interface CheckoutSessionResponse {
+    url: string;
+  }
+
+  const handleUpgrade = async (plan: Plan): Promise<void> => {
+    if (!user || !user.token) return;
+    
     try {
       const response = await api.fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.token}`,
+          'Authorization': `Bearer ${user?.token}`,
         },
         body: JSON.stringify({
           priceId: plan.stripePriceId,
@@ -211,7 +203,7 @@ export function MySubscription() {
         }),
       });
 
-      const { url } = await response.json();
+      const { url } = await response.json() as CheckoutSessionResponse;
       window.location.href = url;
     } catch (error) {
       console.error('Error creating checkout session:', error);
@@ -222,6 +214,8 @@ export function MySubscription() {
     setCancelLoading(true);
     setCancelError(null);
 
+    if (!user || !user.token) return;
+    
     try {
       const response = await api.fetch('/cancel-subscription', {
         method: 'POST',
@@ -258,6 +252,8 @@ export function MySubscription() {
   };
 
   const handleReactivate = async () => {
+    if (!user || !user.token) return;
+    
     try {
       const response = await api.fetch('/reactivate-subscription', {
         method: 'POST',
@@ -271,7 +267,7 @@ export function MySubscription() {
         throw new Error('Failed to reactivate subscription');
       }
 
-      const data = await response.json();
+      await response.json(); // Parse the response but don't store it
       setSubscriptionStatus('active');
       setShowReactivateConfirm(false);
       
@@ -314,7 +310,7 @@ export function MySubscription() {
       const response = await api.fetch('/schedule-plan-change', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.token}`,
+          'Authorization': `Bearer ${user?.token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -326,7 +322,7 @@ export function MySubscription() {
         throw new Error('Failed to schedule plan change');
       }
 
-      const data = await response.json();
+      await response.json(); // Parse the response but don't store it
       setPendingPlanChange(targetPlan);
       setShowDowngradeConfirm(false);
     } catch (error) {
@@ -339,7 +335,7 @@ export function MySubscription() {
       const response = await api.fetch('/cancel-plan-change', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.token}`,
+          'Authorization': `Bearer ${user?.token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -402,7 +398,7 @@ export function MySubscription() {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-items-center">  
           {PLANS.map((plan) => {
-            const planRank = PLAN_RANKS[plan.name];
+            const planRank = PLAN_RANKS[plan.name as keyof typeof PLAN_RANKS] || 0;
             const isCurrentPlan = plan.name === currentPlan;
             const canUpgrade = plan.name !== 'Demo' && planRank > currentPlanRank;
             const canDowngrade = plan.name !== 'Demo' && planRank < currentPlanRank && subscriptionStatus === 'active';
