@@ -61,22 +61,30 @@ export const ModelArmorService = {
   /**
    * Verifiser input sikkerhet med både klient og server sjekker
    */
-  verifyInputSafety: async (input: string, action: string = 'submit_prompt'): Promise<InputSafetyResult> => {
+  // I utils/modelArmorService.ts
+verifyInputSafety: async (input: string, action: string = 'submit_prompt'): Promise<InputSafetyResult> => {
     try {
-      // Get reCAPTCHA token
+      // Hent reCAPTCHA token
       const recaptchaToken = await RecaptchaService.safeExecuteRecaptcha(action);
       
-      // Send request to backend
-      const response = await api.fetch('/api/verify-input-safety', {
+      // Her er API-kallet med relativ URL
+      const response = await fetch('/api/verify-input-safety', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input, recaptchaToken, action }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}` // Legg til auth token
+        },
+        credentials: 'include', // Viktig for cookies
+        body: JSON.stringify({
+          input,
+          recaptchaToken,
+          action
+        })
       });
       
-      // Check if response is ok
+      // Sjekk respons
       if (!response.ok) {
         try {
-          // Try to parse error message if possible
           const errorData = await response.json();
           return {
             success: false,
@@ -85,7 +93,6 @@ export const ModelArmorService = {
             error: errorData.error || 'Security check failed'
           };
         } catch (parseError) {
-          // Handle case where response isn't valid JSON
           console.error('Error parsing API response:', parseError);
           return {
             success: false,
@@ -96,24 +103,14 @@ export const ModelArmorService = {
         }
       }
       
-      // Parse successful response
-      try {
-        return await response.json();
-      } catch (parseError) {
-        console.error('Error parsing successful response:', parseError);
-        return {
-          success: false,
-          is_safe: false,
-          risk_score: 0.7,
-          error: 'Invalid response format from security service'
-        };
-      }
+      // Parse success response
+      return await response.json();
     } catch (error) {
       console.error('Input safety verification error:', error);
       return {
         success: false,
         is_safe: false,
-        risk_score: 0.7,
+        risk_score: 0.7, 
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
