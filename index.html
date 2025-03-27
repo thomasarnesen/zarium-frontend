@@ -13,8 +13,33 @@
     <meta name="msapplication-TileImage" content="/mstile-144x144.png">
     <meta name="msapplication-config" content="/browserconfig.xml">
     
-    <!-- reCAPTCHA API -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6LdbBQErAAAAAOJtIXNhnHqRGoknYPxoa6C3oyzG&onload=onLoadRecaptcha" async defer></script>
+    <!-- Dynamic reCAPTCHA loader instead of direct script tag -->
+    <script>
+      // Load reCAPTCHA dynamically to avoid content blockers
+      window.loadRecaptchaScript = function() {
+        if (document.querySelector('script[src*="recaptcha/api.js"]')) {
+          return; // Already loaded
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://www.google.com/recaptcha/api.js?render=6LdbBQErAAAAAOJtIXNhnHqRGoknYPxoa6C3oyzG';
+        script.async = true;
+        script.defer = true;
+        script.onload = function() {
+          console.log("reCAPTCHA script loaded successfully");
+          if (window.onLoadRecaptcha) {
+            window.onLoadRecaptcha();
+          }
+        };
+        script.onerror = function() {
+          console.error("Failed to load reCAPTCHA script");
+        };
+        document.head.appendChild(script);
+      };
+
+      // Start loading reCAPTCHA after a short delay
+      setTimeout(window.loadRecaptchaScript, 500);
+    </script>
     
     <!-- Improved styling for loading state -->
     <style>
@@ -94,6 +119,7 @@
     <!-- Preload Critical Resources -->
     <link rel="preconnect" href="https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net" />
     <link rel="preconnect" href="https://js.stripe.com" crossorigin />
+    <link rel="preconnect" href="https://www.google.com" crossorigin />
     
     <!-- Stripe Integration -->
     <script src="https://js.stripe.com/v3/" defer></script>
@@ -429,50 +455,79 @@
       });
     </script>
     
-    <!-- reCAPTCHA initialization script -->
+    <!-- reCAPTCHA initialization script - Improved version -->
     <script>
       // Make reCAPTCHA available to your React application
       window.onLoadRecaptcha = function() {
         console.log("reCAPTCHA ready!");
-        // Expose methods for your React app to use reCAPTCHA
-        window.executeRecaptcha = function(callback) {
-          try {
-            grecaptcha.ready(function() {
+      };
+      
+      // The enhanced executeRecaptcha function with better fallbacks
+      window.executeRecaptcha = function(callback) {
+        try {
+          // Check if grecaptcha is available
+          if (typeof grecaptcha === 'undefined' || !grecaptcha.ready) {
+            console.warn("reCAPTCHA not available, proceeding without verification");
+            if (typeof callback === 'function') {
+              callback(null);
+            }
+            return;
+          }
+          
+          grecaptcha.ready(function() {
+            try {
               grecaptcha.execute('6LdbBQErAAAAAOJtIXNhnHqRGoknYPxoa6C3oyzG', {action: 'submit'})
                 .then(function(token) {
                   console.log("reCAPTCHA token obtained");
                   if (typeof callback === 'function') {
                     callback(token);
                   }
+                })
+                .catch(function(error) {
+                  console.error("reCAPTCHA execution error:", error);
+                  if (typeof callback === 'function') {
+                    callback(null);
+                  }
                 });
-            });
-          } catch (error) {
-            console.error("reCAPTCHA execution error:", error);
-            if (typeof callback === 'function') {
-              callback(null, error);
+            } catch (error) {
+              console.error("Error in grecaptcha.execute:", error);
+              if (typeof callback === 'function') {
+                callback(null);
+              }
             }
+          });
+        } catch (error) {
+          console.error("Error executing reCAPTCHA:", error);
+          if (typeof callback === 'function') {
+            callback(null);
           }
-        };
-        
-        // Method to get reCAPTCHA response manually
-        window.getRecaptchaResponse = function() {
-          try {
-            return grecaptcha.getResponse();
-          } catch (error) {
-            console.error("Error getting reCAPTCHA response:", error);
+        }
+      };
+      
+      // Method to get reCAPTCHA response manually
+      window.getRecaptchaResponse = function() {
+        try {
+          if (typeof grecaptcha === 'undefined') {
             return null;
           }
-        };
-        
-        // Method to reset reCAPTCHA
-        window.resetRecaptcha = function() {
-          try {
-            grecaptcha.reset();
-            console.log("reCAPTCHA reset");
-          } catch (error) {
-            console.error("Error resetting reCAPTCHA:", error);
+          return grecaptcha.getResponse();
+        } catch (error) {
+          console.error("Error getting reCAPTCHA response:", error);
+          return null;
+        }
+      };
+      
+      // Method to reset reCAPTCHA
+      window.resetRecaptcha = function() {
+        try {
+          if (typeof grecaptcha === 'undefined') {
+            return;
           }
-        };
+          grecaptcha.reset();
+          console.log("reCAPTCHA reset");
+        } catch (error) {
+          console.error("Error resetting reCAPTCHA:", error);
+        }
       };
       
       // Add global callback for reCAPTCHA
