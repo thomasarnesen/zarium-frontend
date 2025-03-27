@@ -358,95 +358,80 @@
       });
     </script>
     
-    <!-- Google reCAPTCHA integration -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6LdsVgErAAAAACUjZb006U2ZHGDgaIbaAKAqTkKS"></script>
+    <!-- Robust reCAPTCHA integration -->
     <script>
-      // Definerer global funksjon for å utføre reCAPTCHA
-      window.executeRecaptcha = function(action) {
-        return new Promise((resolve, reject) => {
-          if (!window.grecaptcha) {
-            console.warn('reCAPTCHA not loaded yet');
-            resolve('recaptcha-unavailable');
-            return;
-          }
-          
-          try {
-            window.grecaptcha.ready(function() {
-              window.grecaptcha.execute('6LdsVgErAAAAACUjZb006U2ZHGDgaIbaAKAqTkKS', { action: action })
-                .then(resolve)
-                .catch(error => {
-                  console.error('reCAPTCHA execution error:', error);
-                  resolve('recaptcha-error');
-                });
-            });
-          } catch (error) {
-            console.error('reCAPTCHA ready error:', error);
-            resolve('recaptcha-error');
-          }
-        });
-      };
-    </script>
-  </head>
-  <body> 
-    <div id="root">
-      <!-- Initial loading state shown while React loads -->
-      <div class="initial-loader">
-        <div class="initial-loader-content">
-          <h1>Zarium</h1>
-          <div class="spinner"></div>
-          <p>Loading application...</p>
-        </div>
-      </div>
-    </div>
-    <noscript>
-      <div style="padding: 20px; text-align: center;">
-        <h1>Zarium AI Excel Generator</h1>
-        <p>Zarium is an AI-powered tool that helps you generate professional Excel spreadsheets.</p>
-        <p>Please enable JavaScript to use Zarium AI.</p>
-      </div>
-    </noscript>
-    <!-- Add cache busting parameter -->
-    <script type="module" src="/src/main.tsx?v=20240325_2"></script>
-    
-    <script>
-      // Sikkerhetsnett for innlasting
-      window.addEventListener('load', function() {
-        var loadTimeout = setTimeout(function() {
-          var root = document.getElementById('root');
-          var loaderElement = document.querySelector('.initial-loader');
-          
-          // Sjekk om appen fortsatt viser lasteskjermen etter 15 sekunder
-          if (root && loaderElement && root.contains(loaderElement)) {
-            loaderElement.innerHTML = `
-              <div style="max-width:500px;padding:20px;text-align:center;">
-                <h2 style="font-size:20px;color:#059669;margin-bottom:15px;">
-                  Dette tar lengre tid enn forventet
-                </h2>
-                <p style="margin-bottom:20px;color:#555;line-height:1.5;">
-                  Vi beklager forsinkelsen. Dette kan skyldes treg nettverksforbindelse.
-                </p>
-                <div>
-                  <button onclick="window.location.reload()" style="padding:10px 20px;background-color:#059669;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:10px;">
-                    Oppdater siden
-                  </button>
-                  <button onclick="localStorage.clear();sessionStorage.clear();document.cookie.split(';').forEach(c=>document.cookie=c.replace(/^ +/,'').replace(/=.*/,'=;expires='+new Date().toUTCString()+';path=/'));window.location.href='/';" style="padding:10px 20px;background-color:#f3f4f6;color:#333;border:1px solid #ddd;border-radius:4px;cursor:pointer;">
-                    Start på nytt
-                  </button>
-                </div>
-              </div>
-            `;
-          }
-        }, 15000); // 15 sekunder
-
-        // Rydd opp hvis appen laster som den skal
-        var observer = new MutationObserver(function(mutations) {
-          if (!document.querySelector('.initial-loader')) {
-            clearTimeout(loadTimeout);
-            observer.disconnect();
-          }
-        });
+      // Safely initialize reCAPTCHA to prevent React initialization issues
+      window.recaptchaInitialized = false;
+      window.recaptchaQueue = [];
+      
+      // Safe loader for reCAPTCHA
+      function initRecaptcha() {
+        // Create script element
+        var script = document.createElement('script');
+        script.src = 'https://www.google.com/recaptcha/api.js?render=6LdsVgErAAAAACUjZb006U2ZHGDgaIbaAKAqTkKS';
+        script.async = true;
+        script.defer = true;
         
-        observer.observe(document.body, { childList: true, subtree: true });
+        // Add onload handler
+        script.onload = function() {
+          window.recaptchaInitialized = true;
+          
+          // Define the safe execute function
+          window.executeRecaptcha = function(action) {
+            return new Promise((resolve) => {
+              if (!window.grecaptcha) {
+                console.warn('reCAPTCHA not loaded yet');
+                resolve('recaptcha-unavailable');
+                return;
+              }
+              
+              try {
+                window.grecaptcha.ready(function() {
+                  window.grecaptcha
+                    .execute('6LdsVgErAAAAACUjZb006U2ZHGDgaIbaAKAqTkKS', { action: action })
+                    .then(resolve)
+                    .catch(function(error) {
+                      console.error('reCAPTCHA execution error:', error);
+                      resolve('recaptcha-error');
+                    });
+                });
+              } catch (error) {
+                console.error('reCAPTCHA ready error:', error);
+                resolve('recaptcha-error');
+              }
+            });
+          };
+          
+          // Process any queued executions
+          window.recaptchaQueue.forEach(function(item) {
+            window.executeRecaptcha(item.action).then(item.resolve);
+          });
+          window.recaptchaQueue = [];
+        };
+        
+        // Add error handler
+        script.onerror = function() {
+          console.error('Failed to load reCAPTCHA script');
+          window.recaptchaInitialized = true; // Mark as initialized to prevent further attempts
+          window.executeRecaptcha = function() {
+            return Promise.resolve('recaptcha-error');
+          };
+          
+          // Resolve any queued promises
+          window.recaptchaQueue.forEach(function(item) {
+            item.resolve('recaptcha-error');
+          });
+          window.recaptchaQueue = [];
+        };
+        
+        // Add to document
+        document.head.appendChild(script);
+      }
+      
+      // Delay loading reCAPTCHA until after the main app has started
+      window.addEventListener('load', function() {
+        // Use setTimeout to ensure React has initialized first
+        setTimeout(initRecaptcha, 1000);
       });
     </script>
     
@@ -641,6 +626,69 @@
           
           return debugInfo;
         };
+      });
+    </script>
+  </head>
+  <body> 
+    <div id="root">
+      <!-- Initial loading state shown while React loads -->
+      <div class="initial-loader">
+        <div class="initial-loader-content">
+          <h1>Zarium</h1>
+          <div class="spinner"></div>
+          <p>Loading application...</p>
+        </div>
+      </div>
+    </div>
+    <noscript>
+      <div style="padding: 20px; text-align: center;">
+        <h1>Zarium AI Excel Generator</h1>
+        <p>Zarium is an AI-powered tool that helps you generate professional Excel spreadsheets.</p>
+        <p>Please enable JavaScript to use Zarium AI.</p>
+      </div>
+    </noscript>
+    <!-- Add cache busting parameter -->
+    <script type="module" src="/src/main.tsx?v=20240325_2"></script>
+    
+    <script>
+      // Sikkerhetsnett for innlasting
+      window.addEventListener('load', function() {
+        var loadTimeout = setTimeout(function() {
+          var root = document.getElementById('root');
+          var loaderElement = document.querySelector('.initial-loader');
+          
+          // Sjekk om appen fortsatt viser lasteskjermen etter 15 sekunder
+          if (root && loaderElement && root.contains(loaderElement)) {
+            loaderElement.innerHTML = `
+              <div style="max-width:500px;padding:20px;text-align:center;">
+                <h2 style="font-size:20px;color:#059669;margin-bottom:15px;">
+                  Dette tar lengre tid enn forventet
+                </h2>
+                <p style="margin-bottom:20px;color:#555;line-height:1.5;">
+                  Vi beklager forsinkelsen. Dette kan skyldes treg nettverksforbindelse.
+                </p>
+                <div>
+                  <button onclick="window.location.reload()" style="padding:10px 20px;background-color:#059669;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:10px;">
+                    Oppdater siden
+                  </button>
+                  <button onclick="localStorage.clear();sessionStorage.clear();document.cookie.split(';').forEach(c=>document.cookie=c.replace(/^ +/,'').replace(/=.*/,'=;expires='+new Date().toUTCString()+';path=/'));window.location.href='/';" style="padding:10px 20px;background-color:#f3f4f6;color:#333;border:1px solid #ddd;border-radius:4px;cursor:pointer;">
+                    Start på nytt
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+        }, 15000); // 15 sekunder
+
+        // Rydd opp hvis appen laster som den skal
+        var observer = new MutationObserver(function(mutations) {
+          if (!document.querySelector('.initial-loader')) {
+            clearTimeout(loadTimeout);
+            observer.disconnect();
+          }
+        });
+        
+        observer.observe(document.body, { childList: true, subtree: true });
       });
     </script>
   </body>

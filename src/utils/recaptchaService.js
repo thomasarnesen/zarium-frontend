@@ -1,4 +1,3 @@
-
 export const RecaptchaService = {
   /**
    * Executes reCAPTCHA verification and returns a token
@@ -6,34 +5,21 @@ export const RecaptchaService = {
    * @returns {Promise<string|null>} - reCAPTCHA token or null on error
    */
   executeRecaptcha: async (action = 'login') => {
-    // Check if reCAPTCHA is available
-    if (!window.grecaptcha) {
-      console.error('reCAPTCHA is not loaded');
-      return null;
-    }
-
-    // Use the global executeRecaptcha function if available
+    // Use the global function if it exists
     if (typeof window.executeRecaptcha === 'function') {
       return window.executeRecaptcha(action);
     }
-
-    // Fallback to standard grecaptcha API
-    try {
-      return new Promise((resolve, reject) => {
-        window.grecaptcha.ready(() => {
-          window.grecaptcha
-            .execute('6LdsVgErAAAAACUjZb006U2ZHGDgaIbaAKAqTkKS', { action })
-            .then(resolve)
-            .catch(error => {
-              console.error('reCAPTCHA execution error:', error);
-              reject(error);
-            });
-        });
+    
+    // Queue the request if reCAPTCHA is still loading
+    if (window.recaptchaQueue) {
+      return new Promise((resolve) => {
+        window.recaptchaQueue.push({ action, resolve });
       });
-    } catch (error) {
-      console.error('reCAPTCHA error:', error);
-      return null;
     }
+    
+    // Return a fallback value if reCAPTCHA isn't available
+    console.warn('reCAPTCHA not available');
+    return 'recaptcha-unavailable';
   },
 
   /**
@@ -58,9 +44,15 @@ export const RecaptchaService = {
    * Verifies a reCAPTCHA token with the server
    * 
    * @param {string} token - reCAPTCHA token to verify
-   * @returns {Promise<{success: boolean, score?: number, error?: string}>}
+   * @returns {Promise<{success: boolean, score?: number, error?: string, warning?: string}>}
    */
   verifyToken: async (token) => {
+    // If token indicates reCAPTCHA wasn't available, bypass verification
+    if (token === 'recaptcha-unavailable' || token === 'recaptcha-error') {
+      console.warn(`Bypassing server verification due to token: ${token}`);
+      return { success: true, warning: token };
+    }
+    
     try {
       const response = await fetch('/api/auth/verify-recaptcha', {
         method: 'POST',
@@ -73,7 +65,8 @@ export const RecaptchaService = {
       return await response.json();
     } catch (error) {
       console.error('Error verifying token:', error);
-      return { success: false, error: 'Network error' };
+      // Never block users if verification fails
+      return { success: true, error: 'Network error', warning: 'Verification failed but proceeding' };
     }
   }
 };
