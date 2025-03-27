@@ -357,6 +357,35 @@
         }
       });
     </script>
+    
+    <!-- Google reCAPTCHA integration -->
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdsVgErAAAAACUjZb006U2ZHGDgaIbaAKAqTkKS"></script>
+    <script>
+      // Definerer global funksjon for å utføre reCAPTCHA
+      window.executeRecaptcha = function(action) {
+        return new Promise((resolve, reject) => {
+          if (!window.grecaptcha) {
+            console.warn('reCAPTCHA not loaded yet');
+            resolve('recaptcha-unavailable');
+            return;
+          }
+          
+          try {
+            window.grecaptcha.ready(function() {
+              window.grecaptcha.execute('6LdsVgErAAAAACUjZb006U2ZHGDgaIbaAKAqTkKS', { action: action })
+                .then(resolve)
+                .catch(error => {
+                  console.error('reCAPTCHA execution error:', error);
+                  resolve('recaptcha-error');
+                });
+            });
+          } catch (error) {
+            console.error('reCAPTCHA ready error:', error);
+            resolve('recaptcha-error');
+          }
+        });
+      };
+    </script>
   </head>
   <body> 
     <div id="root">

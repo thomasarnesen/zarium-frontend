@@ -3,38 +3,77 @@ import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { Sun, Moon, FileSpreadsheet } from 'lucide-react';
 import UserMenu from './UserMenu';
+import { useState } from 'react';
+import  RecaptchaService  from '../utils/recaptchaService';
+import { toast } from 'react-hot-toast'; // Make sure you have this package installed
 
 export default function Navbar() {
   const { user } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
-
-  // Direct to Azure CIAM authentication
-  const handleDirectAuth = () => {
-    const redirectUrl = `${window.location.origin}/auth/callback`;
-    
-    // Store the current URL for potential redirect after login
-    sessionStorage.setItem('authRedirectUrl', window.location.pathname);
-    
-    // Generate nonce for security
-    const nonce = Date.now().toString();
-    const state = Math.random().toString(36).substring(2, 15);
-    
-    // Azure CIAM authorization URL
-    const authUrl = `https://zariumai.ciamlogin.com/zariumai.onmicrosoft.com/oauth2/v2.0/authorize`;
-    
-    const params = new URLSearchParams({
-      client_id: 'a0432355-cca6-450f-b415-a4c3c4e5d55b',
-      response_type: 'id_token',
-      redirect_uri: redirectUrl,
-      scope: 'openid profile email',
-      response_mode: 'fragment',
-      nonce: nonce,
-      state: state,
-      prompt: 'login'
-    });
-    
-    // Redirect to Azure CIAM login page
-    window.location.href = `${authUrl}?${params.toString()}`;
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  
+  // Updated to use reCAPTCHA before redirecting to Azure
+  const handleDirectAuth = async () => {
+    try {
+      setIsAuthLoading(true);
+      
+      // Execute reCAPTCHA verification
+      const recaptchaToken = await RecaptchaService.safeExecuteRecaptcha('login_navbar');
+      
+      // Special handling for unavailable reCAPTCHA
+      if (recaptchaToken === 'recaptcha-unavailable' || recaptchaToken === 'recaptcha-error') {
+        console.warn(`reCAPTCHA issue: ${recaptchaToken}, proceeding with auth anyway`);
+        // You could choose to block auth here, but we'll allow it with a warning
+      } else {
+        // Verify the token with your backend
+        const verifyResponse = await RecaptchaService.verifyToken(recaptchaToken);
+        
+        if (!verifyResponse.success) {
+          toast.error('Security verification failed. Please try again.');
+          setIsAuthLoading(false);
+          return;
+        }
+        
+        // If score is very low, you might want to block
+        if (verifyResponse.score && verifyResponse.score < 0.2) {
+          toast.error('Suspicious activity detected. Please try again later.');
+          setIsAuthLoading(false);
+          return;
+        }
+      }
+      
+      // Proceed with external authentication redirect
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      
+      // Store the current path for potential redirect after login
+      sessionStorage.setItem('authRedirectUrl', window.location.pathname);
+      
+      // Generate nonce for security
+      const nonce = Date.now().toString();
+      const state = Math.random().toString(36).substring(2, 15);
+      
+      // Azure CIAM authorization URL
+      const authUrl = `https://zariumai.ciamlogin.com/zariumai.onmicrosoft.com/oauth2/v2.0/authorize`;
+      
+      const params = new URLSearchParams({
+        client_id: 'a0432355-cca6-450f-b415-a4c3c4e5d55b',
+        response_type: 'id_token',
+        redirect_uri: redirectUrl,
+        scope: 'openid profile email',
+        response_mode: 'fragment',
+        nonce: nonce,
+        state: state,
+        prompt: 'login'
+      });
+      
+      // Redirect to Azure CIAM login page
+      window.location.href = `${authUrl}?${params.toString()}`;
+      
+    } catch (error) {
+      console.error('Authentication error:', error);
+      toast.error('Could not start login process. Please try again.');
+      setIsAuthLoading(false);
+    }
   };
 
   return (
@@ -74,9 +113,10 @@ export default function Navbar() {
                 {/* For non-authenticated users, just show "Get Started" button */}
                 <button
                   onClick={handleDirectAuth}
-                  className="text-base bg-emerald-800 dark:bg-emerald-700 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-900 dark:hover:bg-emerald-600 shadow-sm hover:shadow-md transition-all"
+                  disabled={isAuthLoading}
+                  className="text-base bg-emerald-800 dark:bg-emerald-700 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-900 dark:hover:bg-emerald-600 shadow-sm hover:shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  Sign In
+                  {isAuthLoading ? 'Verifying...' : 'Sign In'}
                 </button>
               </>
             )}

@@ -3,23 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { FileSpreadsheet, Sparkles, Zap, Shield, CheckCircle, HelpCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Helmet } from 'react-helmet-async';
+import  RecaptchaService  from '../utils/recaptchaService';
+import { toast } from 'react-hot-toast'; 
 
-// TypeScript declaration for reCAPTCHA
-declare global {
-  interface Window {
-    executeRecaptcha?: (callback: (token: string) => void) => void;
-  }
-}
 
+const [error, setError] = useState<string | null>(null);
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isLoggedIn = !!user?.token;
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // Handle reCAPTCHA verification and authentication
-  const handleGetStarted = () => {
+  // Updated handleGetStarted function with Azure CIAM authentication
+  
+  const handleGetStarted = async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -30,43 +27,41 @@ const Home = () => {
         return;
       }
       
-      // Execute reCAPTCHA verification before proceeding with auth
-      if (window.executeRecaptcha) {
-        window.executeRecaptcha((token) => {
-          // Call function to proceed with auth after reCAPTCHA verification
-          proceedWithAuth(token);
-        });
+      // Execute reCAPTCHA verification
+      const recaptchaToken = await RecaptchaService.safeExecuteRecaptcha('login_homepage');
+      
+      // Special handling for unavailable reCAPTCHA
+      if (recaptchaToken === 'recaptcha-unavailable' || recaptchaToken === 'recaptcha-error') {
+        console.warn(`reCAPTCHA issue: ${recaptchaToken}, proceeding with auth anyway`);
       } else {
-        // Fallback if reCAPTCHA isn't available
-        console.warn("reCAPTCHA not available, proceeding without verification");
-        proceedWithAuth(null);
+        // Verify the token with the server
+        const verifyResponse = await RecaptchaService.verifyToken(recaptchaToken);
+        
+        if (!verifyResponse.success) {
+          setError('Security verification failed. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+        
+        // If score is very low, you might want to block
+        if (verifyResponse.score && verifyResponse.score < 0.2) {
+          setError('Suspicious activity detected. Please try again later.');
+          setIsLoading(false);
+          return;
+        }
       }
+      
+      // Proceed with authentication
+      proceedWithAuth();
     } catch (error) {
       console.error('Navigation error:', error);
       setError('An error occurred. Please try again.');
       setIsLoading(false);
     }
   };
-
-  // New function to handle authentication after reCAPTCHA verification
-  const proceedWithAuth = async (recaptchaToken: string | null) => {
+  
+  const proceedWithAuth = async () => {
     try {
-      // Verify the reCAPTCHA token with your backend
-      if (recaptchaToken) {
-        const response = await fetch(`${window.location.origin}/api/auth/verify-recaptcha`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ recaptchaToken }),
-        });
-
-        // If verification fails, stop the auth process
-        if (!response.ok) {
-          throw new Error('Human verification failed. Please try again.');
-        }
-      }
-
       // Use redirect URL that matches what's configured in Azure portal
       const redirectUri = `${window.location.origin}/auth/callback`;
       
@@ -100,8 +95,7 @@ const Home = () => {
       setError(error instanceof Error ? error.message : 'Authentication failed. Please try again.');
       setIsLoading(false);
     }
-  };
-
+  };  
   return (
     <>
       <Helmet>
@@ -127,11 +121,6 @@ const Home = () => {
                 Transform your ideas into professional Excel spreadsheets instantly.
                 Just describe what you need, and watch the magic happen.
               </p>
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 rounded-lg max-w-lg mx-auto">
-                  {error}
-                </div>
-              )}
               <div className="flex justify-center">
                 <button
                   onClick={handleGetStarted}

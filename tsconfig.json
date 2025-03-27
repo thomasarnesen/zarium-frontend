@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "strict": true,
+    "allowJs": true,
     "forceConsistentCasingInFileNames": true
   },
   "files": [],
@@ -9,3 +10,4 @@
     { "path": "./tsconfig.node.json" }
   ]
 }
+// tsconfig.json
