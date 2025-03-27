@@ -63,52 +63,51 @@ export const ModelArmorService = {
    */
   verifyInputSafety: async (input: string, action: string = 'submit_prompt'): Promise<InputSafetyResult> => {
     try {
-      // Først kjør klientside pre-sjekk (raskest)
-      const preCheck = ModelArmorService.preCheckInput(input);
-      if (!preCheck.passed) {
-        return {
-          success: false,
-          is_safe: false,
-          risk_score: 0.9,
-          error: preCheck.reason || 'Input failed pre-check'
-        };
-      }
-      
-      // Utfør reCAPTCHA (nest raskest)
+      // Get reCAPTCHA token
       const recaptchaToken = await RecaptchaService.safeExecuteRecaptcha(action);
       
-      // Send til server for grundigere analyse
+      // Send request to backend
       const response = await api.fetch('/api/verify-input-safety', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          input,
-          recaptchaToken,
-          action,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input, recaptchaToken, action }),
       });
       
+      // Check if response is ok
       if (!response.ok) {
-        const errorData = await response.json();
+        try {
+          // Try to parse error message if possible
+          const errorData = await response.json();
+          return {
+            success: false,
+            is_safe: false,
+            risk_score: 0.8,
+            error: errorData.error || 'Security check failed'
+          };
+        } catch (parseError) {
+          // Handle case where response isn't valid JSON
+          console.error('Error parsing API response:', parseError);
+          return {
+            success: false,
+            is_safe: false,
+            risk_score: 0.8,
+            error: `API error: ${response.status} ${response.statusText}`
+          };
+        }
+      }
+      
+      // Parse successful response
+      try {
+        return await response.json();
+      } catch (parseError) {
+        console.error('Error parsing successful response:', parseError);
         return {
           success: false,
           is_safe: false,
-          risk_score: 0.8,
-          error: errorData.error || 'Security check failed'
+          risk_score: 0.7,
+          error: 'Invalid response format from security service'
         };
       }
-      
-      const result = await response.json();
-      
-      // Legg til reCAPTCHA token i resultatet for gjenbruk
-      if (result.success && result.is_safe) {
-        if (!result.details) result.details = {};
-        result.details.recaptchaToken = recaptchaToken;
-      }
-      
-      return result;
     } catch (error) {
       console.error('Input safety verification error:', error);
       return {
