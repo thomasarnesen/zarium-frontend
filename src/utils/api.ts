@@ -108,8 +108,6 @@ const api = {
       return null;
     }
   },
-  
-  // Special method for handling registration flow
   createRegistrationCheckout: async (
     email: string,
     password: string,
@@ -117,32 +115,49 @@ const api = {
     priceId: string
   ): Promise<{ success: boolean; url?: string; error?: string }> => {
     try {
+      console.log(`Creating checkout for plan: ${planType}, priceId: ${priceId}`);
+      
       // Use AbortController for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
       
+      // Get auth token if user is logged in
+      const token = api.getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      };
+      
+      // Add auth token if available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log("Added auth token to checkout request");
+      }
+      
+      const requestData = {
+        priceId: priceId,
+        planName: planType,
+        pendingUserEmail: email,
+        pendingUserPassword: password,
+        successUrl: `${window.location.origin}/dashboard?success=true&email=${encodeURIComponent(email)}`,
+        cancelUrl: `${window.location.origin}/pricing?success=false`
+      };
+      
+      console.log("Checkout request data:", JSON.stringify(requestData));
+      
       const response = await fetch(`${config.apiUrl}/api/create-checkout-session`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
-        },
+        headers: headers,
         credentials: 'include',
-        body: JSON.stringify({
-          priceId: priceId,
-          planName: planType,
-          pendingUserEmail: email,
-          pendingUserPassword: password,
-          successUrl: `${window.location.origin}/dashboard?success=true&email=${encodeURIComponent(email)}`,
-          cancelUrl: `${window.location.origin}/pricing?success=false`
-        }),
+        body: JSON.stringify(requestData),
         signal: controller.signal,
         cache: 'no-store'
       });
       
       clearTimeout(timeoutId); // Clear timeout
-
+      console.log("Checkout response status:", response.status);
+  
       if (!response.ok) {
         let errorMessage;
         try {
@@ -157,8 +172,9 @@ const api = {
           error: errorMessage
         };
       }
-
+  
       const data = await response.json();
+      console.log("Checkout response data received");
       
       if (!data.url) {
         return {
@@ -167,6 +183,7 @@ const api = {
         };
       }
       
+      console.log("Redirecting to Stripe URL:", data.url.substring(0, 50) + "...");
       return {
         success: true,
         url: data.url
@@ -188,6 +205,8 @@ const api = {
       };
     }
   },
+  
+  // Special method for handling registration flow
   
   uploadFile: async (endpoint: string, file: File, additionalData?: Record<string, any>) => {
     // Add /api prefix to all endpoints

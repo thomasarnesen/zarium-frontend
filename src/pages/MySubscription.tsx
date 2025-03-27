@@ -168,55 +168,104 @@ export function MySubscription() {
   
   const currentPlanRank = PLAN_RANKS[currentPlan || 'Basic'];
 
-  const handleBuyTokens = async () => {
-    try {
-      const response = await api.fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`,
-        },
-        body: JSON.stringify({
-          isTokenReload: true,
-          successUrl: `${window.location.origin}/tokens?success=true&session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${window.location.origin}/tokens?success=false`
-        }),
-      });
-  
-      if (!response.ok) {
-        throw new Error('Failed to create checkout session');
-      }
-  
-      const { url } = await response.json();
-      if (url) {
-        window.location.href = url;
-      } else {
-        console.error('No URL returned from checkout session');
-      }
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-    }
-  };
 
-  const handleUpgrade = async (plan) => {
-    try {
-      const response = await api.fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-        },
-        body: JSON.stringify({
-          priceId: plan.stripePriceId,
-          planName: plan.name,
-        }),
-      });
+  // Improved handleUpgrade function with detailed logging
+const handleUpgrade = async (plan) => {
+  try {
+    console.log("Starting plan upgrade process for plan:", plan.name);
+    console.log("Price ID:", plan.stripePriceId);
+    console.log("User token available:", !!user?.token);
+    
+    // Create request data with all necessary information
+    const requestData = {
+      priceId: plan.stripePriceId,
+      planName: plan.name,
+      successUrl: `${window.location.origin}/dashboard?payment_success=true`,
+      cancelUrl: `${window.location.origin}/dashboard?payment_cancelled=true`
+    };
+    
+    console.log("Sending request data:", JSON.stringify(requestData));
+    
+    // Make the API request with proper headers
+    const response = await api.fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user?.token}`
+      },
+      body: JSON.stringify(requestData),
+    });
 
-      const { url } = await response.json();
-      window.location.href = url;
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
+    console.log("Response status:", response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Error response:", errorText);
+      throw new Error(`Failed to create checkout session: ${response.status} ${errorText}`);
     }
-  };
+
+    const data = await response.json();
+    console.log("Response data:", data);
+    
+    if (data.url) {
+      console.log("Redirecting to Stripe URL:", data.url);
+      window.location.href = data.url;
+    } else {
+      console.error("No URL in response data");
+      throw new Error("No redirect URL received from server");
+    }
+  } catch (error) {
+    console.error('Error creating checkout session:', error);
+    // You could add toast notifications here to inform the user
+  }
+};
+
+// Similarly enhance handleBuyTokens function
+const handleBuyTokens = async () => {
+  try {
+    console.log("Starting token purchase process");
+    console.log("User token available:", !!user?.token);
+    
+    const requestData = {
+      isTokenReload: true,
+      successUrl: `${window.location.origin}/tokens?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${window.location.origin}/tokens?success=false`
+    };
+    
+    console.log("Sending token request data:", JSON.stringify(requestData));
+    
+    const response = await api.fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user?.token}`
+      },
+      body: JSON.stringify(requestData),
+    });
+
+    console.log("Token purchase response status:", response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Token purchase error response:", errorText);
+      throw new Error(`Failed to create token checkout: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log("Token purchase response data:", data);
+    
+    if (data.url) {
+      console.log("Redirecting to Stripe for token purchase:", data.url);
+      window.location.href = data.url;
+    } else {
+      console.error("No URL in token purchase response");
+      throw new Error("No redirect URL received for token purchase");
+    }
+  } catch (error) {
+    console.error('Error creating token purchase session:', error);
+    // You could add toast notifications here
+  }
+};
 
   const handleCancelSubscription = async () => {
     setCancelLoading(true);
