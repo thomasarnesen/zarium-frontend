@@ -1,6 +1,7 @@
-import api from './api';
+
 // @ts-ignore
 import { RecaptchaService } from './recaptchaService';
+import  api  from './api';
 
 interface InputSafetyResult {
   success: boolean;
@@ -68,7 +69,8 @@ verifyInputSafety: async (input: string, action: string = 'submit_prompt'): Prom
       const recaptchaToken = await RecaptchaService.safeExecuteRecaptcha(action);
       
       // Her er API-kallet med relativ URL
-      const response = await fetch('/api/verify-input-safety', {
+
+      const response = await api.fetch('/api/verify-input-safety', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
