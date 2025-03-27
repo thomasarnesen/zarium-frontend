@@ -13,6 +13,12 @@
       "serve": "/index.html"
     },
     {
+      "route": "/api/verify-input-safety",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/verify-input-safety"
+    },
+    {
       "route": "/api/auth/verify-recaptcha",
       "methods": ["POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
