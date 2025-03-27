@@ -24,14 +24,58 @@ import AuthCallback from './components/AuthCallback';
 import LogoutCallback from './components/LogoutCallback'; 
 import WelcomePage from './pages/WelcomePage';
 import CompleteProfile from './pages/CompleteProfile';
-
+import toast from 'react-hot-toast';
 // Token refresh interval (10 minutes)
 const TOKEN_REFRESH_INTERVAL = 10 * 60 * 1000;
 
 // Component to handle post-payment actions
 function PostPaymentHandler() {
-  // Post-payment handling logic goes here 
-  // (unchanged from your original code)
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { completeRegistrationAfterPayment, refreshUserData } = useAuthStore();
+  
+  useEffect(() => {
+    const handleSuccessfulPayment = async () => {
+      const searchParams = new URLSearchParams(location.search);
+      const success = searchParams.get('success') === 'true';
+      const email = searchParams.get('email');
+      
+      if (success && email) {
+        // Try to complete the registration
+        const result = await completeRegistrationAfterPayment(email);
+        
+        if (result) {
+          // Registration completed successfully
+          toast.success('Your account has been created and payment processed successfully!');
+          // Refresh user data to get latest tokens, etc.
+          await refreshUserData();
+        } else {
+          // The user was created by the webhook, but we couldn't log them in automatically
+          toast.success('Payment successful! Please log in with your credentials.');
+          // Redirect to login
+          navigate('/login');
+          return;
+        }
+      } else if (success) {
+        // Payment was successful for existing user (not a new registration)
+        toast.success('Payment processed successfully!');
+        // Refresh user data to get latest tokens, etc.
+        await refreshUserData();
+      }
+      
+      // Clean up URL parameters
+      if (success) {
+        // Remove query params but keep on dashboard
+        navigate('/dashboard', { replace: true });
+      }
+    };
+    
+    // Check if we're coming back from a payment
+    if (location.search.includes('success=')) {
+      handleSuccessfulPayment();
+    }
+  }, [location, completeRegistrationAfterPayment, navigate, refreshUserData]);
+  
   return null;
 }
 
@@ -263,3 +307,9 @@ declare global {
 }
 
 export default App;
+
+
+
+
+
+
