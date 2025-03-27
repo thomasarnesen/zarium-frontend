@@ -110,14 +110,27 @@ export function MySubscription() {
         
         if (response.ok) {
           const data = await response.json();
+          console.log("Verify token response:", data);  // Legg til logging for debugging
+          
           setCurrentPlan(data.planType);
-          setOriginalPlan(data.planType); 
-          setSubscriptionStatus(data.subscriptionStatus || 'none');
+          setOriginalPlan(data.planType);
+          
+          // Håndter subscription status med fallback
+          const status = data.subscriptionStatus || (data.planType === 'Demo' ? 'none' : 'active');
+          setSubscriptionStatus(status);
+          
+          // Håndter plan endring
           setPendingPlanChange(data.pendingPlanChange || null);
           setPendingPlanDate(data.pendingPlanChangeDate || null);
+          
+          // Håndter sluttdato
           if (data.subscriptionEndDate) {
             setSubscriptionEndDate(data.subscriptionEndDate);
           }
+          
+          // Logg subscription info for debugging
+          console.log("Subscription status:", status);
+          console.log("Subscription end date:", data.subscriptionEndDate);
         }
       } catch (error) {
         console.error('Error fetching subscription status:', error);
@@ -187,7 +200,7 @@ export function MySubscription() {
 
   const handleUpgrade = async (plan) => {
     try {
-      const response = await api.fetch('/create-checkout-session', {
+      const response = await api.fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${user.token}`,
@@ -262,6 +275,23 @@ export function MySubscription() {
       setSubscriptionStatus('active');
       setShowReactivateConfirm(false);
       
+      // Refresh token info after reactivation
+      const fetchTokenInfo = async () => {
+        try {
+          const response = await api.fetch('/user/tokens', {
+            headers: {
+              'Authorization': `Bearer ${user?.token}`,
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setTokenInfo(data);
+          }
+        } catch (error) {
+          console.error('Error fetching token info:', error);
+        }
+      };
       fetchTokenInfo();
     } catch (error) {
       console.error('Error reactivating subscription:', error);
@@ -493,7 +523,7 @@ export function MySubscription() {
                     Ending Soon
                   </div>
                 </div>
-              ) : subscriptionStatus === 'none' ? (
+              ) : currentPlan === 'Demo' || !currentPlan ? (
                 <div className="flex items-center justify-between">
                   <p className="text-gray-700 dark:text-gray-300">
                     No active subscription
