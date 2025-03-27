@@ -14,15 +14,29 @@ interface Plan {
   features: string[];
 }
 
+interface SubscriptionProps {
+  user: {
+    token: string;
+    subscription?: {
+      plan_type: string;
+      status: string;
+      end_date?: string;
+    };
+  };
+}
 
-const PLAN_RANKS: { [key in 'Basic' | 'Plus' | 'Pro' | 'Demo']: number } = {
+
+const PLAN_RANKS = {
   'Basic': 0,
   'Plus': 1,
-  'Pro': 2,
-  'Demo': -1
+  'Pro': 2
 };
 
-// Removing the unused PLAN_TOKENS constant
+const PLAN_TOKENS = {
+  'Basic': 100000,
+  'Plus': 300000,
+  'Pro': 1000000
+};
 
 const PLANS = [
   {
@@ -96,27 +110,14 @@ export function MySubscription() {
         
         if (response.ok) {
           const data = await response.json();
-          console.log("Verify token response:", data);  // Legg til logging for debugging
-          
           setCurrentPlan(data.planType);
-          setOriginalPlan(data.planType);
-          
-          // Håndter subscription status med fallback
-          const status = data.subscriptionStatus || (data.planType === 'Demo' ? 'none' : 'active');
-          setSubscriptionStatus(status);
-          
-          // Håndter plan endring
+          setOriginalPlan(data.planType); 
+          setSubscriptionStatus(data.subscriptionStatus || 'none');
           setPendingPlanChange(data.pendingPlanChange || null);
           setPendingPlanDate(data.pendingPlanChangeDate || null);
-          
-          // Håndter sluttdato
           if (data.subscriptionEndDate) {
             setSubscriptionEndDate(data.subscriptionEndDate);
           }
-          
-          // Logg subscription info for debugging
-          console.log("Subscription status:", status);
-          console.log("Subscription end date:", data.subscriptionEndDate);
         }
       } catch (error) {
         console.error('Error fetching subscription status:', error);
@@ -150,11 +151,11 @@ export function MySubscription() {
       fetchTokenInfo();
     }
   }, [user]);
-  const currentPlanRank = PLAN_RANKS[(currentPlan as keyof typeof PLAN_RANKS) || 'Basic'];
+
+  
+  const currentPlanRank = PLAN_RANKS[currentPlan || 'Basic'];
 
   const handleBuyTokens = async () => {
-    if (!user || !user.token) return;
-    
     try {
       const response = await api.fetch('/api/create-checkout-session', {
         method: 'POST',
@@ -184,18 +185,12 @@ export function MySubscription() {
     }
   };
 
-  interface CheckoutSessionResponse {
-    url: string;
-  }
-
-  const handleUpgrade = async (plan: Plan): Promise<void> => {
-    if (!user || !user.token) return;
-    
+  const handleUpgrade = async (plan) => {
     try {
-      const response = await api.fetch('/api/create-checkout-session', {
+      const response = await api.fetch('/create-checkout-session', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user?.token}`,
+          'Authorization': `Bearer ${user.token}`,
         },
         body: JSON.stringify({
           priceId: plan.stripePriceId,
@@ -203,7 +198,7 @@ export function MySubscription() {
         }),
       });
 
-      const { url } = await response.json() as CheckoutSessionResponse;
+      const { url } = await response.json();
       window.location.href = url;
     } catch (error) {
       console.error('Error creating checkout session:', error);
@@ -214,8 +209,6 @@ export function MySubscription() {
     setCancelLoading(true);
     setCancelError(null);
 
-    if (!user || !user.token) return;
-    
     try {
       const response = await api.fetch('/cancel-subscription', {
         method: 'POST',
@@ -252,8 +245,6 @@ export function MySubscription() {
   };
 
   const handleReactivate = async () => {
-    if (!user || !user.token) return;
-    
     try {
       const response = await api.fetch('/reactivate-subscription', {
         method: 'POST',
@@ -267,27 +258,10 @@ export function MySubscription() {
         throw new Error('Failed to reactivate subscription');
       }
 
-      await response.json(); // Parse the response but don't store it
+      const data = await response.json();
       setSubscriptionStatus('active');
       setShowReactivateConfirm(false);
       
-      // Refresh token info after reactivation
-      const fetchTokenInfo = async () => {
-        try {
-          const response = await api.fetch('/user/tokens', {
-            headers: {
-              'Authorization': `Bearer ${user?.token}`,
-            }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            setTokenInfo(data);
-          }
-        } catch (error) {
-          console.error('Error fetching token info:', error);
-        }
-      };
       fetchTokenInfo();
     } catch (error) {
       console.error('Error reactivating subscription:', error);
@@ -310,7 +284,7 @@ export function MySubscription() {
       const response = await api.fetch('/schedule-plan-change', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user?.token}`,
+          'Authorization': `Bearer ${user.token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -322,7 +296,7 @@ export function MySubscription() {
         throw new Error('Failed to schedule plan change');
       }
 
-      await response.json(); // Parse the response but don't store it
+      const data = await response.json();
       setPendingPlanChange(targetPlan);
       setShowDowngradeConfirm(false);
     } catch (error) {
@@ -335,7 +309,7 @@ export function MySubscription() {
       const response = await api.fetch('/cancel-plan-change', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user?.token}`,
+          'Authorization': `Bearer ${user.token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -398,7 +372,7 @@ export function MySubscription() {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-items-center">  
           {PLANS.map((plan) => {
-            const planRank = PLAN_RANKS[plan.name as keyof typeof PLAN_RANKS] || 0;
+            const planRank = PLAN_RANKS[plan.name];
             const isCurrentPlan = plan.name === currentPlan;
             const canUpgrade = plan.name !== 'Demo' && planRank > currentPlanRank;
             const canDowngrade = plan.name !== 'Demo' && planRank < currentPlanRank && subscriptionStatus === 'active';
@@ -519,7 +493,7 @@ export function MySubscription() {
                     Ending Soon
                   </div>
                 </div>
-              ) : currentPlan === 'Demo' || !currentPlan ? (
+              ) : subscriptionStatus === 'none' ? (
                 <div className="flex items-center justify-between">
                   <p className="text-gray-700 dark:text-gray-300">
                     No active subscription
