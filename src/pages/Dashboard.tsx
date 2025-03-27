@@ -6,6 +6,12 @@ import { useAuthStore } from '../store/authStore';
 import { config } from '../config';
 import { Switch } from '../components/ui/switch';
 import api from '../utils/api';
+// @ts-ignore
+import { ModelArmorService } from '../utils/ModelArmorService';
+// @ts-ignore
+import { toast } from 'react-hot-toast';
+// @ts-ignore
+
 
 // Define types for global window
 declare global {
@@ -315,83 +321,106 @@ export default function Dashboard() {
     }
   };
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+
+// Inne i Dashboard-komponentet
+const handleGenerate = async () => {
+  if (!prompt.trim()) return;
+  
+  setFirstMessageSent(true);
+  setIsGenerating(true);
+  setError(null);
+  setFormatting(null);
+
+  try {
+    // STEG 1: Verifiser input sikkerhet med Model Armor
+    const safetyCheck = await ModelArmorService.verifyInputSafety(prompt, 'generate_excel');
     
-    setFirstMessageSent(true);
-    setIsGenerating(true);
-    setError(null);
-    setFormatting(null);
-  
-    try {
-      // Refresh token before generation
-      const tokenResponse = await api.fetch('/refresh-token', {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (!tokenResponse.ok) {
-        throw new Error('Failed to refresh session');
-      }
-
-      const endpoint = selectedFiles.length > 0 ? '/generate-macro-with-file' : '/generate-macro';
-      
-      const requestOptions: RequestInit = {
-        method: 'POST',
-        credentials: 'include'
-      };
-
-      if (selectedFiles.length > 0) {
-        const formData = new FormData();
-        selectedFiles.forEach((fileInfo, index) => {
-          formData.append(`file${index}`, fileInfo.file);
-        });
-        formData.append('prompt', prompt);
-        formData.append('format', 'xlsx');
-        formData.append('fileCount', selectedFiles.length.toString());
-        formData.append('enhancedMode', enhancedMode.toString());
-        requestOptions.body = formData;
-      } else {
-        requestOptions.headers = {
-          'Content-Type': 'application/json',
-        };
-        requestOptions.body = JSON.stringify({
-          prompt,
-          format: 'xlsx',
-          enhancedMode
-        });
-      }
-
-      const response = await api.fetch(endpoint, requestOptions);
-      const result = await response.json();
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      if (result.previewImage) {
-        setPreviewImage(result.previewImage);
-      }
-      
-      if (result.formatting) {
-        setFormatting(result.formatting);
-      }
-
-      // Refresh user data after successful generation
-      await refreshUserData();
-
-    } catch (error: any) {
-      console.error('Generation error:', error);
-      setError(error.message || 'Failed to generate document. Please try again.');
-      setIsGenerating(false);
-      setGenerationStatus('');
-      setSessionId(null);
+    if (!safetyCheck.success || !safetyCheck.is_safe) {
+      throw new Error(safetyCheck.error || 'Din forespørsel ble blokkert av sikkerhetssystemet');
     }
-  };
+    
+    // STEG 2: Fortsett med normal prosessering
+    const tokenResponse = await api.fetch('/api/refresh-token', {
+      method: 'POST',
+      credentials: 'include'
+    });
 
-  // Add function to fetch recent spreadsheets
+    if (!tokenResponse.ok) {
+      throw new Error('Failed to refresh session');
+    }
 
-  
+    const endpoint = selectedFiles.length > 0 ? '/api/generate-macro-with-file' : '/api/generate-macro';
+    
+    const requestOptions: RequestInit = {
+      method: 'POST',
+      credentials: 'include'
+    };
+
+    if (selectedFiles.length > 0) {
+      const formData = new FormData();
+      selectedFiles.forEach((fileInfo, index) => {
+        formData.append(`file${index}`, fileInfo.file);
+      });
+      formData.append('prompt', prompt);
+      formData.append('format', 'xlsx');
+      formData.append('fileCount', selectedFiles.length.toString());
+      formData.append('enhancedMode', enhancedMode.toString());
+      // Legg til reCAPTCHA token fra sikkerhetssjekken
+      if (safetyCheck.details?.recaptchaToken) {
+        formData.append('recaptchaToken', safetyCheck.details.recaptchaToken);
+      }
+      requestOptions.body = formData;
+    } else {
+      requestOptions.headers = {
+        'Content-Type': 'application/json',
+      };
+      requestOptions.body = JSON.stringify({
+        prompt,
+        format: 'xlsx',
+        enhancedMode,
+        // Legg til reCAPTCHA token her også
+        recaptchaToken: safetyCheck.details?.recaptchaToken
+      });
+    }
+
+    const response = await api.fetch(endpoint, requestOptions);
+    const result = await response.json();
+    
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    if (result.previewImage) {
+      setPreviewImage(result.previewImage);
+    }
+    
+    if (result.formatting) {
+      setFormatting(result.formatting);
+    }
+
+    // Refresh user data after successful generation
+    await refreshUserData();
+
+  } catch (error: any) {
+    console.error('Generation error:', error);
+    
+    // Forbedret feilhåndtering
+    if (error.message?.includes('security') || 
+        error.message?.includes('blocked') || 
+        error.message?.includes('harmful')) {
+      setError('Din forespørsel inneholder innhold som kan være upassende. Vennligst endre teksten og prøv igjen.');
+    } else {
+      setError(error.message || 'Failed to generate document. Please try again.');
+    }
+    
+    setIsGenerating(false);
+    setGenerationStatus('');
+    setSessionId(null);
+  }
+};
+
+// Inne i Dashboard-komponentet
+
 
 
   return (

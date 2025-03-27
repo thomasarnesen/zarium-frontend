@@ -4,6 +4,7 @@ import { Check, Crown, Sparkles, Coins } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import SubscriptionCancelConfirm from '../components/SubscriptionCancelConfirm';
 import api from '../utils/api';
+import { toast } from 'react-toastify';
 
 interface Plan {
   name: string;
@@ -170,102 +171,176 @@ export function MySubscription() {
 
 
   // Improved handleUpgrade function with detailed logging
-const handleUpgrade = async (plan) => {
-  try {
-    console.log("Starting plan upgrade process for plan:", plan.name);
-    console.log("Price ID:", plan.stripePriceId);
-    console.log("User token available:", !!user?.token);
-    
-    // Create request data with all necessary information
-    const requestData = {
-      priceId: plan.stripePriceId,
-      planName: plan.name,
-      successUrl: `${window.location.origin}/dashboard?payment_success=true`,
-      cancelUrl: `${window.location.origin}/dashboard?payment_cancelled=true`
-    };
-    
-    console.log("Sending request data:", JSON.stringify(requestData));
-    
-    // Make the API request with proper headers
-    const response = await api.fetch('/api/create-checkout-session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${user?.token}`
-      },
-      body: JSON.stringify(requestData),
-    });
-
-    console.log("Response status:", response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Error response:", errorText);
-      throw new Error(`Failed to create checkout session: ${response.status} ${errorText}`);
+  const handleUpgrade = async (plan) => {
+    try {
+      console.log("Starting plan upgrade process for plan:", plan.name);
+      console.log("Price ID:", plan.stripePriceId);
+      
+      // Get token from multiple sources to ensure we have it
+      let token = user?.token;
+      
+      // Fallback to localStorage if token is missing from user object
+      if (!token) {
+        try {
+          const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+          token = authData.token;
+          console.log("Using token from localStorage");
+        } catch (e) {
+          console.error("Error parsing localStorage data:", e);
+        }
+      }
+      
+      if (!token) {
+        console.error("No authentication token available");
+        toast.error("Authentication error. Please try logging out and in again.");
+        return;
+      }
+      
+      console.log("Token available:", !!token);
+      
+      // Create request data
+      const requestData = {
+        priceId: plan.stripePriceId,
+        planName: plan.name,
+        successUrl: `${window.location.origin}/dashboard?payment_success=true`,
+        cancelUrl: `${window.location.origin}/dashboard?payment_cancelled=true`
+      };
+      
+      console.log("Sending request data:", JSON.stringify(requestData));
+      
+      // First construct the URL
+      let url = '/api/create-checkout-session';
+      
+      // For Safari/iOS, also add token to URL query parameters
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
+                      /iphone|ipad|ipod/i.test(navigator.userAgent);
+      
+      if (isSafari) {
+        url += `?token=${encodeURIComponent(token)}`;
+        console.log("Added token to URL for Safari compatibility");
+      }
+      
+      // Make the request with Authorization header
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify(requestData)
+      });
+      
+      console.log("Response status:", response.status);
+      
+      if (!response.ok) {
+        let errorText = '';
+        try {
+          const errorData = await response.json();
+          errorText = errorData.error || `Error ${response.status}`;
+        } catch (e) {
+          errorText = await response.text() || `Error ${response.status}`;
+        }
+        
+        console.error("Error response:", errorText);
+        toast.error(`Failed to create checkout session: ${errorText}`);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log("Response data received");
+      
+      if (data.url) {
+        console.log("Redirecting to Stripe URL");
+        window.location.href = data.url;
+      } else {
+        console.error("No URL in response data");
+        toast.error("Failed to create checkout session");
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      toast.error("An error occurred. Please try again later.");
     }
-
-    const data = await response.json();
-    console.log("Response data:", data);
-    
-    if (data.url) {
-      console.log("Redirecting to Stripe URL:", data.url);
-      window.location.href = data.url;
-    } else {
-      console.error("No URL in response data");
-      throw new Error("No redirect URL received from server");
+  };
+  
+  // Similarly update handleBuyTokens
+  const handleBuyTokens = async () => {
+    try {
+      console.log("Starting token purchase process");
+      
+      // Get token from multiple sources
+      let token = user?.token;
+      
+      if (!token) {
+        try {
+          const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+          token = authData.token;
+        } catch (e) {
+          console.error("Error parsing localStorage data:", e);
+        }
+      }
+      
+      if (!token) {
+        console.error("No authentication token available");
+        toast.error("Authentication error. Please try logging out and in again.");
+        return;
+      }
+      
+      // Create request data
+      const requestData = {
+        isTokenReload: true,
+        successUrl: `${window.location.origin}/tokens?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/tokens?success=false`
+      };
+      
+      // First construct the URL
+      let url = '/api/create-checkout-session';
+      
+      // For Safari/iOS, also add token to URL query parameters
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
+                      /iphone|ipad|ipod/i.test(navigator.userAgent);
+      
+      if (isSafari) {
+        url += `?token=${encodeURIComponent(token)}`;
+      }
+      
+      // Make the request
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify(requestData)
+      });
+      
+      if (!response.ok) {
+        let errorText = '';
+        try {
+          const errorData = await response.json();
+          errorText = errorData.error || `Error ${response.status}`;
+        } catch (e) {
+          errorText = await response.text() || `Error ${response.status}`;
+        }
+        
+        console.error("Token purchase error:", errorText);
+        toast.error(`Failed to process token purchase: ${errorText}`);
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error("Failed to create token purchase checkout");
+      }
+    } catch (error) {
+      console.error('Error creating token purchase session:', error);
+      toast.error("An error occurred. Please try again later.");
     }
-  } catch (error) {
-    console.error('Error creating checkout session:', error);
-    // You could add toast notifications here to inform the user
-  }
-};
-
-// Similarly enhance handleBuyTokens function
-const handleBuyTokens = async () => {
-  try {
-    console.log("Starting token purchase process");
-    console.log("User token available:", !!user?.token);
-    
-    const requestData = {
-      isTokenReload: true,
-      successUrl: `${window.location.origin}/tokens?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${window.location.origin}/tokens?success=false`
-    };
-    
-    console.log("Sending token request data:", JSON.stringify(requestData));
-    
-    const response = await api.fetch('/api/create-checkout-session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${user?.token}`
-      },
-      body: JSON.stringify(requestData),
-    });
-
-    console.log("Token purchase response status:", response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Token purchase error response:", errorText);
-      throw new Error(`Failed to create token checkout: ${response.status} ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log("Token purchase response data:", data);
-    
-    if (data.url) {
-      console.log("Redirecting to Stripe for token purchase:", data.url);
-      window.location.href = data.url;
-    } else {
-      console.error("No URL in token purchase response");
-      throw new Error("No redirect URL received for token purchase");
-    }
-  } catch (error) {
-    console.error('Error creating token purchase session:', error);
-    // You could add toast notifications here
-  }
-};
+  };
 
   const handleCancelSubscription = async () => {
     setCancelLoading(true);
