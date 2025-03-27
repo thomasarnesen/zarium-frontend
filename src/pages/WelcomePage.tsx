@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Sparkles, ArrowRight, FileSpreadsheet, Zap, HelpCircle } from 'lucide-react';
 import api from '../utils/api';
+// @ts-ignore
+import { RecaptchaService } from '../utils/recaptchaService';
 
 export default function WelcomePage() {
   const { user, refreshUserData } = useAuthStore();
@@ -49,13 +51,35 @@ export default function WelcomePage() {
     setLoading(true);
 
     try {
+      // Execute reCAPTCHA verification
+      const recaptchaToken = await RecaptchaService.safeExecuteRecaptcha('update_name');
+      
+      // Verify the token with your backend
+      const verifyResponse = await RecaptchaService.verifyToken(recaptchaToken);
+      
+      if (!verifyResponse.success) {
+        setError('Security verification failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+      
+      // If score is very low, you might want to block
+      if (verifyResponse.score && verifyResponse.score < 0.5) {
+        console.warn(`Low reCAPTCHA score: ${verifyResponse.score}`);
+        // You could block here, but we'll just log it for now
+      }
+      
+      // Proceed with updating display name
       const response = await fetch(`${api.apiUrl}/api/update-display-name`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user?.token}`
         },
-        body: JSON.stringify({ displayName: displayName.trim() }),
+        body: JSON.stringify({ 
+          displayName: displayName.trim(),
+          recaptchaToken // Optionally include token for server-side logging
+        }),
         credentials: 'include'
       });
 
@@ -167,7 +191,7 @@ export default function WelcomePage() {
                   disabled={loading || !displayName.trim()}
                   className="w-full py-3 px-4 rounded-lg bg-emerald-800 dark:bg-emerald-700 text-white hover:bg-emerald-900 dark:hover:bg-emerald-600 disabled:opacity-70 transition-colors flex items-center justify-center gap-2"
                 >
-                  <span>{loading ? 'Saving...' : 'Start Using Zarium'}</span>
+                  <span>{loading ? 'Verifying...' : 'Start Using Zarium'}</span>
                   <ArrowRight className="h-5 w-5" />
                 </button>
               </form>
