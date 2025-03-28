@@ -95,7 +95,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log("Skipping refresh - too soon since last refresh");
       return true;
     }
-
+  
     // Add special handling for Safari/iOS
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
                    /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -122,7 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.error("Safari refresh method failed:", safariError);
       }
     }
-
+  
     // Add backoff mechanism for failed refreshes
     const { failedRefreshCount, lastFailureTime } = get();
     if (failedRefreshCount > 0) {
@@ -158,7 +158,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             failedRefreshCount: currentFailures, 
             lastFailureTime: Date.now() 
           });
-
+  
           // If we've failed 3+ times, stop the refresh interval
           if (currentFailures >= 3) {
             console.warn(`Token refresh failed ${currentFailures} times, stopping automatic refreshes`);
@@ -167,7 +167,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               window.tokenRefreshInterval = undefined;
             }
           }
-
+  
           console.warn("Token refresh failed:", await tokenResponse.text());
           return false; // Return early on token refresh failure
         } else {
@@ -182,23 +182,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         return false; // Return early on token refresh error
       }
-
+  
       // Get user information with retries
       let attempts = 0;
       const maxAttempts = 2;
       
       while (attempts < maxAttempts) {
         try {
-          const tokenResponse = await api.fetch('/api/verify-token', {
+          const userResponse = await api.fetch('/api/user/current', {
             cache: 'no-store',
             headers: {
               'Cache-Control': 'no-cache, no-store, must-revalidate',
               'Pragma': 'no-cache'
             }
           });
-
-          if (tokenResponse.ok) {
-            const userData = await tokenResponse.json();
+  
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
             
             // Update localStorage with latest user data
             const authUser = JSON.parse(localStorage.getItem('authUser') || '{}');
@@ -352,32 +352,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  setUser: (user) => {
+  setUser: (user: User | null) => {
     if (user) {
-      const authData = {
-        id: user.id,
-        email: user.email,
-        planType: user.planType,
-        tokens: user.tokens,
-        token: user.token,
-        isAdmin: user.isAdmin,
-        displayName: user.displayName, // Include displayName
-      };
-      
-      localStorage.setItem('authUser', JSON.stringify(authData));
+      localStorage.setItem('authUser', JSON.stringify(user));
       localStorage.setItem('isAuthenticated', 'true');
+      set({ 
+        user,
+        isAuthenticated: true,
+        tokens: user.tokens || 0,
+        planType: user.planType,
+        isDemoUser: user.planType === 'Demo'
+      });
     } else {
       localStorage.removeItem('authUser');
       localStorage.removeItem('isAuthenticated');
+      set({ 
+        user: null,
+        isAuthenticated: false,
+        tokens: 0,
+        planType: null
+      });
     }
-    
-    set({
-      user,
-      isAuthenticated: !!user,
-      planType: user?.planType || null,
-      tokens: user?.tokens || 0,
-      isDemoUser: user?.planType === 'Demo'
-    });
   },
 
   login: async (email: string, password: string) => {
