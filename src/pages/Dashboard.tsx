@@ -520,32 +520,18 @@ export default function Dashboard() {
               ))}
             </div>
           )}
-
-          {isBasicPlan && (
-            <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center">
-              <Lock className="h-4 w-4 inline-block mr-2" />
-              File upload is available in Plus and Pro plans. 
-              <a href="/subscription" className="underline ml-1">Upgrade now</a>
-            </div>
-          )}
           
           {/* Tokens display - centered */}
           <div className="text-center text-emerald-700 dark:text-emerald-300 mt-4">
             Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
           </div>
         </div>
+        
 
         {/* Error display */}
         {error && (
           <div className="max-w-3xl mx-auto mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-lg text-center">
             {error}
-          </div>
-        )}
-
-        {/* Z Logo animation during loading */}
-        {isGenerating && (
-          <div className="flex justify-center mb-4">
-            <div className="zarium-logo-animation">Z</div>
           </div>
         )}
 
