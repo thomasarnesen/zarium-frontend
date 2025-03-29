@@ -24,7 +24,12 @@
       "allowedRoles": ["anonymous"],
       "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/verify-recaptcha"
     },
-    
+    {
+      "route": "/api/auth/verify-recaptcha-v2",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/verify-recaptcha-v2"
+    },
     {
       "route": "/api/add-email-claim",
       "methods": ["POST", "OPTIONS"],

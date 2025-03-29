@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Sparkles, ArrowRight, FileSpreadsheet, Zap, HelpCircle } from 'lucide-react';
 import api from '../utils/api';
 // @ts-ignore
-import { RecaptchaService } from '../utils/recaptchaService';
+import { RecaptchaV2Service } from '../utils/recaptchaV2Service';
 
 export default function WelcomePage() {
   const { user, refreshUserData } = useAuthStore();
@@ -12,6 +12,8 @@ export default function WelcomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const recaptchaContainerRef = useRef(null);
+  const [recaptchaWidgetId, setRecaptchaWidgetId] = useState(null);
 
   // Make sure user data is fresh and redirect if needed
   useEffect(() => {
@@ -39,6 +41,29 @@ export default function WelcomePage() {
     initWelcomePage();
   }, [user, navigate, refreshUserData]);
 
+  // Initialize reCAPTCHA v2 when the component mounts
+  useEffect(() => {
+    const initRecaptcha = async () => {
+      if (recaptchaContainerRef.current) {
+        try {
+          const widgetId = await RecaptchaV2Service.renderRecaptcha('recaptcha-container');
+          if (widgetId !== -1) {
+            setRecaptchaWidgetId(widgetId);
+            console.log("reCAPTCHA v2 widget initialized with ID:", widgetId);
+          } else {
+            console.error("Failed to initialize reCAPTCHA v2 widget");
+          }
+        } catch (error) {
+          console.error("Error initializing reCAPTCHA:", error);
+        }
+      }
+    };
+
+    // Initialize reCAPTCHA after a slight delay to ensure the DOM is ready
+    const timer = setTimeout(initRecaptcha, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleNameSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -51,22 +76,24 @@ export default function WelcomePage() {
     setLoading(true);
 
     try {
-      // Execute reCAPTCHA verification
-      const recaptchaToken = await RecaptchaService.safeExecuteRecaptcha('update_name');
+      // Get the reCAPTCHA v2 token
+      const recaptchaToken = RecaptchaV2Service.getResponse(recaptchaWidgetId);
       
-      // Verify the token with your backend
-      const verifyResponse = await RecaptchaService.verifyToken(recaptchaToken);
-      
-      if (!verifyResponse.success) {
-        setError('Security verification failed. Please try again.');
+      if (!recaptchaToken) {
+        setError('Please complete the reCAPTCHA verification');
         setLoading(false);
         return;
       }
       
-      // If score is very low, you might want to block
-      if (verifyResponse.score && verifyResponse.score < 0.5) {
-        console.warn(`Low reCAPTCHA score: ${verifyResponse.score}`);
-        // You could block here, but we'll just log it for now
+      // Verify the token with your backend
+      const verifyResponse = await RecaptchaV2Service.verifyToken(recaptchaToken);
+      
+      if (!verifyResponse.success) {
+        setError('Security verification failed. Please try again.');
+        // Reset the reCAPTCHA widget
+        RecaptchaV2Service.reset(recaptchaWidgetId);
+        setLoading(false);
+        return;
       }
       
       // Proceed with updating display name
@@ -100,6 +127,8 @@ export default function WelcomePage() {
       navigate('/dashboard');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');
+      // Reset the reCAPTCHA widget on error
+      RecaptchaV2Service.reset(recaptchaWidgetId);
     } finally {
       setLoading(false);
     }
@@ -185,6 +214,11 @@ export default function WelcomePage() {
                   required
                   autoFocus
                 />
+                
+                {/* reCAPTCHA v2 container */}
+                <div className="flex justify-center mt-4 mb-4">
+                  <div id="recaptcha-container" ref={recaptchaContainerRef}></div>
+                </div>
                 
                 <button
                   type="submit"

@@ -358,7 +358,7 @@
       });
     </script>
     
-    <!-- Robust reCAPTCHA integration -->
+    <!-- Robust reCAPTCHA v3 integration -->
     <script>
       // Safely initialize reCAPTCHA to prevent React initialization issues
       window.recaptchaInitialized = false;
@@ -432,6 +432,39 @@
       window.addEventListener('load', function() {
         // Use setTimeout to ensure React has initialized first
         setTimeout(initRecaptcha, 1000);
+      });
+    </script>
+    
+    <!-- reCAPTCHA v2 integration (NEW) -->
+    <script>
+      // Initialize reCAPTCHA v2
+      window.recaptchaV2Loaded = false;
+      
+      // Safe loader for reCAPTCHA v2
+      function initRecaptchaV2() {
+        // Create script element for reCAPTCHA v2
+        var scriptV2 = document.createElement('script');
+        scriptV2.src = 'https://www.google.com/recaptcha/api.js?onload=recaptchaV2Callback&render=explicit';
+        scriptV2.async = true;
+        scriptV2.defer = true;
+        
+        // Add to document
+        document.head.appendChild(scriptV2);
+      }
+      
+      // Callback function that will be called when reCAPTCHA v2 is loaded
+      window.recaptchaV2Callback = function() {
+        console.log("reCAPTCHA v2 is loaded and ready");
+        window.recaptchaV2Loaded = true;
+        
+        // Dispatch an event to notify React components
+        window.dispatchEvent(new Event('recaptchaV2Loaded'));
+      };
+      
+      // Delay loading reCAPTCHA v2 until after the main app has started
+      window.addEventListener('load', function() {
+        // Use setTimeout to ensure React has initialized first and not interfere with v3
+        setTimeout(initRecaptchaV2, 1500);
       });
     </script>
     
