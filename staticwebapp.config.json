@@ -26,7 +26,7 @@
     },
     {
       "route": "/api/auth/verify-recaptcha-v2",
-      "methods": ["GET", "POST", "OPTIONS"],
+      "methods": ["POST", "OPTIONS"],
       "allowedRoles": ["anonymous"],
       "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/verify-recaptcha-v2"
     },
