@@ -1,75 +1,50 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Sparkles, ArrowRight, FileSpreadsheet, Zap, HelpCircle } from 'lucide-react';
 import api from '../utils/api';
-// @ts-ignore
-import { RecaptchaService } from '../utils/recaptchaService';
 
-export default function WelcomePage() {
+declare global {
+  interface Window {
+    grecaptcha?: {
+      ready: (callback: () => void) => void;
+      execute: (siteKey: string, options: { action: string }) => Promise<string>;
+      render: (container: string | HTMLElement, options: any) => number;
+      reset: (widgetId?: number) => void;
+      getResponse: (widgetId?: number) => string;
+    };
+  }
+}
+
+const WelcomePage: React.FC = () => {
   const { user, refreshUserData } = useAuthStore();
-  const [displayName, setDisplayName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
-  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
+  const [displayName, setDisplayName] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [recaptchaLoaded, setRecaptchaLoaded] = useState<boolean>(false);
   const navigate = useNavigate();
 
-  // Make sure user data is fresh and redirect if needed
+  // Make sure user data is fresh
   useEffect(() => {
-    const initWelcomePage = async () => {
-      try {
-        // Refresh user data to ensure it's up to date
-        await refreshUserData();
-        
-        // Check if user is logged in
-        if (!user) {
-          navigate('/');
-          return;
-        }
-        
-        // Check if user already has a display name - if so, redirect to dashboard
-        if (user.displayName && user.displayName !== 'unknown') {
-          console.log("User already has a display name, redirecting to dashboard");
-          navigate('/dashboard');
-        }
-      } catch (error) {
-        console.error("Error initializing welcome page:", error);
-      }
-    };
-    
-    initWelcomePage();
-  }, [user, navigate, refreshUserData]);
+    refreshUserData();
+  }, [refreshUserData]);
 
-  // Load and render reCAPTCHA v2 after component mounts
+  // Load reCAPTCHA script on component mount
   useEffect(() => {
-    let isMounted = true;
-
-    const loadRecaptcha = async () => {
-      if (recaptchaContainerRef.current) {
-        try {
-          const success = await RecaptchaService.renderRecaptchaV2('recaptcha-container');
-          if (isMounted) {
-            setRecaptchaLoaded(success);
-            if (!success) {
-              setError('Failed to load security verification. Please try refreshing the page.');
-            }
-          }
-        } catch (error) {
-          console.error("Error loading reCAPTCHA:", error);
-          if (isMounted) {
-            setError('Failed to load security verification. Please try refreshing the page.');
-          }
-        }
-      }
-    };
-
-    loadRecaptcha();
-
-    // Clean up function for when component unmounts
-    return () => {
-      isMounted = false;
-    };
+    // Add the reCAPTCHA script if it's not already added
+    if (!document.querySelector('script[src*="recaptcha/api.js"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://www.google.com/recaptcha/api.js';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        console.log('reCAPTCHA script loaded');
+        setRecaptchaLoaded(true);
+      };
+      document.head.appendChild(script);
+    } else {
+      setRecaptchaLoaded(true);
+    }
   }, []);
 
   const handleNameSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -80,30 +55,36 @@ export default function WelcomePage() {
       return;
     }
     
-    setError('');
+    // Get reCAPTCHA response
+    const recaptchaResponse = window.grecaptcha?.getResponse();
+    if (!recaptchaResponse) {
+      setError('Please complete the security verification');
+      return;
+    }
+    
     setLoading(true);
+    setError('');
 
     try {
-      // Get the reCAPTCHA v2 response token
-      const recaptchaToken = RecaptchaService.getRecaptchaV2Response();
+      // Verify reCAPTCHA
+      const verifyResponse = await fetch('/api/auth/verify-recaptcha', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ recaptchaToken: recaptchaResponse })
+      });
       
-      if (!recaptchaToken) {
-        setError('Please complete the security verification by checking the box');
-        setLoading(false);
-        return;
-      }
+      const verifyResult = await verifyResponse.json();
       
-      // Verify the token with your backend
-      const verifyResponse = await RecaptchaService.verifyToken(recaptchaToken);
-      
-      if (!verifyResponse.success) {
+      if (!verifyResult.success) {
         setError('Security verification failed. Please try again.');
-        RecaptchaService.resetRecaptchaV2();
+        window.grecaptcha?.reset();
         setLoading(false);
         return;
       }
       
-      // Proceed with updating display name
+      // Update display name
       const response = await fetch(`${api.apiUrl}/api/update-display-name`, {
         method: 'POST',
         headers: {
@@ -111,8 +92,7 @@ export default function WelcomePage() {
           'Authorization': `Bearer ${user?.token}`
         },
         body: JSON.stringify({ 
-          displayName: displayName.trim(),
-          recaptchaToken // Include token for server-side verification
+          displayName: displayName.trim()
         }),
         credentials: 'include'
       });
@@ -122,25 +102,26 @@ export default function WelcomePage() {
         throw new Error(errorData.error || 'Failed to update display name');
       }
 
-      // Update local storage with new display name
+      // Update local storage
       const userData = await response.json();
       const storedUser = JSON.parse(localStorage.getItem('authUser') || '{}');
       storedUser.displayName = userData.displayName;
       localStorage.setItem('authUser', JSON.stringify(storedUser));
 
+      // Refresh user data
       await refreshUserData();
       
-      // Redirect to dashboard after successful name update
+      // Redirect to dashboard
       navigate('/dashboard');
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'An unexpected error occurred');
-      RecaptchaService.resetRecaptchaV2();
+    } catch (error: any) {
+      setError(error.message || 'An unexpected error occurred');
+      window.grecaptcha?.reset();
     } finally {
       setLoading(false);
     }
   };
 
-  // Guard to prevent unnecessary renders
+  // Guard against unnecessary renders
   if (!user) {
     return null;
   }
@@ -149,7 +130,7 @@ export default function WelcomePage() {
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-3xl mx-auto">
-          {/* Welcome Header */}
+          {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center px-4 py-2 mb-6 rounded-full bg-emerald-100/80 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
               <Sparkles className="h-4 w-4 mr-2" />
@@ -162,7 +143,6 @@ export default function WelcomePage() {
             
             <p className="text-lg text-emerald-700 dark:text-emerald-300 mb-8">
               You now have access to Zarium's Excel generation features with your demo account.
-              {/* Show actual token amount, not hardcoded value */}
               You have {user.tokens?.toLocaleString() || '0'} tokens available to try out the platform.
             </p>
           </div>
@@ -194,7 +174,7 @@ export default function WelcomePage() {
               </div>
             </div>
             
-            {/* Name Input Form - Integrated in the same card */}
+            {/* Name Input Form */}
             <div className="border-t border-emerald-100 dark:border-emerald-800 pt-6">
               <h3 className="text-xl font-semibold text-emerald-800 dark:text-emerald-200 mb-3 text-center">
                 What would you like us to call you?
@@ -219,19 +199,22 @@ export default function WelcomePage() {
                   className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
                   required
                   autoFocus
+                  id="displayName"
+                  name="displayName"
+                  autoComplete="name"
                 />
                 
-                {/* reCAPTCHA v2 Container */}
+                {/* Direct reCAPTCHA element - simple approach */}
                 <div className="flex justify-center my-4">
-                  <div id="recaptcha-container" ref={recaptchaContainerRef}></div>
+                  <div className="g-recaptcha" data-sitekey="6LcWqwMrAAAAANGwYW88sOfXnZmJKSOoo4gxb5Qc"></div>
                 </div>
                 
                 <button
                   type="submit"
-                  disabled={loading || !displayName.trim()}
+                  disabled={loading}
                   className="w-full py-3 px-4 rounded-lg bg-emerald-800 dark:bg-emerald-700 text-white hover:bg-emerald-900 dark:hover:bg-emerald-600 disabled:opacity-70 transition-colors flex items-center justify-center gap-2"
                 >
-                  <span>{loading ? 'Verifying...' : 'Start Using Zarium'}</span>
+                  <span>{loading ? 'Processing...' : 'Start Using Zarium'}</span>
                   <ArrowRight className="h-5 w-5" />
                 </button>
               </form>
@@ -280,4 +263,6 @@ export default function WelcomePage() {
       </div>
     </div>
   );
-}
+};
+
+export default WelcomePage;
