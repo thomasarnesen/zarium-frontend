@@ -194,14 +194,47 @@ export default function WelcomePage() {
         return;
       }
       
-      // Verify the token with your backend
+      // Verify the token with your backend - this now includes IP checking
       const verifyResponse = await RecaptchaV2Service.verifyToken(recaptchaToken);
       
+      // Check standard success response
       if (!verifyResponse.success) {
         setError('Security verification failed. Please try again.');
         // Reset the reCAPTCHA widget
         RecaptchaV2Service.reset(recaptchaWidgetId);
         setLoading(false);
+        return;
+      }
+      
+      // Check for IP limitation flag - NEW CODE
+      if (verifyResponse.flag === "ip_limit") {
+        setError('This IP address has reached the maximum number of accounts allowed.');
+        RecaptchaV2Service.reset(recaptchaWidgetId);
+        setLoading(false);
+        
+        // Optional: Report to the abuse system if this is suspicious
+        try {
+          await fetch(`${api.apiUrl}/api/report-bot`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user?.token}`
+            },
+            body: JSON.stringify({
+              userId: user?.id,
+              detectionSource: 'welcome_page',
+              detectionMethod: 'ip_limit_exceeded',
+              indicators: {
+                ipLimitExceeded: true,
+                formCompletionTime: timeTaken,
+                mouseMovements: mouseMovements
+              }
+            })
+          });
+        } catch (err) {
+          console.error("Error reporting IP limit violation:", err);
+        }
+        
         return;
       }
       
@@ -240,7 +273,7 @@ export default function WelcomePage() {
         },
         body: JSON.stringify({ 
           displayName: displayName.trim(),
-          recaptchaToken // Optionally include token for server-side logging
+          recaptchaToken // Include token for server-side logging
         }),
         credentials: 'include'
       });
