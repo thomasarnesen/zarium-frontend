@@ -1,161 +1,305 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+// src/components/AuthCallback.tsx - Completely skip email collection
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import api from '../utils/api';
 
-const AuthCallback: React.FC = () => {
-  const [loading, setLoading] = useState<boolean>(true);
+interface DebugInfo {
+  timestamp?: string;
+  authData?: any;
+  finalError?: string;
+  [key: string]: any;
+}
+
+const AuthCallback = () => {
   const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string>('');
+  const [processing, setProcessing] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<any>({});
+  
   const location = useLocation();
   const navigate = useNavigate();
-  const { setUser } = useAuthStore(); // Add this to directly use your auth store
+  const { setUser } = useAuthStore();
+ 
+  // Helper function to detect TikTok browser
+  const isTikTokBrowser = () => {
+    return /TikTok/i.test(navigator.userAgent) || 
+           navigator.userAgent.includes('WebView') ||
+           !('cookieEnabled' in navigator) || 
+           !navigator.cookieEnabled;
+  };
 
-  // Process the token from the URL
   useEffect(() => {
-    const processToken = async (): Promise<void> => {
+    const processAuthCallback = async () => {
       try {
-        // Add debug info
-        setDebugInfo(prev => prev + "Starting auth process...\n");
-        console.log("Auth callback started with URL:", location.pathname + location.search + location.hash);
-        
-        // Check if we have a hash with an id_token
-        if (location.hash && location.hash.includes('id_token=')) {
-          setDebugInfo(prev => prev + "Found token in URL hash\n");
-          console.log("Found hash in URL");
-          
-          // Extract the token from the hash
+        // Collect debug info
+        const debug: DebugInfo = {
+          path: location.pathname,
+          search: location.search,
+          hash: location.hash,
+          timestamp: new Date().toISOString(),
+          isTikTok: isTikTokBrowser(),
+          userAgent: navigator.userAgent
+        };
+
+        // Check if there's an error in the hash (common with Azure AD)
+        if (location.hash && location.hash.includes('error=')) {
           const hashParams = new URLSearchParams(location.hash.substring(1));
-          const idToken = hashParams.get('id_token');
+          const errorCode = hashParams.get('error');
+          const errorDescription = hashParams.get('error_description');
           
-          if (idToken) {
-            setDebugInfo(prev => prev + "Successfully extracted token\n");
-            console.log("Successfully extracted token from hash");
-            
-            // Call your API endpoint to process the token and authenticate the user
-            try {
-              setDebugInfo(prev => prev + "Sending token to API...\n");
-              const response = await fetch('/api/auth/azure-callback', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json'
-                },
-                body: JSON.stringify({ id_token: idToken }),
-                credentials: 'include'
-              });
-              
-              setDebugInfo(prev => prev + `API response status: ${response.status}\n`);
-              
-              if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Auth callback API error:', response.status, errorText);
-                setDebugInfo(prev => prev + `API error: ${response.status} - ${errorText}\n`);
-                throw new Error(`Failed to authenticate: ${response.status}`);
-              }
-              
-              const data = await response.json();
-              setDebugInfo(prev => prev + "Authentication successful\n");
-              console.log("Authentication successful, redirecting");
-              console.log("User data received:", data);
-              
-              // Important: update your auth store directly
-              if (data && data.token) {
-                setDebugInfo(prev => prev + "Setting user in auth store\n");
-                setUser(data);
-                
-                // Save to localStorage as a backup
-                try {
-                  const authUser = { ...data };
-                  localStorage.setItem('authUser', JSON.stringify(authUser));
-                  localStorage.setItem('isAuthenticated', 'true');
-                  localStorage.removeItem('manualLogout'); // Clear any previous logout flag
-                  console.log("Saved auth data to localStorage");
-                  setDebugInfo(prev => prev + "Saved auth data to localStorage\n");
-                } catch (storageErr) {
-                  console.error('Error saving to localStorage:', storageErr);
-                  setDebugInfo(prev => prev + `localStorage error: ${storageErr}\n`);
-                }
-                
-                // Decide where to redirect
-                if (!data.displayName || data.displayName === 'unknown') {
-                  setDebugInfo(prev => prev + "Redirecting to welcome page\n");
-                  navigate('/welcome');
-                } else {
-                  setDebugInfo(prev => prev + "Redirecting to dashboard\n");
-                  navigate('/dashboard');
-                }
-              } else {
-                setDebugInfo(prev => prev + "No token in response data\n");
-                throw new Error('No token received from server');
-              }
-            } catch (apiError: any) {
-              setDebugInfo(prev => prev + `API call error: ${apiError.message}\n`);
-              throw apiError;
-            }
+
+          throw new Error(`Authentication failed: ${errorDescription || errorCode}`);
+        }
+        
+        // Extract token from hash (Azure AD uses fragment/hash)
+        let token = null;
+        let provider = 'azure';
+        
+        if (window.location.hash && window.location.hash.length > 1) {
+
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          token = hashParams.get('id_token');
+          
+          if (token) {
+
           } else {
-            setDebugInfo(prev => prev + "No token found in URL\n");
-            throw new Error('No token found in URL');
+
           }
         } else {
-          setDebugInfo(prev => prev + "Invalid callback URL - no token found\n");
-          throw new Error('Invalid callback URL - no token found');
+
+          
+          // Fall back to query parameters (for OAuth2 code flow with Google)
+          const searchParams = new URLSearchParams(location.search);
+          token = searchParams.get('code');
+          if (token) {
+
+            provider = 'google';
+          }
         }
-      } catch (error: any) {
-        console.error("Error processing auth callback:", error);
-        setDebugInfo(prev => prev + `Final error: ${error.message}\n`);
-        setError(error.message || "Authentication failed. Please try again.");
-        setLoading(false);
+        
+        // Check for special case: auth_success=true but no token (TikTok browser)
+        const isAuthSuccess = new URLSearchParams(location.search).get('auth_success') === 'true';
+        
+        if (!token && isAuthSuccess) {
+  
+          
+          // In TikTok browser, we'd use session storage or special endpoint to get the auth data
+          const sessionAuthData = sessionStorage.getItem('auth_pending_data');
+          const sessionProvider = sessionStorage.getItem('auth_provider');
+          
+          if (sessionAuthData && sessionProvider) {
+            try {
+              const parsedData = JSON.parse(sessionAuthData);
+              if (parsedData.id_token) {
+                token = parsedData.id_token;
+                provider = sessionProvider;
+     
+              }
+            } catch (e) {
+
+            }
+          }
+          
+          // If we still don't have a token, try to fetch from special endpoint
+          if (!token) {
+            try {
+              const sessionId = sessionStorage.getItem('auth_session_id');
+              if (sessionId) {
+        
+                const sessionResponse = await fetch(`/api/auth/session-helper?session_id=${sessionId}`);
+                
+                if (sessionResponse.ok) {
+                  const sessionData = await sessionResponse.json();
+                  if (sessionData.token) {
+                    token = sessionData.token;
+                    provider = sessionData.provider || 'azure';
+
+                  }
+                } else {
+  
+                }
+              }
+            } catch (sessionError) {
+
+            }
+          }
+        }
+        
+        // Final check if we have a token
+        if (!token) {
+          throw new Error('No authentication token found. Authentication failed.');
+        }
+        
+        // For security, remove token from URL history
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Extract user info for logging (optional)
+        let userEmail = null;
+        let idp = null;
+        
+        if (token && provider === 'azure') {
+          try {
+            // Try to decode the token payload
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = parts[1];
+              const decodedPayload = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+              const tokenData = JSON.parse(decodedPayload);
+              
+              // Log tokenData for debugging (exclude sensitive fields)
+              const displayData = { ...tokenData };
+              delete displayData.sub;
+              delete displayData.oid;
+
+              
+              userEmail = tokenData.email || 
+                        tokenData.preferred_username || 
+                        tokenData.upn || 
+                        tokenData.name;
+                        
+              idp = tokenData.idp;
+              
+
+            }
+          } catch (decodeError) {
+
+          }
+        }
+        
+        // Prepare authentication data for backend
+        const authData = {
+          id_token: token,
+          user_details: userEmail,
+          user_id: null, // Will be extracted by backend
+          provider: provider,
+          create_demo: true, // Always create a demo account
+          isTikTok: isTikTokBrowser() // Let backend know if this is TikTok browser
+        };
+        
+        debug.authData = { ...authData, id_token: '***redacted***' };
+        setDebugInfo((prev: DebugInfo) => ({...prev, ...debug}));
+        
+        // Send token to backend for verification/user creation
+        const callbackEndpoint = 
+          provider === 'google' 
+            ? '/api/auth/google/callback' 
+            : '/api/auth/azure-callback';
+        
+
+            
+        const response = await api.fetch(callbackEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(authData),
+          credentials: 'include'
+        });
+          
+        if (!response.ok) {
+          let errorMessage = '';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || `Error ${response.status}`;
+          } catch (e) {
+            errorMessage = `Error ${response.status}: ${response.statusText}`;
+          }
+          throw new Error(errorMessage);
+        }
+          
+        // Parse user data from response
+        const userData = await response.json();
+        
+        // MODIFIED: Always skip email collection and proceed directly
+        // Store in local storage
+        localStorage.setItem('authUser', JSON.stringify(userData));
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.removeItem('manualLogout'); // Clear any logout flag
+        
+        // Clean up any session storage items we might have used
+        sessionStorage.removeItem('auth_pending_data');
+        sessionStorage.removeItem('auth_provider');
+        sessionStorage.removeItem('auth_session_id');
+        
+        // Update auth store
+        setUser(userData);
+        
+        // MODIFIED: Always direct new users to welcome page for name collection,
+        // existing users to dashboard
+        if (!userData.displayName || userData.displayName === 'unknown') {
+
+          navigate('/welcome');
+        } else {
+          // Get saved redirect URL if it exists
+          const redirectUrl = sessionStorage.getItem('authRedirectUrl');
+          sessionStorage.removeItem('authRedirectUrl');
+          
+
+          navigate(redirectUrl || '/dashboard');
+        }
+        
+        setProcessing(false);
+      } catch (error) {
+
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setError(`Authentication error: ${errorMessage}`);
+        setDebugInfo((prev: DebugInfo) => ({...prev, finalError: errorMessage}));
+        setProcessing(false);
+        
+        // Redirect to homepage after a delay
+        setTimeout(() => navigate('/'), 8000);
       }
     };
     
-    processToken();
+    processAuthCallback();
   }, [location, navigate, setUser]);
 
-  // If there's an error
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="p-8 max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow p-8">
           <div className="text-center">
-            <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">Authentication Error</h2>
-            <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Authentication Error
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">Redirecting to home page in a few seconds...</p>
             
-            {debugInfo && (
-              <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg text-left overflow-auto max-h-60">
-                <p className="text-xs font-mono whitespace-pre-wrap">{debugInfo}</p>
+            {/* Debug information */}
+            <div className="mt-6 text-left text-sm text-gray-500 dark:text-gray-400 border-t pt-4">
+              <h3 className="font-semibold">Debug Info:</h3>
+              <pre className="mt-2 bg-gray-100 dark:bg-gray-900 p-2 rounded overflow-auto text-xs">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+              
+              <div className="mt-4 flex space-x-4 justify-center">
+                <button
+                  onClick={() => navigate('/')}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                >
+                  Back to Home
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  Retry
+                </button>
               </div>
-            )}
-            
-            <button
-              onClick={() => navigate('/')}
-              className="mt-4 w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded transition-colors"
-            >
-              Back to Home
-            </button>
+            </div>
           </div>
         </div>
       </div>
     );
   }
-  
-  // Loading state - show this during token processing
+ 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="p-8 max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-        <div className="text-center">
-          <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">Processing Authentication</h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Please wait while we complete your login...</p>
-          
-          {debugInfo && (
-            <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg text-left overflow-auto max-h-60">
-              <p className="text-xs font-mono whitespace-pre-wrap">{debugInfo}</p>
-            </div>
-          )}
-          
-          <div className="mt-4 flex justify-center">
-            <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-          </div>
-        </div>
+      <div className="text-center">
+        <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-300">
+          {processing ? "Signing you in..." : "Authentication complete, redirecting..."}
+        </p>
       </div>
     </div>
   );
