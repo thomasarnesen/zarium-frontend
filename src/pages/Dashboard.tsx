@@ -57,9 +57,114 @@ export default function Dashboard() {
   const [generationStatus, setGenerationStatus] = useState<string>('');
   const [sessionId, setSessionId] = useState<string | null>(null);
 
+  // Bot detection states
+  const [botDetected, setBotDetected] = useState(false);
+  const [timeOnPage, setTimeOnPage] = useState(0);
+  const [mouseMovements, setMouseMovements] = useState(0);
+  const [honeypotField, setHoneypotField] = useState('');
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  const [typingStats, setTypingStats] = useState({ charCount: 0, startTime: Date.now() });
+
+  // Track time on page and mouse movements for bot detection
+  useEffect(() => {
+    const startTime = Date.now();
+    
+    // Track mouse movements
+    const handleMouseMove = () => {
+      setMouseMovements(prev => prev + 1);
+      setLastActivityTime(Date.now());
+    };
+    
+    // Track keyboard activity
+    const handleKeyDown = () => {
+      setLastActivityTime(Date.now());
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Update time on page every second
+    const timeInterval = setInterval(() => {
+      setTimeOnPage(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('keydown', handleKeyDown);
+      clearInterval(timeInterval);
+    };
+  }, []);
+
   // Refs for the textarea and buttons
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const generateButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Handler for honeypot field changes
+  const handleHoneypotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setHoneypotField(e.target.value);
+    
+    // If honeypot field is filled, mark as bot
+    if (e.target.value) {
+      setBotDetected(true);
+      reportHoneypotTrigger('hidden_field');
+    }
+  };
+
+  // Handle honeypot link click
+  const handleSecretLinkClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setBotDetected(true);
+    reportHoneypotTrigger('hidden_link');
+    // Continue normally to avoid alerting bot
+  };
+
+  // Function to report honeypot triggers
+  const reportHoneypotTrigger = async (honeypotType: string) => {
+    try {
+      await fetch(`${api.apiUrl}/api/honeypot-trigger`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          honeypotType,
+          page: 'dashboard_page',
+          details: { 
+            fieldContent: honeypotType === 'hidden_field' ? honeypotField : undefined,
+            timeOnPage,
+            mouseMovements
+          }
+        })
+      });
+    } catch (err) {
+      // Silent fail - don't alert the bot
+      console.error("Error reporting honeypot trigger:", err);
+    }
+  };
+
+  // Function to report bot behavioral patterns
+  const reportBotBehavior = async () => {
+    try {
+      await fetch(`${api.apiUrl}/api/behavior-analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          timeOnPage,
+          mouseMovements,
+          interactionCount: 1,
+          typingSpeed: typingStats.charCount / Math.max(1, (Date.now() - typingStats.startTime) / 1000),
+          inactivityTime: Date.now() - lastActivityTime
+        })
+      });
+    } catch (err) {
+      // Silent fail
+      console.error("Error reporting bot behavior:", err);
+    }
+  };
   
   // Generate time-based greeting
   useEffect(() => {
@@ -95,10 +200,9 @@ export default function Dashboard() {
   // Add this effect to redirect to welcome page if no display name
   useEffect(() => {
     if (user && (!user.displayName || user.displayName === 'unknown')) {
-  
       navigate('/welcome');
     } else if (user && user.displayName) {
-  
+      // User has a display name, continue
     }
   }, [user, navigate]);
 
@@ -177,7 +281,7 @@ export default function Dashboard() {
             if (data.formatting) setFormatting(data.formatting);
           }
         } catch (error) {
-  
+          // Handle error silently
         }
       }, 1000);
     }
@@ -315,6 +419,30 @@ export default function Dashboard() {
     }
   };
 
+  // Track typing for bot detection
+  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // Track current prompt value
+    setPrompt(e.target.value);
+    
+    // Update typing stats
+    if (e.target.value.length > typingStats.charCount) {
+      // Only track when typing, not deleting
+      setTypingStats({
+        charCount: e.target.value.length,
+        startTime: typingStats.startTime
+      });
+    } else if (e.target.value.length === 0) {
+      // Reset typing stats when clearing the field
+      setTypingStats({
+        charCount: 0,
+        startTime: Date.now()
+      });
+    }
+    
+    // Reset the lastActivityTime
+    setLastActivityTime(Date.now());
+  };
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     
@@ -322,6 +450,21 @@ export default function Dashboard() {
     setIsGenerating(true);
     setError(null);
     setFormatting(null);
+    
+    // Check for bot behavior - generating too quickly or suspiciously
+    if (timeOnPage < 5 || mouseMovements < 3) {
+      setBotDetected(true);
+      reportBotBehavior();
+    }
+    
+    // Calculate typing speed (chars per second)
+    const typingSpeed = typingStats.charCount / Math.max(1, (Date.now() - typingStats.startTime) / 1000);
+    
+    // Extremely fast typing is suspicious
+    if (typingSpeed > 10 && typingStats.charCount > 30) {
+      setBotDetected(true);
+      reportBotBehavior();
+    }
   
     try {
       // Refresh token before generation
@@ -334,7 +477,8 @@ export default function Dashboard() {
         throw new Error('Failed to refresh session');
       }
 
-      const endpoint = selectedFiles.length > 0 ? '/generate-api-with-file' : '/generate-api';
+      // Use the correct endpoints based on whether files are selected
+      const endpoint = selectedFiles.length > 0 ? '/api/generate-macro-with-file' : '/api/generate-macro';
       
       const requestOptions: RequestInit = {
         method: 'POST',
@@ -360,6 +504,34 @@ export default function Dashboard() {
           format: 'xlsx',
           enhancedMode
         });
+      }
+
+      // If bot detected, report to separate endpoint
+      if (botDetected) {
+        try {
+          fetch(`${api.apiUrl}/api/report-bot`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              userId: user?.id,
+              detectionSource: 'dashboard_page',
+              detectionMethod: 'generation_behavior',
+              indicators: {
+                timeOnPage,
+                mouseMovements,
+                typingSpeed,
+                promptLength: prompt.length,
+                honeypotField: honeypotField || undefined
+              }
+            })
+          });
+        } catch (err) {
+          // Silent fail - don't alert the bot
+          console.error("Error reporting bot:", err);
+        }
       }
 
       const response = await api.fetch(endpoint, requestOptions);
@@ -389,13 +561,25 @@ export default function Dashboard() {
     }
   };
 
-  // Add function to fetch recent spreadsheets
-
-  
-
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
+      {/* Honeypot Link - Hidden from normal users */}
+      <a 
+        href="/internal-access" 
+        onClick={handleSecretLinkClick}
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          width: '1px',
+          height: '1px',
+          overflow: 'hidden'
+        }}
+        aria-hidden="true"
+        tabIndex={-1}
+      >
+        Internal System Access
+      </a>
+
       <div className={`container mx-auto px-4 transition-all duration-500 ${firstMessageSent ? 'pt-6' : 'pt-24'}`}>
         {/* Header with greeting - visible before first message */}
         <div className={`text-center mb-12 transition-opacity duration-500 ${firstMessageSent ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
@@ -407,9 +591,31 @@ export default function Dashboard() {
         {/* Input Form */}
         <div className="max-w-3xl mx-auto mb-6">
           <div className="relative w-full">
+            {/* Hidden honeypot field */}
+            <div 
+              style={{
+                position: 'absolute',
+                left: '-9999px',
+                height: 0,
+                width: 0,
+                overflow: 'hidden'
+              }}
+              aria-hidden="true"
+            >
+              <input 
+                type="text"
+                name="message_backup"
+                value={honeypotField}
+                onChange={handleHoneypotChange}
+                placeholder="Please don't fill this"
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
+            
             <textarea
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={handlePromptChange}
               onKeyPress={handleKeyPress}
               onPaste={handlePaste}
               onDrop={handleDrop}
@@ -527,7 +733,6 @@ export default function Dashboard() {
           </div>
         </div>
         
-
         {/* Error display */}
         {error && (
           <div className="max-w-3xl mx-auto mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-lg text-center">

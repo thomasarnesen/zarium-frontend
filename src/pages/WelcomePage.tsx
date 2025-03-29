@@ -15,6 +15,29 @@ export default function WelcomePage() {
   const recaptchaContainerRef = useRef(null);
   const [recaptchaWidgetId, setRecaptchaWidgetId] = useState(null);
 
+  // Bot detection states
+  const [timeStarted, setTimeStarted] = useState<number | null>(null);
+  const [mouseMovements, setMouseMovements] = useState(0);
+  const [botDetected, setBotDetected] = useState(false);
+  const [honeypotData, setHoneypotData] = useState({
+    username: '',
+    email: '',
+    phoneNumber: ''
+  });
+
+  // Initialize timestamp when component mounts
+  useEffect(() => {
+    setTimeStarted(Date.now());
+    
+    // Track mouse movements
+    const handleMouseMove = () => {
+      setMouseMovements(prev => prev + 1);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    return () => document.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
   // Make sure user data is fresh and redirect if needed
   useEffect(() => {
     const initWelcomePage = async () => {
@@ -64,12 +87,98 @@ export default function WelcomePage() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Handler for honeypot field changes
+  const handleHoneypotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setHoneypotData(prev => ({ ...prev, [name]: value }));
+    
+    // When any honeypot field is filled, mark as bot
+    if (value) {
+      setBotDetected(true);
+      
+      // Report honeypot trigger to backend
+      try {
+        fetch(`${api.apiUrl}/api/honeypot-trigger`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user?.token}`
+          },
+          body: JSON.stringify({
+            honeypotType: 'hidden_field',
+            page: 'welcome_page',
+            details: { fieldName: name, value }
+          })
+        });
+      } catch (err) {
+        // Silent fail - don't alert the bot
+        console.error("Error reporting honeypot trigger:", err);
+      }
+    }
+  };
+
+  // Handle admin link click (honeypot link)
+  const handleAdminLinkClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setBotDetected(true);
+    
+    // Report honeypot trigger to backend
+    try {
+      fetch(`${api.apiUrl}/api/honeypot-trigger`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`
+        },
+        body: JSON.stringify({
+          honeypotType: 'hidden_link',
+          page: 'welcome_page',
+          details: { linkText: 'Admin Portal Access' }
+        })
+      });
+    } catch (err) {
+      // Silent fail - don't alert the bot
+      console.error("Error reporting honeypot trigger:", err);
+    }
+    
+    // Continue to dashboard to avoid alerting the bot
+    navigate('/dashboard');
+  };
+
   const handleNameSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!displayName.trim()) {
       setError('Please enter what we should call you');
       return;
+    }
+    
+    // Check for bot indicators
+    const timeTaken = timeStarted ? Date.now() - timeStarted : 0;
+    
+    // Bot detection: Too fast form completion, no mouse movements
+    if (timeTaken < 1500 || mouseMovements < 5) {
+      setBotDetected(true);
+      
+      // Send behavior analysis to backend
+      try {
+        fetch(`${api.apiUrl}/api/behavior-analysis`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user?.token}`
+          },
+          body: JSON.stringify({
+            timeOnPage: Math.floor(timeTaken / 1000),
+            mouseMovements: mouseMovements,
+            interactionCount: 1,
+            typingSpeed: displayName.length / (timeTaken / 1000)
+          })
+        });
+      } catch (err) {
+        // Silent fail - don't alert the bot
+        console.error("Error sending behavior analysis:", err);
+      }
     }
     
     setError('');
@@ -94,6 +203,32 @@ export default function WelcomePage() {
         RecaptchaV2Service.reset(recaptchaWidgetId);
         setLoading(false);
         return;
+      }
+      
+      // If bot detected, report to backend, but continue with normal flow
+      if (botDetected) {
+        try {
+          await fetch(`${api.apiUrl}/api/report-bot`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user?.token}`
+            },
+            body: JSON.stringify({
+              userId: user?.id,
+              detectionSource: 'welcome_page',
+              detectionMethod: 'form_submission',
+              indicators: {
+                honeypotFields: honeypotData,
+                formCompletionTime: timeTaken,
+                mouseMovements: mouseMovements
+              }
+            })
+          });
+        } catch (err) {
+          // Silent fail - don't alert the bot
+          console.error("Error reporting bot:", err);
+        }
       }
       
       // Proceed with updating display name
@@ -143,6 +278,23 @@ export default function WelcomePage() {
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-3xl mx-auto">
+          {/* Honeypot Link - Only bots will see/click this */}
+          <a 
+            href="/admin-portal" 
+            onClick={handleAdminLinkClick}
+            style={{
+              position: 'absolute',
+              left: '-9999px',
+              width: '1px',
+              height: '1px',
+              overflow: 'hidden'
+            }}
+            aria-hidden="true"
+            tabIndex={-1}
+          >
+            Admin Portal Access
+          </a>
+          
           {/* Welcome Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center px-4 py-2 mb-6 rounded-full bg-emerald-100/80 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
@@ -205,6 +357,44 @@ export default function WelcomePage() {
               )}
               
               <form onSubmit={handleNameSubmit} className="space-y-4">
+                {/* Honeypot fields - invisible to real users */}
+                <div 
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    left: '-9999px',
+                    height: 0,
+                    width: 0,
+                    overflow: 'hidden'
+                  }}
+                >
+                  <input
+                    type="text"
+                    name="username"
+                    value={honeypotData.username}
+                    onChange={handleHoneypotChange}
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                  <input
+                    type="email"
+                    name="email"
+                    value={honeypotData.email}
+                    onChange={handleHoneypotChange}
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    value={honeypotData.phoneNumber}
+                    onChange={handleHoneypotChange}
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </div>
+                
+                {/* Real visible input */}
                 <input
                   type="text"
                   value={displayName}
