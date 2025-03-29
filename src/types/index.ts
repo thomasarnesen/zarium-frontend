@@ -33,7 +33,6 @@ export interface ExcelFile {
   id: string;
   name: string;
   sheets: ExcelSheet[];
-  macros: MacroDefinition[];
 }
 
 export interface ExcelSheet {

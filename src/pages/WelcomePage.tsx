@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Sparkles, ArrowRight, FileSpreadsheet, Zap, HelpCircle } from 'lucide-react';
@@ -11,6 +11,8 @@ export default function WelcomePage() {
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
+  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   // Make sure user data is fresh and redirect if needed
@@ -39,6 +41,37 @@ export default function WelcomePage() {
     initWelcomePage();
   }, [user, navigate, refreshUserData]);
 
+  // Load and render reCAPTCHA v2 after component mounts
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRecaptcha = async () => {
+      if (recaptchaContainerRef.current) {
+        try {
+          const success = await RecaptchaService.renderRecaptchaV2('recaptcha-container');
+          if (isMounted) {
+            setRecaptchaLoaded(success);
+            if (!success) {
+              setError('Failed to load security verification. Please try refreshing the page.');
+            }
+          }
+        } catch (error) {
+          console.error("Error loading reCAPTCHA:", error);
+          if (isMounted) {
+            setError('Failed to load security verification. Please try refreshing the page.');
+          }
+        }
+      }
+    };
+
+    loadRecaptcha();
+
+    // Clean up function for when component unmounts
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleNameSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -51,22 +84,23 @@ export default function WelcomePage() {
     setLoading(true);
 
     try {
-      // Execute reCAPTCHA verification
-      const recaptchaToken = await RecaptchaService.safeExecuteRecaptcha('update_name');
+      // Get the reCAPTCHA v2 response token
+      const recaptchaToken = RecaptchaService.getRecaptchaV2Response();
+      
+      if (!recaptchaToken) {
+        setError('Please complete the security verification by checking the box');
+        setLoading(false);
+        return;
+      }
       
       // Verify the token with your backend
       const verifyResponse = await RecaptchaService.verifyToken(recaptchaToken);
       
       if (!verifyResponse.success) {
         setError('Security verification failed. Please try again.');
+        RecaptchaService.resetRecaptchaV2();
         setLoading(false);
         return;
-      }
-      
-      // If score is very low, you might want to block
-      if (verifyResponse.score && verifyResponse.score < 0.5) {
-        console.warn(`Low reCAPTCHA score: ${verifyResponse.score}`);
-        // You could block here, but we'll just log it for now
       }
       
       // Proceed with updating display name
@@ -78,7 +112,7 @@ export default function WelcomePage() {
         },
         body: JSON.stringify({ 
           displayName: displayName.trim(),
-          recaptchaToken // Optionally include token for server-side logging
+          recaptchaToken // Include token for server-side verification
         }),
         credentials: 'include'
       });
@@ -100,6 +134,7 @@ export default function WelcomePage() {
       navigate('/dashboard');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');
+      RecaptchaService.resetRecaptchaV2();
     } finally {
       setLoading(false);
     }
@@ -185,6 +220,11 @@ export default function WelcomePage() {
                   required
                   autoFocus
                 />
+                
+                {/* reCAPTCHA v2 Container */}
+                <div className="flex justify-center my-4">
+                  <div id="recaptcha-container" ref={recaptchaContainerRef}></div>
+                </div>
                 
                 <button
                   type="submit"

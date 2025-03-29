@@ -334,7 +334,7 @@ export default function Dashboard() {
         throw new Error('Failed to refresh session');
       }
 
-      const endpoint = selectedFiles.length > 0 ? '/generate-macro-with-file' : '/generate-macro';
+      const endpoint = selectedFiles.length > 0 ? '/generate-api-with-file' : '/generate-api';
       
       const requestOptions: RequestInit = {
         method: 'POST',

@@ -98,7 +98,7 @@ export default function Navbar() {
                 </Link>
                 {/* Only show Pricing to authenticated users */}
                 <Link
-                  to="/subscription"
+                  to="/pricing"
                   className="text-base text-emerald-800 dark:text-emerald-200 hover:text-emerald-900 dark:hover:text-emerald-100"
                 >
                   Pricing

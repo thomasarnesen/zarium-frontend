@@ -1,53 +1,101 @@
-import { loadRecaptchaScript } from './recaptchaLoader';
+let recaptchaPromise = null;
+let recaptchaV2Promise = null;
+let isLoading = false;
+let isLoadingV2 = false;
 
-export const RecaptchaService = {
-  executeRecaptcha: async (action = 'login') => {
-    try {
-      // Load the script if needed
-      await loadRecaptchaScript();
-      
-      // Execute reCAPTCHA
-      return await window.grecaptcha.execute('6LdsVgErAAAAACUjZb006U2ZHGDgaIbaAKAqTkKS', { action });
-    } catch (error) {
-      console.error('reCAPTCHA execution error:', error);
-      return 'recaptcha-error';
-    }
-  },
-
-  safeExecuteRecaptcha: async (action = 'login') => {
-    try {
-      const token = await RecaptchaService.executeRecaptcha(action);
-      return token || 'recaptcha-unavailable';
-    } catch (error) {
-      console.warn('reCAPTCHA execution failed:', error);
-      return 'recaptcha-error';
-    }
-  },
-
-  verifyToken: async (token) => {
-    // If token indicates reCAPTCHA wasn't available, bypass verification
-    if (token === 'recaptcha-unavailable' || token === 'recaptcha-error') {
-      console.warn(`Bypassing server verification due to token: ${token}`);
-      return { success: true, warning: token };
-    }
-    
-    try {
-      const response = await fetch('/api/auth/verify-recaptcha', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ recaptchaToken: token })
-      });
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error verifying token:', error);
-      // Return success instead of failure to prevent blocking users
-      // when the verification endpoint is unavailable
-      return { success: true, error: 'Network error', warning: 'verification-bypassed' };
-    }
+/**
+ * Loads the reCAPTCHA v3 script only once when needed
+ * @returns {Promise<void>} Promise that resolves when reCAPTCHA is loaded
+ */
+export const loadRecaptchaScript = () => {
+  // Return existing promise if already loading or loaded
+  if (recaptchaPromise) {
+    return recaptchaPromise;
   }
+  // Check if already loaded in the page
+  if (window.grecaptcha && window.grecaptcha.ready) {
+    recaptchaPromise = Promise.resolve();
+    return recaptchaPromise;
+  }
+  // Start loading
+  isLoading = true;
+ 
+  // Create a new promise for the loading process
+  recaptchaPromise = new Promise((resolve, reject) => {
+    // Add the script to the document
+    const script = document.createElement('script');
+    script.src = 'https://www.google.com/recaptcha/api.js?render=6LdsVgErAAAAACUjZb006U2ZHGDgaIbaAKAqTkKS';
+    script.async = true;
+    script.defer = true;
+   
+    // Handle successful loading
+    script.onload = () => {
+      if (window.grecaptcha) {
+        window.grecaptcha.ready(() => {
+          console.log('reCAPTCHA v3 loaded successfully');
+          isLoading = false;
+          resolve();
+        });
+      } else {
+        isLoading = false;
+        console.error('reCAPTCHA loaded but grecaptcha object not available');
+        reject(new Error('reCAPTCHA loaded but not available'));
+      }
+    };
+   
+    // Handle loading failure
+    script.onerror = () => {
+      isLoading = false;
+      console.error('Failed to load reCAPTCHA script');
+      reject(new Error('Failed to load reCAPTCHA script'));
+    };
+   
+    // Add the script to the document
+    document.head.appendChild(script);
+  });
+ 
+  return recaptchaPromise;
 };
 
-export default RecaptchaService;
+/**
+ * Loads the reCAPTCHA v2 (checkbox) script only once when needed
+ * Uses explicit rendering approach for better control
+ * @returns {Promise<void>} Promise that resolves when reCAPTCHA v2 is loaded
+ */
+export const loadRecaptchaV2Script = () => {
+  // Return existing promise if already loading or loaded
+  if (recaptchaV2Promise) {
+    return recaptchaV2Promise;
+  }
+  
+  // Start loading
+  isLoadingV2 = true;
+ 
+  // Create a new promise for the loading process
+  recaptchaV2Promise = new Promise((resolve, reject) => {
+    // Define the callback function that will be called when reCAPTCHA v2 is loaded
+    window.onRecaptchaLoaded = function() {
+      console.log('reCAPTCHA v2 loaded successfully');
+      isLoadingV2 = false;
+      resolve();
+    };
+    
+    // Add the script to the document with explicit render and onload callback
+    const script = document.createElement('script');
+    script.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit';
+    script.async = true;
+    script.defer = true;
+   
+    // Handle loading failure
+    script.onerror = () => {
+      isLoadingV2 = false;
+      console.error('Failed to load reCAPTCHA v2 script');
+      reject(new Error('Failed to load reCAPTCHA v2 script'));
+    };
+   
+    // Add the script to the document
+    document.head.appendChild(script);
+  });
+ 
+  return recaptchaV2Promise;
+};
