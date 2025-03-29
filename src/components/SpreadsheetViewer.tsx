@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, MouseEvent } from 'react';
 import { Download } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../utils/api';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Added useNavigate import
 
 interface SpreadsheetViewerProps {
   previewImage: string | null;
@@ -30,9 +30,6 @@ const A_Z_COUNT = 26; // A-Z columns
 const AA_BA_COUNT = 27; // AA-BA columns (27 combinations)
 const TOTAL_COLUMNS = A_Z_COUNT + AA_BA_COUNT; // Total column count
 
-// Mobile breakpoint
-const MOBILE_BREAKPOINT = 768; // Typical mobile breakpoint
-
 export function SpreadsheetViewer({ 
   previewImage, 
   isGenerating, 
@@ -55,24 +52,7 @@ export function SpreadsheetViewer({
   const [startY, setStartY] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
-  const navigate = useNavigate();
-  const [isMobile, setIsMobile] = useState(false); // Track if device is mobile
-
-  // Check for mobile device on component mount and window resize
-  useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    };
-    
-    // Initial check
-    checkIsMobile();
-    
-    // Add resize listener
-    window.addEventListener('resize', checkIsMobile);
-    
-    // Cleanup
-    return () => window.removeEventListener('resize', checkIsMobile);
-  }, []);
+  const navigate = useNavigate(); // Added for navigation
 
   // Add custom style for the slider thumb
   useEffect(() => {
@@ -114,10 +94,12 @@ export function SpreadsheetViewer({
     if (previewImage) {
       console.log("Preview image received, length:", previewImage.length);
       setImageError(false);
+      // Remove the direct modification of isGenerating state
+      // setIsGenerating(false); - This is causing the error
     } else {
       console.log("No preview available");
     }
-  }, [previewImage]);
+  }, [previewImage]); // Remove setIsGenerating from dependencies
 
   const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const sliderValue = parseFloat(e.target.value);
@@ -258,11 +240,6 @@ export function SpreadsheetViewer({
     // Otherwise use the default minimum zoom of 50%
     return 50;
   };
-
-  // Set download button position based on device type
-  const downloadButtonStyle = isMobile
-    ? { left: '-41px', top: 0 } // Position on left side for mobile
-    : { right: '-41px', top: 0 }; // Position on right side for desktop (original position)
 
   return (
     <div className="relative">
@@ -445,10 +422,11 @@ export function SpreadsheetViewer({
             </div>
           </div>
           
-          {/* Mobile-responsive Download Button */}
-          <div className="absolute" style={downloadButtonStyle}>
+          {/* Absolute-positioned controls */}
+          <div className="absolute" style={{ right: '-41px', top: 0 }}>
+            {/* Download Button - now clickable for Demo users */}
             <button
-              onClick={handleDownload}
+              onClick={handleDownload} // Always use handleDownload (it will redirect Demo users)
               className={`inline-flex items-center justify-center p-1.5 w-8 h-8 ${
                 !formatting?.downloadUrl 
                   ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
@@ -460,7 +438,7 @@ export function SpreadsheetViewer({
                   ? 'Upgrade to download this file'
                   : 'Download Excel file to edit, reposition charts, or customize formatting'
               }
-              disabled={!formatting?.downloadUrl}
+              disabled={!formatting?.downloadUrl} // Only disabled if no download URL is available
             >
               <Download className={`h-5 w-5 ${
                 !formatting?.downloadUrl 
@@ -482,7 +460,7 @@ export function SpreadsheetViewer({
                   type="range"
                   min={getMinZoomValue()}
                   max="150"
-                  title="Zoom"
+                  title = "Zoom"
                   value={Math.max(getMinZoomValue(), Math.round(scale * 100))}
                   onChange={handleZoomChange}
                   onClick={handleZoomClick}
