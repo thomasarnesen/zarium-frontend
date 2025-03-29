@@ -478,7 +478,7 @@ export default function Dashboard() {
       }
 
       // Use the correct endpoints based on whether files are selected
-      const endpoint = selectedFiles.length > 0 ? '/api/generate-macro-with-file' : '/api/generate-macro';
+      const endpoint = selectedFiles.length > 0 ? '/api/generate-api-with-file' : '/api/generate-api';
       
       const requestOptions: RequestInit = {
         method: 'POST',
