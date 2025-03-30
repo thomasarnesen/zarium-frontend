@@ -1,9 +1,18 @@
 {
-  "globalHeaders": {
+"globalHeaders": {
   "Access-Control-Allow-Origin": "https://zarium.dev",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Credentials": "true"
+  "Access-Control-Allow-Credentials": "true",
+  
+  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network https://m.stripe.com https://analytics.tiktok.com https://accounts.google.com https://apis.google.com https://*.b2clogin.com https://cdn.consentmanager.net https://www.googletagmanager.com; connect-src 'self' https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net https://api.stripe.com https://m.stripe.network https://m.stripe.com https://*.azurestaticapps.net https://analytics.tiktok.com https://zarium.b2clogin.com https://*.b2clogin.com https://accounts.google.com https://apis.google.com https://oauth2.googleapis.com https://www.googleapis.com; style-src 'self' 'unsafe-inline' https://*.b2clogin.com; img-src 'self' data: https:; frame-src https://js.stripe.com https://m.stripe.network https://hooks.stripe.com https://m.stripe.com https://zarium.b2clogin.com https://*.b2clogin.com https://accounts.google.com; form-action 'self' https://zarium.b2clogin.com https://*.b2clogin.com https://accounts.google.com; worker-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; upgrade-insecure-requests",
+  
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "X-XSS-Protection": "1; mode=block",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
 },
   "routes": [
     {
