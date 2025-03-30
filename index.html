@@ -3,56 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zarium - Under Maintenance</title>
+    <title>Zarium - Server Capacity Expansion</title>
     <style>
+        :root {
+            --primary: #057857;
+            --primary-light: #0a8a65;
+            --secondary: #4a4a4a;
+            --light-bg: #f8fafb;
+            --border-radius: 12px;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #e4efe9 100%);
-            color: #333;
+            color: var(--secondary);
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             padding: 20px;
             text-align: center;
         }
+        
         .maintenance-container {
             background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: var(--border-radius);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             padding: 40px;
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
         }
-        h1 {
-            color: #057857;
-            margin-bottom: 16px;
+        
+        .logo {
+            font-size: 42px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 20px;
+            letter-spacing: -1px;
         }
+        
+        .logo span {
+            color: var(--secondary);
+            opacity: 0.7;
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 24px;
+            font-size: 28px;
+        }
+        
         p {
             color: #666;
-            line-height: 1.6;
+            line-height: 1.7;
             margin-bottom: 24px;
+            font-size: 16px;
         }
-        .logo {
-            font-size: 36px;
-            font-weight: bold;
-            color: #057857;
-            margin-bottom: 24px;
+        
+        .highlight {
+            background-color: var(--light-bg);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin: 30px 0;
+            border-left: 4px solid var(--primary);
         }
-        .emoji {
+        
+        .highlight p {
+            margin-bottom: 0;
+            font-weight: 500;
+        }
+        
+        .divider {
+            height: 1px;
+            background-color: #eee;
+            margin: 30px 0;
+        }
+        
+        .footer {
+            margin-top: 20px;
+        }
+        
+        a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 8px 18px;
+            background-color: #fff3cd;
+            color: #856404;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+        
+        .server-icon {
             font-size: 48px;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
     <div class="maintenance-container">
-        <div class="logo">Zarium</div>
-        <div class="emoji">🛠️</div>
-        <h1>Under Maintenance</h1>
-        <p>We're currently improving our system. Please check back soon.</p>
-        <p>Estimated completion: <strong>Soon</strong></p>
+        <div class="logo">Zarium<span>.</span></div>
+        <div class="status">Server Capacity Expansion</div>
+        
+        <div class="server-icon">🖥️</div>
+        
+        <h1>Expanding Our Server Capacity</h1>
+        
+        <p>Due to high demand and increased traffic, we're currently expanding our server capacity to better serve our users. Our team is working to bring Zarium back online with improved performance and stability.</p>
+        
+        <div class="highlight">
+            <p>Thank you for your interest in Zarium! The unexpected high volume of users has exceeded our current server capacity.</p>
+        </div>
+        
+        <p>We're working quickly to scale our infrastructure to accommodate all users. This temporary maintenance will ensure a smoother, faster experience when you return.</p>
+        
+        <div class="divider"></div>
+        
+        <p><strong>Expected return:</strong> As soon as possible</p>
+        
+        <div class="footer">
+            <p>Have questions? <a href="mailto:support@zarium.dev" style="color: #057857; font-weight: medium;">Email support →</a></p>
+        </div>
     </div>
 </body>
 </html>
