@@ -30,16 +30,22 @@ import AdminDashboard from './pages/AdminDashboard';
 
 
 // Legg til denne ruten i Routes-komponenten under andre ruter:
+// In App.tsx, replace the debug-auth route with:
 <Route path="/debug-auth" element={
-  <div className="p-4">
-    <h1 className="text-xl mb-4">Auth Debug</h1>
-    <pre className="bg-gray-100 p-4 rounded">
-      {JSON.stringify({
-        user: useAuthStore.getState().user,
-        isAuthenticated: useAuthStore.getState().isAuthenticated,
-        isSuperAdmin: useAuthStore.getState().user?.isSuperAdmin,
-      }, null, 2)}
-    </pre>
+  <div className="container mx-auto p-8">
+    <h1 className="text-2xl font-bold mb-4">Auth Debug</h1>
+    <div className="bg-gray-100 p-4 rounded">
+      <p className="mb-2"><strong>Auth Status:</strong> {useAuthStore.getState().isAuthenticated ? 'Authenticated' : 'Not Authenticated'}</p>
+      
+      {useAuthStore.getState().user && (
+        <>
+          <p className="mb-2"><strong>User Email:</strong> {useAuthStore.getState().user?.email}</p>
+          <p className="mb-2"><strong>User ID:</strong> {useAuthStore.getState().user?.id}</p>
+          <p className="mb-2"><strong>Plan Type:</strong> {useAuthStore.getState().user?.planType}</p>
+          <p className="mb-2"><strong>Is Super Admin:</strong> {useAuthStore.getState().user?.isSuperAdmin ? 'Yes' : 'No'}</p>
+        </>
+      )}
+    </div>
   </div>
 } />
 

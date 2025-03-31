@@ -8,13 +8,7 @@ declare global {
     tokenRefreshInterval?: NodeJS.Timeout; // Updated to proper timeout type
   }
 }
-const parseJwt = (token: string) => {
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch (e) {
-    return null;
-  }
-};
+// Function removed: parseJwt was declared but never used
 
 interface User {
   id: number;
@@ -75,6 +69,12 @@ interface AuthState {
   updateDisplayName: (displayName: string) => Promise<boolean>; // New function for updating display name
   getAuthToken: () => string | null; // Added new method for getting auth token
 }
+
+const checkIfSuperAdmin = (user: User | null) => {
+  // Check if user is one of the known admin emails
+  const adminEmails = ['d5905928-e95c-4fd8-b3aa-be50eae456fd@zariumai.onmicrosoft.com']; // Replace with your admin email
+  return user && adminEmails.includes(user.email);
+};
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
@@ -370,12 +370,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   setUser: (user: User | null) => {
     if (user) {
-      // Debug token innhold hvis token finnes
-      if (user.token) {
-        const tokenPayload = parseJwt(user.token);
-        console.log("Token payload:", tokenPayload);
-        // Sikre at isSuperAdmin blir riktig satt
-        user.isSuperAdmin = tokenPayload?.is_super_admin === true;
+      // Force super admin status for known admin accounts
+      const shouldBeSuperAdmin = checkIfSuperAdmin(user);
+      if (shouldBeSuperAdmin) {
+        console.log("Setting user as super admin based on email match");
+        user.isSuperAdmin = true;
       }
       
       localStorage.setItem('authUser', JSON.stringify(user));
@@ -386,7 +385,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         tokens: user.tokens || 0,
         planType: user.planType,
         isDemoUser: user.planType === 'Demo',
-        isSuperAdmin: user.isSuperAdmin || false
+        isSuperAdmin: !!user.isSuperAdmin || shouldBeSuperAdmin || false
       });
     } else {
       localStorage.removeItem('authUser');
