@@ -25,6 +25,9 @@ import LogoutCallback from './components/LogoutCallback';
 import WelcomePage from './pages/WelcomePage';
 import CompleteProfile from './pages/CompleteProfile';
 import toast from 'react-hot-toast';
+import AdminDashboard from './pages/AdminDashboard';
+
+
 // Token refresh interval (10 minutes)
 const TOKEN_REFRESH_INTERVAL = 10 * 60 * 1000;
 
@@ -266,6 +269,11 @@ function App() {
                 </ProtectedRoute>
               } />
               
+              <Route path="admin" element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } />
               <Route path="dashboard" element={
                 <ProtectedRoute>
                   <DashboardPage />

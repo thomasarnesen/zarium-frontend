@@ -15,6 +15,7 @@ interface User {
   planType: 'Demo' | 'Basic' | 'Plus' | 'Pro';  
   tokens?: number;
   isAdmin?: boolean; 
+  isSuperAdmin?: boolean; // Legg til super admin-status
   token: string;
   displayName?: string;  // Added displayName property
   subscription?: {
@@ -46,6 +47,7 @@ interface AuthState {
   lastRefreshTime: number; // Added to track timing
   failedRefreshCount: number; // Added to track refresh failures
   lastFailureTime: number; // Added to track last failure time
+  isSuperAdmin: boolean; // Legg til super admin-status i state
  
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, planType?: 'Demo' | 'Basic' | 'Plus' | 'Pro', displayName?: string) => Promise<void>;
@@ -81,6 +83,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   lastRefreshTime: 0, // New state to track when refreshes happen
   failedRefreshCount: 0, // New state to track refresh failures
   lastFailureTime: 0, // New state to track last failure time
+  isSuperAdmin: false, // Initialiser super admin-status
 
   refreshUserData: async () => {
     // Prevent multiple concurrent refresh calls
@@ -113,7 +116,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isAuthenticated: true,
             tokens: result.tokens || 0,
             planType: result.planType,
-            isDemoUser: result.planType === 'Demo'
+            isDemoUser: result.planType === 'Demo',
+            isSuperAdmin: result.isSuperAdmin || false
           });
           
           return true;
@@ -211,6 +215,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               ...userData,
               token: authUser.token || userData.token,
               isAdmin: userData.isAdmin || authUser.isAdmin,
+              isSuperAdmin: userData.isSuperAdmin || authUser.isSuperAdmin,
               // Important: Only use localStorage displayName as fallback
               // Always prioritize server data when available
               displayName: userData.displayName || authUser.displayName
@@ -256,7 +261,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     isAuthenticated: true,
                     tokens: tokenData.current_tokens || userData.tokens || 0,
                     planType: userData.planType,
-                    isDemoUser: userData.planType === 'Demo'
+                    isDemoUser: userData.planType === 'Demo',
+                    isSuperAdmin: updatedUser.isSuperAdmin || false
                   });
                   
                   // Log successful update
@@ -269,7 +275,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     isAuthenticated: true,
                     tokens: userData.tokens || 0,
                     planType: userData.planType,
-                    isDemoUser: userData.planType === 'Demo'
+                    isDemoUser: userData.planType === 'Demo',
+                    isSuperAdmin: updatedUser.isSuperAdmin || false
                   });
                 }
               } else {
@@ -278,7 +285,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                   isAuthenticated: true,
                   tokens: userData.tokens || 0,
                   planType: userData.planType,
-                  isDemoUser: userData.planType === 'Demo'
+                  isDemoUser: userData.planType === 'Demo',
+                  isSuperAdmin: updatedUser.isSuperAdmin || false
                 });
                 
                 console.log("User data updated without token info, displayName:", updatedUser.displayName);
@@ -290,7 +298,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 isAuthenticated: true,
                 tokens: userData.tokens || 0,
                 planType: userData.planType,
-                isDemoUser: userData.planType === 'Demo'
+                isDemoUser: userData.planType === 'Demo',
+                isSuperAdmin: updatedUser.isSuperAdmin || false
               });
               
               console.log("User data updated with auth only, displayName:", updatedUser.displayName);
@@ -329,7 +338,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isAuthenticated: true,
             tokens: userData.tokens || 0,
             planType: userData.planType,
-            isDemoUser: userData.planType === 'Demo'
+            isDemoUser: userData.planType === 'Demo',
+            isSuperAdmin: userData.isSuperAdmin || false
           });
           console.log('Using cached user data due to API failure, displayName:', userData.displayName);
           return true;
@@ -361,7 +371,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         tokens: user.tokens || 0,
         planType: user.planType,
-        isDemoUser: user.planType === 'Demo'
+        isDemoUser: user.planType === 'Demo',
+        isSuperAdmin: user.isSuperAdmin || false
       });
     } else {
       localStorage.removeItem('authUser');
@@ -370,7 +381,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: null,
         isAuthenticated: false,
         tokens: 0,
-        planType: null
+        planType: null,
+        isSuperAdmin: false
       });
     }
   },
@@ -543,7 +555,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         planType: null,
         tokens: 0,
         isAuthenticated: false, // Important to set this to false
-        pendingRegistration: null
+        pendingRegistration: null,
+        isSuperAdmin: false
       });
       
       // Force an update of components that depend on authentication status
@@ -626,7 +639,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isAuthenticated: true,
             planType: authData.planType,
             tokens: authData.tokens || 0,
-            isDemoUser: authData.planType === 'Demo'
+            isDemoUser: authData.planType === 'Demo',
+            isSuperAdmin: authData.isSuperAdmin || false
           });
         } catch (parseError) {
           console.warn('Failed to parse stored auth data:', parseError);
@@ -652,11 +666,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     ...userData,
                     token: JSON.parse(storedAuth).token,
                     isAdmin: userData.isAdmin,
+                    isSuperAdmin: userData.isSuperAdmin || false,
                     displayName: userData.displayName || JSON.parse(storedAuth).displayName
                   },
                   tokens: userData.tokens || 0,
                   planType: userData.planType,
-                  isDemoUser: userData.planType === 'Demo'
+                  isDemoUser: userData.planType === 'Demo',
+                  isSuperAdmin: userData.isSuperAdmin || false
                 });
               }
             }

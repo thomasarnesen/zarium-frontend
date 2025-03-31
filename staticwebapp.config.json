@@ -123,6 +123,42 @@
       "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/auth/session-helper"
     },
     {
+      "route": "/api/admin/dashboard-stats",
+      "methods": ["GET", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/admin/dashboard-stats"
+    },
+    {
+      "route": "/api/admin/users",
+      "methods": ["GET", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/admin/users"
+    },
+    {
+      "route": "/api/admin/bots",
+      "methods": ["GET", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/admin/bots"
+    },
+    {
+      "route": "/api/admin/activate-user/*",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/admin/activate-user/*"
+    },
+    {
+      "route": "/api/admin/users/set-admin/*",
+      "methods": ["POST", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/admin/users/set-admin/*"
+    },
+    {
+      "route": "/api/admin/system-status",
+      "methods": ["GET", "OPTIONS"],
+      "allowedRoles": ["anonymous"],
+      "backendUri": "https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net/api/admin/system-status"
+    },
+    {
       "route": "/api/reactivate-subscription",
       "methods": ["GET", "OPTIONS"],
       "allowedRoles": ["anonymous"],
