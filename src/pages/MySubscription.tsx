@@ -41,10 +41,10 @@ const PLAN_TOKENS = {
 // Define all available features
 const ALL_FEATURES = [
   'Access to Basic model',
-  'Email support',
   'Download generated files',
+  'Email support',
   'Access to enhaced model',
-  'Upload custom files and images',
+  'Upload files',
   'Priority support',
   'Priority queue',
 ];
@@ -52,23 +52,23 @@ const ALL_FEATURES = [
 // Define which features are included in each plan
 const PLAN_FEATURES = {
   'Basic': [
-    'Basic model',
-    'Email support',
+    'Access to Basic model',
     'Download generated files',
+    'Email support',
   ],
   'Plus': [
-    'Basic tasks and templates',
-    'Email support',
+    'Access to Basic model',
     'Download generated files',
+    'Email support',
     'Access to enhaced model',
-    'Upload custom files and images',
+    'Upload files',
   ],
   'Pro': [
     'Access to Basic model',
-    'Email support',
     'Download generated files',
+    'Email support',
     'Access to enhaced model',
-    'Upload custom files and images',
+    'Upload files',
     'Priority support',
     'Priority queue',
   ]
