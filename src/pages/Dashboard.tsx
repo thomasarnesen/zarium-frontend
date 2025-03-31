@@ -338,8 +338,9 @@ export default function Dashboard() {
   };
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    if (isBasicPlan) {
-      setError('Upgrade to Plus or Pro to paste images');
+    if (isBasicPlan || isDemoPlan) {
+      e.preventDefault();
+      setError('Upgrade to Plus or Pro to paste content');
       return;
     }
     
