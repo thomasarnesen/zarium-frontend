@@ -26,6 +26,22 @@ import WelcomePage from './pages/WelcomePage';
 import CompleteProfile from './pages/CompleteProfile';
 import toast from 'react-hot-toast';
 import AdminDashboard from './pages/AdminDashboard';
+// Legg til denne importen øverst i filen:
+
+
+// Legg til denne ruten i Routes-komponenten under andre ruter:
+<Route path="/debug-auth" element={
+  <div className="p-4">
+    <h1 className="text-xl mb-4">Auth Debug</h1>
+    <pre className="bg-gray-100 p-4 rounded">
+      {JSON.stringify({
+        user: useAuthStore.getState().user,
+        isAuthenticated: useAuthStore.getState().isAuthenticated,
+        isSuperAdmin: useAuthStore.getState().user?.isSuperAdmin,
+      }, null, 2)}
+    </pre>
+  </div>
+} />
 
 
 // Token refresh interval (10 minutes)

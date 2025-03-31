@@ -8,6 +8,13 @@ declare global {
     tokenRefreshInterval?: NodeJS.Timeout; // Updated to proper timeout type
   }
 }
+const parseJwt = (token: string) => {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch (e) {
+    return null;
+  }
+};
 
 interface User {
   id: number;
@@ -361,9 +368,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isRefreshing: false });
     }
   },
-
   setUser: (user: User | null) => {
     if (user) {
+      // Debug token innhold hvis token finnes
+      if (user.token) {
+        const tokenPayload = parseJwt(user.token);
+        console.log("Token payload:", tokenPayload);
+        // Sikre at isSuperAdmin blir riktig satt
+        user.isSuperAdmin = tokenPayload?.is_super_admin === true;
+      }
+      
       localStorage.setItem('authUser', JSON.stringify(user));
       localStorage.setItem('isAuthenticated', 'true');
       set({ 
@@ -386,6 +400,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     }
   },
+
 
   login: async (email: string, password: string) => {
     try {
