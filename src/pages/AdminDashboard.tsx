@@ -23,12 +23,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     // Sjekk om brukeren er super admin
-    if (!user?.isSuperAdmin) {
-      // Navigerer til dashboard uten feilmelding for å holde admin-tilgangen skjult
-      navigate('/dashboard');
-      return;
-    }
-    
+
     const fetchUsers = async () => {
       try {
         setIsLoadingUsers(true);
@@ -82,7 +77,7 @@ export default function AdminDashboard() {
     
     fetchUsers();
     fetchBots();
-  }, [user, navigate]);
+  }, []);
   
   const reactivateUser = async (userId: string) => {
     try {
