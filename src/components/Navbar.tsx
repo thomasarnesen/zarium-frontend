@@ -108,13 +108,7 @@ export default function Navbar() {
             ) : (
               <>
                 {/* For non-authenticated users, just show "Get Started" button */}
-                <button
-                  onClick={handleDirectAuth}
-                  disabled={isAuthLoading}
-                  className="text-base bg-emerald-800 dark:bg-emerald-700 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-900 dark:hover:bg-emerald-600 shadow-sm hover:shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {isAuthLoading ? 'Verifying...' : 'Sign In'}
-                </button>
+
               </>
             )}
             {/* Theme Toggle */}
