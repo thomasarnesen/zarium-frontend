@@ -1,3 +1,10 @@
+// Hjelpefunksjon for å detektere localhost
+const isLocalhost = () => {
+  return window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1' || 
+         window.location.hostname.startsWith('192.168.');
+};
+
 export const RecaptchaService = {
   /**
    * Executes reCAPTCHA verification and returns a token
@@ -9,27 +16,34 @@ export const RecaptchaService = {
     if (typeof window.executeRecaptcha === 'function') {
       return window.executeRecaptcha(action);
     }
-    
+   
     // Queue the request if reCAPTCHA is still loading
     if (window.recaptchaQueue) {
       return new Promise((resolve) => {
         window.recaptchaQueue.push({ action, resolve });
       });
     }
-    
+   
     // Return a fallback value if reCAPTCHA isn't available
     console.warn('reCAPTCHA not available');
     return 'recaptcha-unavailable';
   },
-
+  
   /**
    * Safe execution of reCAPTCHA that never fails
    * Returns a special token if reCAPTCHA is unavailable
-   * 
+   * Automatically bypasses reCAPTCHA on localhost
+   *
    * @param {string} action - Name of the action being performed
    * @returns {Promise<string>} - reCAPTCHA token or error code
    */
   safeExecuteRecaptcha: async (action = 'login') => {
+    // Umiddelbar bypass for localhost
+    if (isLocalhost()) {
+      console.log('DEV MODE: Bypassing reCAPTCHA on localhost');
+      return 'recaptcha-unavailable';
+    }
+    
     try {
       const token = await RecaptchaService.executeRecaptcha(action);
       if (token) return token;
@@ -39,10 +53,10 @@ export const RecaptchaService = {
       return 'recaptcha-error';
     }
   },
-
+  
   /**
    * Verifies a reCAPTCHA token with the server
-   * 
+   *
    * @param {string} token - reCAPTCHA token to verify
    * @returns {Promise<{success: boolean, score?: number, error?: string, warning?: string}>}
    */
@@ -52,7 +66,7 @@ export const RecaptchaService = {
       console.warn(`Bypassing server verification due to token: ${token}`);
       return { success: true, warning: token };
     }
-    
+   
     try {
       const response = await fetch('/api/auth/verify-recaptcha', {
         method: 'POST',
@@ -61,7 +75,6 @@ export const RecaptchaService = {
         },
         body: JSON.stringify({ recaptchaToken: token })
       });
-
       return await response.json();
     } catch (error) {
       console.error('Error verifying token:', error);

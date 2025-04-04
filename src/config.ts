@@ -1,9 +1,8 @@
-const isDevelopment = import.meta.env.MODE === 'development' || window.location.hostname === 'localhost';
 
+// src/config.ts - Endre denne filen
 export const config = {
-  apiUrl: isDevelopment
-    ? 'http://localhost:8000'
-    : 'https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net',
+  // Bruk alltid produksjons-API-et
+  apiUrl: 'https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net',
   stripePublicKey: import.meta.env.VITE_STRIPE_PUBLIC_KEY,
   environment: import.meta.env.MODE,
   apiTimeout: 30000,

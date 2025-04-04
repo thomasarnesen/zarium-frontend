@@ -1,8 +1,6 @@
-// src/components/AuthCallback.tsx - Completely skip email collection
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import api from '../utils/api';
 
 interface DebugInfo {
   timestamp?: string;
@@ -46,8 +44,6 @@ const AuthCallback = () => {
           const hashParams = new URLSearchParams(location.hash.substring(1));
           const errorCode = hashParams.get('error');
           const errorDescription = hashParams.get('error_description');
-          
-
           throw new Error(`Authentication failed: ${errorDescription || errorCode}`);
         }
         
@@ -56,72 +52,24 @@ const AuthCallback = () => {
         let provider = 'azure';
         
         if (window.location.hash && window.location.hash.length > 1) {
-
+          console.log('Processing hash:', window.location.hash);
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
           token = hashParams.get('id_token');
           
           if (token) {
-
+            console.log('ID token found in hash');
           } else {
-
+            console.warn('No id_token found in hash');
           }
         } else {
-
+          console.warn('No hash found in URL');
           
           // Fall back to query parameters (for OAuth2 code flow with Google)
           const searchParams = new URLSearchParams(location.search);
           token = searchParams.get('code');
           if (token) {
-
+            console.log('Code found in query parameters');
             provider = 'google';
-          }
-        }
-        
-        // Check for special case: auth_success=true but no token (TikTok browser)
-        const isAuthSuccess = new URLSearchParams(location.search).get('auth_success') === 'true';
-        
-        if (!token && isAuthSuccess) {
-  
-          
-          // In TikTok browser, we'd use session storage or special endpoint to get the auth data
-          const sessionAuthData = sessionStorage.getItem('auth_pending_data');
-          const sessionProvider = sessionStorage.getItem('auth_provider');
-          
-          if (sessionAuthData && sessionProvider) {
-            try {
-              const parsedData = JSON.parse(sessionAuthData);
-              if (parsedData.id_token) {
-                token = parsedData.id_token;
-                provider = sessionProvider;
-     
-              }
-            } catch (e) {
-
-            }
-          }
-          
-          // If we still don't have a token, try to fetch from special endpoint
-          if (!token) {
-            try {
-              const sessionId = sessionStorage.getItem('auth_session_id');
-              if (sessionId) {
-        
-                const sessionResponse = await fetch(`/api/auth/session-helper?session_id=${sessionId}`);
-                
-                if (sessionResponse.ok) {
-                  const sessionData = await sessionResponse.json();
-                  if (sessionData.token) {
-                    token = sessionData.token;
-                    provider = sessionData.provider || 'azure';
-
-                  }
-                } else {
-  
-                }
-              }
-            } catch (sessionError) {
-
-            }
           }
         }
         
@@ -135,7 +83,6 @@ const AuthCallback = () => {
         
         // Extract user info for logging (optional)
         let userEmail = null;
-        let idp = null;
         
         if (token && provider === 'azure') {
           try {
@@ -143,26 +90,19 @@ const AuthCallback = () => {
             const parts = token.split('.');
             if (parts.length === 3) {
               const payload = parts[1];
-              const decodedPayload = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+              const paddedPayload = payload.padEnd(payload.length + (4 - payload.length % 4) % 4, '=');
+              const decodedPayload = atob(paddedPayload.replace(/-/g, '+').replace(/_/g, '/'));
               const tokenData = JSON.parse(decodedPayload);
-              
-              // Log tokenData for debugging (exclude sensitive fields)
-              const displayData = { ...tokenData };
-              delete displayData.sub;
-              delete displayData.oid;
-
               
               userEmail = tokenData.email || 
                         tokenData.preferred_username || 
                         tokenData.upn || 
                         tokenData.name;
-                        
-              idp = tokenData.idp;
               
-
+              console.log('Extracted email:', userEmail);
             }
           } catch (decodeError) {
-
+            console.warn('Error decoding token:', decodeError);
           }
         }
         
@@ -179,15 +119,17 @@ const AuthCallback = () => {
         debug.authData = { ...authData, id_token: '***redacted***' };
         setDebugInfo((prev: DebugInfo) => ({...prev, ...debug}));
         
-        // Send token to backend for verification/user creation
+        // Using direct URL to avoid CORS/proxy issues during development
+        const backendUrl = 'https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net';
         const callbackEndpoint = 
           provider === 'google' 
-            ? '/api/auth/google/callback' 
-            : '/api/auth/azure-callback';
+            ? `${backendUrl}/api/auth/google/callback` 
+            : `${backendUrl}/api/auth/azure-callback`;
         
-
+        console.log('Making auth API call to:', callbackEndpoint);
             
-        const response = await api.fetch(callbackEndpoint, {
+        // Make the API call with JSON content type
+        const response = await fetch(callbackEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -195,6 +137,8 @@ const AuthCallback = () => {
           body: JSON.stringify(authData),
           credentials: 'include'
         });
+          
+        console.log('API response status:', response.status);
           
         if (!response.ok) {
           let errorMessage = '';
@@ -209,8 +153,8 @@ const AuthCallback = () => {
           
         // Parse user data from response
         const userData = await response.json();
+        console.log('Authentication successful, user data received');
         
-        // MODIFIED: Always skip email collection and proceed directly
         // Store in local storage
         localStorage.setItem('authUser', JSON.stringify(userData));
         localStorage.setItem('isAuthenticated', 'true');
@@ -224,23 +168,22 @@ const AuthCallback = () => {
         // Update auth store
         setUser(userData);
         
-        // MODIFIED: Always direct new users to welcome page for name collection,
+        // Direct new users to welcome page for name collection,
         // existing users to dashboard
         if (!userData.displayName || userData.displayName === 'unknown') {
-
+          console.log('Redirecting to welcome page for profile completion');
           navigate('/welcome');
         } else {
           // Get saved redirect URL if it exists
           const redirectUrl = sessionStorage.getItem('authRedirectUrl');
           sessionStorage.removeItem('authRedirectUrl');
-          
-
+          console.log('Redirecting to:', redirectUrl || '/dashboard');
           navigate(redirectUrl || '/dashboard');
         }
         
         setProcessing(false);
       } catch (error) {
-
+        console.error('Authentication error:', error);
         const errorMessage = error instanceof Error ? error.message : String(error);
         setError(`Authentication error: ${errorMessage}`);
         setDebugInfo((prev: DebugInfo) => ({...prev, finalError: errorMessage}));

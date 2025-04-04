@@ -74,7 +74,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 border-b border-emerald-100 dark:border-emerald-900 sticky top-0 z-50 backdrop-blur-sm">
+    <nav className="bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 border-b border-emerald-100 dark:border-emerald-900 sticky top-0 z-50 backdrop-blur-sm shadow-md">
       <div className="container mx-auto px-6">
         <div className="flex justify-between items-center h-20">
           <Link to="/" className="flex items-center">

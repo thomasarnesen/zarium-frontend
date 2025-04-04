@@ -1,0 +1,990 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { FileSpreadsheet, Download, Sparkles, Upload, Lock, HelpCircle, ArrowRight } from 'lucide-react';
+import { SpreadsheetViewer } from '../components/SpreadsheetViewer';
+import { useAuthStore } from '../store/authStore';
+import { config } from '../config';
+import { Switch } from '../components/ui/switch';
+import api from '../utils/api';
+
+// Define types for global window
+declare global {
+  interface Window {
+    tokenRefreshInterval?: NodeJS.Timeout;
+  }
+}
+
+type DocumentType = 'excel';
+
+interface LocationState {
+  selectedType?: DocumentType;
+}
+
+interface FormattingInfo {
+  hasChart: boolean;
+  downloadUrl: string;
+  requestAnalysis?: string;
+  resultSummary?: string;
+}
+
+interface SelectedFileInfo {
+  file: File;
+  id: string;
+  name: string;
+}
+
+const TOKENS_PER_GENERATION = 1000;
+const TOKENS_PER_UPLOAD = 500;
+
+export default function Dashboard() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { selectedType } = (location.state as LocationState) || {};
+  const { user, planType, tokens, useTokens, refreshUserData, enhancedMode, toggleEnhancedMode } = useAuthStore();
+  const token = user?.token;
+  const isAuthenticated = !!user;
+  const isBasicPlan = planType === 'Basic';  
+  const isDemoPlan = planType === 'Demo';
+  const isPro = planType === 'Pro';  // Check if user is on Pro plan
+  const canUseEnhancedMode = !isBasicPlan && !isDemoPlan;
+  const [greeting, setGreeting] = useState('');
+  const [firstMessageSent, setFirstMessageSent] = useState(false);
+  
+  // State for Edit Previous feature
+  const [editPrevious, setEditPrevious] = useState(false);
+  const [hasPreviousMacro, setHasPreviousMacro] = useState(false);
+
+  const [prompt, setPrompt] = useState('');
+  const [documentType, setDocumentType] = useState<DocumentType>('excel');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [formatting, setFormatting] = useState<FormattingInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<SelectedFileInfo[]>([]);
+  const [generationStatus, setGenerationStatus] = useState<string>('');
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  
+  // Chat history to store conversation
+  type MessageType = 'user' | 'assistant';
+  type ChatMessage = {
+    id: string;
+    type: MessageType;
+    text: string;
+    timestamp: Date;
+  };
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+
+  // Bot detection states
+  const [botDetected, setBotDetected] = useState(false);
+  const [timeOnPage, setTimeOnPage] = useState(0);
+  const [mouseMovements, setMouseMovements] = useState(0);
+  const [honeypotField, setHoneypotField] = useState('');
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  const [typingStats, setTypingStats] = useState({ charCount: 0, startTime: Date.now() });
+
+  // Track time on page and mouse movements for bot detection
+  useEffect(() => {
+    const startTime = Date.now();
+    
+    // Track mouse movements
+    const handleMouseMove = () => {
+      setMouseMovements(prev => prev + 1);
+      setLastActivityTime(Date.now());
+    };
+    
+    // Track keyboard activity
+    const handleKeyDown = () => {
+      setLastActivityTime(Date.now());
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Update time on page every second
+    const timeInterval = setInterval(() => {
+      setTimeOnPage(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('keydown', handleKeyDown);
+      clearInterval(timeInterval);
+    };
+  }, []);
+
+  // Check for previous macro availability
+  useEffect(() => {
+    const checkPreviousMacro = async () => {
+      if (planType === 'Pro') {
+        try {
+          const response = await api.fetch('/api/check-previous-macro');
+          if (response.ok) {
+            const data = await response.json();
+            setHasPreviousMacro(data.hasPreviousMacro);
+            
+            // If no previous macro is available, disable the edit previous switch
+            if (!data.hasPreviousMacro) {
+              setEditPrevious(false);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking previous macro:', error);
+        }
+      }
+    };
+    
+    checkPreviousMacro();
+  }, [planType]);
+
+  // Refs for the textarea and buttons
+  const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const generateButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Handler for honeypot field changes
+  const handleHoneypotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setHoneypotField(e.target.value);
+    
+    // If honeypot field is filled, mark as bot
+    if (e.target.value) {
+      setBotDetected(true);
+      reportHoneypotTrigger('hidden_field');
+    }
+  };
+
+  // Handle honeypot link click
+  const handleSecretLinkClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setBotDetected(true);
+    reportHoneypotTrigger('hidden_link');
+    // Continue normally to avoid alerting bot
+  };
+
+  // Function to report honeypot triggers
+  const reportHoneypotTrigger = async (honeypotType: string) => {
+    try {
+      await fetch(`${api.apiUrl}/api/honeypot-trigger`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          honeypotType,
+          page: 'dashboard_page',
+          details: { 
+            fieldContent: honeypotType === 'hidden_field' ? honeypotField : undefined,
+            timeOnPage,
+            mouseMovements
+          }
+        })
+      });
+    } catch (err) {
+      // Silent fail - don't alert the bot
+      console.error("Error reporting honeypot trigger:", err);
+    }
+  };
+
+  // Function to report bot behavioral patterns
+  const reportBotBehavior = async () => {
+    try {
+      await fetch(`${api.apiUrl}/api/behavior-analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          timeOnPage,
+          mouseMovements,
+          interactionCount: 1,
+          typingSpeed: typingStats.charCount / Math.max(1, (Date.now() - typingStats.startTime) / 1000),
+          inactivityTime: Date.now() - lastActivityTime
+        })
+      });
+    } catch (err) {
+      // Silent fail
+      console.error("Error reporting bot behavior:", err);
+    }
+  };
+  
+  // Generate time-based greeting
+  useEffect(() => {
+    const generateGreeting = () => {
+      const hour = new Date().getHours();
+      let timeGreeting = '';
+      
+      if (hour >= 5 && hour < 12) {
+        timeGreeting = 'Good morning';
+      } else if (hour >= 12 && hour < 17) {
+        timeGreeting = 'Good afternoon';
+      } else if (hour >= 17 && hour < 21) {
+        timeGreeting = 'Good evening';
+      } else {
+        timeGreeting = 'Happy late night';
+      }
+      
+      // Use displayName with underscores converted to spaces
+      const displayName = user?.displayName 
+        ? user.displayName.replace(/_/g, ' ') 
+        : '';
+      
+      setGreeting(`${timeGreeting}, ${displayName}`);
+    };
+    
+    generateGreeting();
+    
+    // Update greeting every minute
+    const interval = setInterval(generateGreeting, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Add this effect to redirect to welcome page if no display name
+  useEffect(() => {
+    if (user && (!user.displayName || user.displayName === 'unknown')) {
+      navigate('/welcome');
+    } else if (user && user.displayName) {
+      // User has a display name, continue
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    // Refresh user data on component mount
+    refreshUserData();
+  }, [refreshUserData]);
+
+  // Update spacing based on UI state
+  useEffect(() => {
+    if (previewImage || error) {
+      setFirstMessageSent(true);
+    }
+  }, [previewImage, error]);
+
+  useEffect(() => {
+    if (selectedType) {
+      setDocumentType(selectedType);
+    }
+  }, [selectedType]);
+
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+    let timeouts: NodeJS.Timeout[] = [];
+    let isMounted = true;
+    
+    // Define all the messages we want to show in sequence
+    const messages = [
+      'Processing',
+      'Analyzing your requirements...',
+      'Thinking',
+      'Designing spreadsheet structure...',
+      'Generating',
+      'Generating Excel file...',
+      'Finalizing'
+    ];
+    
+    // Also update assistant messages in chat
+    const assistantMessages = [
+      'I\'m processing your request...',
+      'Analyzing what you need in this spreadsheet...',
+      'Thinking about the best way to structure your data...',
+      'Designing the layout and formulas for your spreadsheet...',
+      'Generating the Excel file with your specifications...',
+      'Creating formulas, charts, and formatting...',
+      'Finalizing your Excel spreadsheet...'
+    ];
+
+    // Clear all timeouts on unmount or when dependencies change
+    const clearAllTimeouts = () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
+      timeouts = [];
+    };
+    
+    // Create a fixed schedule for status updates to ensure all messages are seen
+    const scheduleStatusUpdates = () => {
+      if (!isGenerating || sessionId) return;
+      
+      clearAllTimeouts(); // Clear any existing timeouts
+      
+      // IMPORTANT: Don't add generic messages during generation
+      // We'll only set the generation status without updating the chat
+      // The real messages from the backend will be displayed instead
+      messages.forEach((message, index) => {
+        const timeout = setTimeout(() => {
+          if (!isMounted) return;
+          setGenerationStatus(message);
+          
+          // Only add the first analyzing message, skip the rest of the generic responses
+          // This ensures we only show messages from the actual AI assistant
+          if (index === 0) {
+            // Just set status without adding a chat message
+            console.log("Setting initial status:", message);
+          }
+        }, index * 6000); // Show each message for ~6 seconds
+        
+        timeouts.push(timeout);
+      });
+    };
+
+    if (isGenerating && !sessionId) {
+      scheduleStatusUpdates();
+    }
+    
+    if (sessionId && isGenerating) {
+      // Existing polling code
+      pollInterval = setInterval(async () => {
+        try {
+          console.log("Polling for generation status...");
+          const response = await api.fetch(`/generation-status/${sessionId}`);
+          const data = await response.json();
+          console.log("Status data:", data);
+          
+          if (data.status === "Complete") {
+            console.log("Generation complete!");
+            setIsGenerating(false);
+            setSessionId(null);
+            
+            if (data.previewImage) {
+              console.log("Setting preview image");
+              setPreviewImage(data.previewImage);
+            }
+            
+            // IMPROVED HANDLING: Check for result summary in all possible locations
+            const resultSummaryText = data.resultSummary || 
+                                    (data.formatting && data.formatting.resultSummary) || 
+                                    "I've created your Excel spreadsheet based on your request. Check the preview on the right.";
+            
+            console.log("Adding final result summary to chat:", resultSummaryText.substring(0, 50) + "...");
+            addChatMessage('assistant', resultSummaryText);
+            
+            // Store formatting data
+            if (data.formatting) {
+              console.log("Setting formatting data:", data.formatting);
+              setFormatting(data.formatting);
+            }
+          }
+        } catch (error) {
+          console.error("Error in polling:", error);
+        }
+      }, 1000);
+    }
+
+    return () => {
+      isMounted = false;
+      clearAllTimeouts();
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [isGenerating, sessionId, token]);
+
+  useEffect(() => {
+    // Short delay to ensure authentication status is updated
+    const checkAuth = setTimeout(() => {
+      if (!isAuthenticated) {
+        navigate('/login');
+      }
+    }, 100);
+    
+    return () => clearTimeout(checkAuth);
+  }, [isAuthenticated, navigate]);
+
+  // Add an effect to automatically stop loading when the preview image arrives
+  useEffect(() => {
+    if (previewImage) {
+      // Stop the loading state and all status indicators when preview image is received
+      setIsGenerating(false);
+      setGenerationStatus('');
+      setSessionId(null);
+      setFirstMessageSent(true);
+    }
+  }, [previewImage]);
+  
+  // Make sure chat scrolls to bottom when new messages are added
+  useEffect(() => {
+    if (chatHistory.length > 0) {
+      // Find the chat container and scroll to the bottom
+      setTimeout(() => {
+        const chatContainer = document.querySelector('.chat-container');
+        if (chatContainer) {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+      }, 100); // Slight delay to ensure DOM has updated
+    }
+  }, [chatHistory]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const currentPlanType = user?.planType;
+    
+    if (currentPlanType === 'Plus' || currentPlanType === 'Pro') {
+        const files = event.target.files;
+        if (files) {
+            const totalCost = files.length * TOKENS_PER_UPLOAD;
+            if (!useTokens(totalCost)) {
+                setError('Insufficient tokens for file upload');
+                return;
+            }
+
+            const newFiles = Array.from(files).map(file => ({
+                file,
+                id: Math.random().toString(36).substr(2, 9),
+                name: file.name
+            }));
+            setSelectedFiles(prev => [...prev, ...newFiles]);
+        }
+    }
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (isBasicPlan || isDemoPlan) {
+      e.preventDefault();
+      setError('Upgrade to Plus or Pro to paste content');
+      return;
+    }
+    
+    const items = e.clipboardData.items;
+    let imageCount = 0;
+    
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        imageCount++;
+      }
+    }
+
+    if (imageCount > 0) {
+      const totalCost = imageCount * TOKENS_PER_UPLOAD;
+      if (!useTokens(totalCost)) {
+        setError('Insufficient tokens for image paste');
+        return;
+      }
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf('image') !== -1) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            const newFile = {
+              file,
+              id: Math.random().toString(36).substr(2, 9),
+              name: `Pasted Image ${new Date().toLocaleTimeString()}`
+            };
+            setSelectedFiles(prev => [...prev, newFile]);
+            setPrompt(prev => prev + `\n[Image "${newFile.name}" added]`);
+          }
+        }
+      }
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    if (isBasicPlan) {
+      setError('Upgrade to Plus or Pro to drop files');
+      return;
+    }
+    
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length > 0) {
+      const totalCost = imageFiles.length * TOKENS_PER_UPLOAD;
+      if (!useTokens(totalCost)) {
+        setError('Insufficient tokens for file upload');
+        return;
+      }
+    }
+
+    const newFiles = imageFiles.map(file => ({
+      file,
+      id: Math.random().toString(36).substr(2, 9),
+      name: file.name
+    }));
+    
+    if (newFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...newFiles]);
+      setPrompt(prev => prev + `\n[${newFiles.length} images added]`);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleGenerate();
+    }
+  };
+
+  // Track typing for bot detection
+  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // Track current prompt value
+    setPrompt(e.target.value);
+    
+    // Update typing stats
+    if (e.target.value.length > typingStats.charCount) {
+      // Only track when typing, not deleting
+      setTypingStats({
+        charCount: e.target.value.length,
+        startTime: typingStats.startTime
+      });
+    } else if (e.target.value.length === 0) {
+      // Reset typing stats when clearing the field
+      setTypingStats({
+        charCount: 0,
+        startTime: Date.now()
+      });
+    }
+    
+    // Reset the lastActivityTime
+    setLastActivityTime(Date.now());
+  };
+
+  // Function to add a message to the chat history
+  const addChatMessage = (type: MessageType, text: string) => {
+    const newMessage: ChatMessage = {
+      id: Math.random().toString(36).substr(2, 9),
+      type,
+      text,
+      timestamp: new Date()
+    };
+    setChatHistory(prev => [...prev, newMessage]);
+  };
+  
+  // Oppdatert updateLastAssistantMessage for å fikse problemer med indeksering
+  const updateLastAssistantMessage = (text: string) => {
+    console.log("updateLastAssistantMessage called with:", text.substring(0, 50) + "...");
+    
+    setChatHistory(prev => {
+      // Finn den FAKTISKE siste assistant-meldingen (dette er den sikreste metoden)
+      let assistantIndices = prev
+        .map((msg, index) => msg.type === 'assistant' ? index : -1)
+        .filter(index => index !== -1);
+      
+      // Hvis ingen assistentmeldinger, legg til en ny
+      if (assistantIndices.length === 0) {
+        console.log("No assistant message found, adding new one");
+        return [...prev, {
+          id: Math.random().toString(36).substr(2, 9),
+          type: 'assistant',
+          text,
+          timestamp: new Date()
+        }];
+      }
+      
+      // Finn den siste assistentmeldingen
+      const lastAssistantIndex = assistantIndices[assistantIndices.length - 1];
+      console.log(`Found last assistant message at index ${lastAssistantIndex} of ${prev.length}`);
+      
+      // Oppdater den siste assistentmeldingen
+      const newHistory = [...prev];
+      newHistory[lastAssistantIndex].text = text;
+      return newHistory;
+    });
+  };
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    
+    setFirstMessageSent(true);
+    setIsGenerating(true);
+    setError(null);
+    setPreviewImage(null); // Reset any previous preview
+    
+    // Add user message to chat
+    addChatMessage('user', prompt);
+    
+    // Add initial assistant message
+    addChatMessage('assistant', 'Analyzing your request...');
+    
+    // Reset formatting
+    setFormatting(null);
+    
+    // Log for debugging
+    console.log("Starting generation process with progressive updates");
+    
+    try {
+      // Refresh token before generation
+      const tokenResponse = await api.fetch('/refresh-token', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (!tokenResponse.ok) {
+        throw new Error('Failed to refresh session');
+      }
+      
+      // STEG 1: Start generasjonsprosessen og få en session_id
+      const requestOptions: RequestInit = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          prompt,
+          format: 'xlsx',
+          enhancedMode,
+          editPrevious: isPro ? editPrevious : false
+        })
+      };
+      
+      console.log("Sending initial request to start generation");
+      const startResponse = await api.fetch('/api/start-generation', requestOptions);
+      const startData = await startResponse.json();
+      
+      if (startData.error) {
+        throw new Error(startData.error);
+      }
+      
+      const sessionId = startData.session_id;
+      setSessionId(sessionId);
+      
+      // Oppdater analysemelding med den innledende analysen
+      if (startData.requestAnalysis) {
+        console.log("Updating with initial analysis:", startData.requestAnalysis.substring(0, 50) + "...");
+        updateLastAssistantMessage(startData.requestAnalysis);
+      }
+      
+      // STEG 2: Poller for status og oppdateringer
+      let isComplete = false;
+      let retryCount = 0;
+      const maxRetries = 60; // 1 minutt med 1-sekunds polling
+      
+      while (!isComplete && retryCount < maxRetries) {
+        retryCount++;
+        
+        // Vent i 1 sekund mellom hver polling
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        try {
+          const statusResponse = await api.fetch(`/api/generation-status/${sessionId}`);
+          const statusData = await statusResponse.json();
+          
+          console.log(`Polling status (${retryCount}):`, statusData.status);
+          
+          // Oppdater generationStatus for å gi brukeren feedback
+          setGenerationStatus(statusData.status);
+          
+          // Oppdater resultSummary når det er tilgjengelig
+          if (statusData.resultSummary && statusData.status === 'processing') {
+            console.log("Adding result summary:", statusData.resultSummary.substring(0, 50) + "...");
+            // Legg til resultatoppsummering som ny melding
+            addChatMessage('assistant', statusData.resultSummary);
+          }
+          
+          // Prosessen er ferdig
+          if (statusData.status === 'complete') {
+            isComplete = true;
+            
+            // Vis preview-bilde
+            if (statusData.previewImage) {
+              console.log("Setting preview image");
+              setPreviewImage(statusData.previewImage);
+            }
+            
+            // Lagre formateringsinformasjon
+            if (statusData.formatting) {
+              console.log("Setting formatting data");
+              setFormatting({
+                hasChart: statusData.formatting.hasChart || false,
+                downloadUrl: statusData.downloadUrl || '',
+                requestAnalysis: statusData.requestAnalysis,
+                resultSummary: statusData.resultSummary
+              });
+            } else {
+              // Minimal formatting hvis ikke tilgjengelig
+              setFormatting({
+                hasChart: false,
+                downloadUrl: statusData.downloadUrl || '',
+                requestAnalysis: statusData.requestAnalysis,
+                resultSummary: statusData.resultSummary
+              });
+            }
+            
+            setIsGenerating(false);
+            setSessionId(null);
+            
+            // Refresh user data
+            await refreshUserData();
+            
+            // Update hasPreviousMacro after a successful generation for Pro users
+            if (isPro) {
+              try {
+                const macroResponse = await api.fetch('/api/check-previous-macro');
+                if (macroResponse.ok) {
+                  const macroData = await macroResponse.json();
+                  setHasPreviousMacro(macroData.hasPreviousMacro);
+                }
+              } catch (error) {
+                console.error('Error checking previous macro after generation:', error);
+              }
+            }
+            
+            break;
+          }
+          
+          // Håndter feil
+          if (statusData.status === 'error') {
+            throw new Error(statusData.error || 'Generation failed');
+          }
+          
+        } catch (pollError) {
+          console.error("Error polling generation status:", pollError);
+          // Ikke avbryt polling ved en enkelt feil
+          continue;
+        }
+      }
+      
+      // Timeout hvis maksimalt antall forsøk er nådd
+      if (!isComplete) {
+        throw new Error('Generation timed out. Please try again later.');
+      }
+
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      setError(error.message || 'Failed to generate document. Please try again.');
+      setIsGenerating(false);
+      setGenerationStatus('');
+      setSessionId(null);
+      
+      // Add error message to chat
+      addChatMessage('assistant', `I'm sorry, I encountered an error: ${error.message || 'Failed to generate document. Please try again.'}`);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
+      {/* Honeypot Link - Hidden from normal users */}
+      <a 
+        href="/internal-access" 
+        onClick={handleSecretLinkClick}
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          width: '1px',
+          height: '1px',
+          overflow: 'hidden'
+        }}
+        aria-hidden="true"
+        tabIndex={-1}
+      >
+        Internal System Access
+      </a>
+
+      <div className={`container mx-auto px-4 transition-all duration-500 ${firstMessageSent ? 'pt-6' : 'pt-24'}`}>
+        {/* Header with greeting - visible before first message */}
+        <div className={`text-center mb-12 transition-opacity duration-500 ${firstMessageSent ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
+          <h1 className="text-4xl font-light text-emerald-800 dark:text-emerald-200">
+            {greeting}
+          </h1>
+        </div>
+        
+        <div className="flex flex-col-reverse md:flex-row gap-6">
+          {/* Chat and Request Log Area on the left */}
+          <div className="md:w-1/3">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-emerald-100 dark:border-emerald-800 overflow-hidden flex flex-col h-[600px]">
+              {/* Request log area - messages displayed from bottom to top */}
+              <div className="flex-grow overflow-y-auto p-4 flex flex-col chat-container">
+                {/* Show all chat history - user requests followed by assistant responses */}
+                {chatHistory.map((message, index) => (
+                  <div key={message.id} className="mb-4">
+                    {message.type === 'user' ? (
+                      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
+                        <p className="text-gray-800 dark:text-gray-200 text-sm">
+                          <span className="font-semibold">You:</span> {message.text}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 mt-2">
+                        <p className="text-emerald-800 dark:text-emerald-200 text-sm">
+                          <span className="font-semibold">Assistant:</span> {message.text}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {/* If chat is empty, show a welcome message */}
+                {chatHistory.length === 0 && (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-gray-400 text-center">
+                      Ask me to create an Excel spreadsheet for you.<br/>
+                      I'll explain what I'm creating in real-time.
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Input area fixed at the bottom */}
+              <div className="p-4 border-t border-emerald-100 dark:border-emerald-800">
+                <div className="relative w-full">
+                  {/* Hidden honeypot field */}
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      left: '-9999px',
+                      height: 0,
+                      width: 0,
+                      overflow: 'hidden'
+                    }}
+                    aria-hidden="true"
+                  >
+                    <input 
+                      type="text"
+                      name="message_backup"
+                      value={honeypotField}
+                      onChange={handleHoneypotChange}
+                      placeholder="Please don't fill this"
+                      tabIndex={-1}
+                      autoComplete="off"
+                    />
+                  </div>
+                  
+                  <textarea
+                    value={prompt}
+                    onChange={handlePromptChange}
+                    onKeyPress={handleKeyPress}
+                    onPaste={handlePaste}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    placeholder="How can I help you today?"
+                    className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-white min-h-[80px] resize-none outline-none shadow-sm"
+                    style={{ height: 'auto', minHeight: '80px' }}
+                    ref={promptTextareaRef}
+                  />
+                  
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-3">
+                      {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
+                        <label className="cursor-pointer">
+                          <Upload 
+                            className="h-4 w-4 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                          />
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept=".xlsx,.xls,.csv,.ods,image/*" 
+                            onChange={handleFileChange}
+                            multiple
+                            aria-label="Upload files"
+                          />
+                        </label>
+                      ) : (
+                        <div
+                          className="cursor-not-allowed"
+                          title="Upgrade to Plus or Pro to upload files"
+                        >
+                          <Upload className="h-4 w-4 text-gray-400" />
+                        </div>
+                      )}
+
+                      {/* Enhanced Mode Switch */}
+                      <div className="flex items-center gap-1">
+                        {canUseEnhancedMode ? (
+                          <Switch
+                            checked={enhancedMode}
+                            onCheckedChange={toggleEnhancedMode}
+                            className="data-[state=checked]:bg-emerald-600 h-4 w-7"
+                          />
+                        ) : (
+                          <div
+                            className="cursor-not-allowed"
+                            title={isDemoPlan ? "Demo users can't use enhanced mode. Upgrade to Plus or Pro." : "Upgrade to Plus or Pro to use enhanced mode"}
+                          >
+                            <Switch
+                              checked={false}
+                              disabled
+                              className="opacity-50 h-4 w-7"
+                            />
+                          </div>
+                        )}
+                        <span className="text-xs text-emerald-700 dark:text-emerald-300">
+                          Enhanced
+                        </span>
+                      </div>
+
+                      {/* Add Edit Previous switch only for Pro users */}
+                      {isPro && (
+                        <div className="flex items-center gap-1">
+                          <Switch
+                            checked={editPrevious}
+                            onCheckedChange={setEditPrevious}
+                            disabled={!hasPreviousMacro}
+                            className={`data-[state=checked]:bg-emerald-600 h-4 w-7 ${!hasPreviousMacro ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          />
+                          <span className={`text-xs ${hasPreviousMacro ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-400 dark:text-gray-500'}`}>
+                            Edit
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={handleGenerate}
+                      disabled={isGenerating || !prompt.trim()}
+                      className={`p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors ${
+                        isGenerating || !prompt.trim() 
+                          ? 'opacity-50 cursor-not-allowed' 
+                          : ''
+                      }`}
+                      aria-label="Generate Excel"
+                      ref={generateButtonRef}
+                    >
+                      <ArrowRight className="h-5 w-5 text-white" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Selected files display */}
+                {selectedFiles.length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    {selectedFiles.map((fileInfo) => (
+                      <div 
+                        key={fileInfo.id}
+                        className="flex items-center justify-between py-1 px-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-sm"
+                      >
+                        <span className="text-emerald-800 dark:text-emerald-200 truncate text-xs">
+                          {fileInfo.name}
+                        </span>
+                        <button
+                          onClick={() => setSelectedFiles(prev => 
+                            prev.filter(f => f.id !== fileInfo.id)
+                          )}
+                          className="ml-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Tokens display */}
+                <div className="text-center text-emerald-700 dark:text-emerald-300 text-xs mt-2">
+                  Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Spreadsheet Viewer on the right */}
+          <div className="md:w-2/3">
+            {/* Error display */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-lg text-center">
+                {error}
+              </div>
+            )}
+
+            <SpreadsheetViewer 
+              previewImage={previewImage} 
+              isGenerating={isGenerating} 
+              generationStatus={generationStatus} 
+              formatting={formatting}
+              planType={user?.planType}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -13,11 +13,13 @@
   },
   "dependencies": {
     "@handsontable/react": "^13.1.0",
+    "@radix-ui/react-popover": "^1.1.6",
     "@radix-ui/react-switch": "^1.1.3",
     "@shadcn/ui": "^0.0.4",
     "@stripe/stripe-js": "^2.4.0",
     "@supabase/supabase-js": "^2.39.0",
     "@tanstack/react-query": "^5.0.0",
+    "clsx": "^2.1.1",
     "handsontable": "^13.1.0",
     "lucide-react": "^0.344.0",
     "openai": "^4.0.0",
@@ -28,6 +30,7 @@
     "react-router-dom": "^6.22.0",
     "react-toastify": "^11.0.5",
     "stripe": "^13.2.0",
+    "tailwind-merge": "^3.1.0",
     "xlsx": "^0.18.5",
     "zustand": "^4.5.0"
   },

@@ -1,0 +1,121 @@
+/* Curtain-like overlay animation for SpreadsheetViewer */
+
+.glass-overlay-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.glass-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transform: translateY(-100%); /* Start positioned above the viewport */
+}
+
+/* Curtain drop animation */
+@keyframes curtainDrop {
+  0% {
+    transform: translateY(-100%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Modified animation to exit through bottom with a jerky/choppy effect */
+@keyframes curtainRaise {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  15% {
+    transform: translateY(10%);
+    opacity: 1;
+  }
+  20% {
+    transform: translateY(15%);
+    opacity: 1;
+  }
+  35% {
+    transform: translateY(30%);
+    opacity: 1;
+  }
+  40% {
+    transform: translateY(32%);
+    opacity: 1;
+  }
+  60% {
+    transform: translateY(55%);
+    opacity: 1;
+  }
+  65% {
+    transform: translateY(65%);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(75%);
+    opacity: 1;
+  }
+  82% {
+    transform: translateY(80%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 1;
+  }
+}
+
+/* Distinct animation classes with explicit no-repeat settings */
+.glass-overlay.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+  animation: curtainDrop 0.5s cubic-bezier(0.33, 1, 0.68, 1);
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+.glass-overlay.fade-out {
+  opacity: 0;
+  animation: curtainRaise 0.7s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+/* Preview image animations */
+@keyframes previewCurtainDrop {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.preview-image-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-curtain-animation {
+  transform: translateY(-100%);
+  animation: previewCurtainDrop 0.8s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}

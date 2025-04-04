@@ -26,29 +26,15 @@ import WelcomePage from './pages/WelcomePage';
 import CompleteProfile from './pages/CompleteProfile';
 import toast from 'react-hot-toast';
 import AdminDashboard from './pages/AdminDashboard';
-// Legg til denne importen øverst i filen:
 
+/* 
+  VIKTIG: Ikke skriv JSX-kode utenfor funksjonskomponenter her. 
+  Alt JSX må være inne i en funksjonskomponent.
+*/
 
-// Legg til denne ruten i Routes-komponenten under andre ruter:
-// In App.tsx, replace the debug-auth route with:
-<Route path="/debug-auth" element={
-  <div className="container mx-auto p-8">
-    <h1 className="text-2xl font-bold mb-4">Auth Debug</h1>
-    <div className="bg-gray-100 p-4 rounded">
-      <p className="mb-2"><strong>Auth Status:</strong> {useAuthStore.getState().isAuthenticated ? 'Authenticated' : 'Not Authenticated'}</p>
-      
-      {useAuthStore.getState().user && (
-        <>
-          <p className="mb-2"><strong>User Email:</strong> {useAuthStore.getState().user?.email}</p>
-          <p className="mb-2"><strong>User ID:</strong> {useAuthStore.getState().user?.id}</p>
-          <p className="mb-2"><strong>Plan Type:</strong> {useAuthStore.getState().user?.planType}</p>
-          <p className="mb-2"><strong>Is Super Admin:</strong> {useAuthStore.getState().user?.isSuperAdmin ? 'Yes' : 'No'}</p>
-        </>
-      )}
-    </div>
-  </div>
-} />
-
+// NOTAT: Det var tidligere en JSX-kode her som så ut som en kommentar,
+// men som faktisk ble tolket som kode. Dette er fjernet.
+// Bruk heller AuthDebugPage-komponenten inne i ruter.
 
 // Token refresh interval (10 minutes)
 const TOKEN_REFRESH_INTERVAL = 10 * 60 * 1000;
@@ -118,6 +104,30 @@ function AuthRedirectWrapper({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, navigate, location.pathname]);
 
   return <>{children}</>;
+}
+
+// Auth Debug component
+function AuthDebugPage() {
+  const [authState, setAuthState] = useState(null);
+  const { isAuthenticated, user } = useAuthStore();
+  
+  return (
+    <div className="container mx-auto p-8">
+      <h1 className="text-2xl font-bold mb-4">Auth Debug</h1>
+      <div className="bg-gray-100 p-4 rounded">
+        <p className="mb-2"><strong>Auth Status:</strong> {isAuthenticated ? 'Authenticated' : 'Not Authenticated'}</p>
+        
+        {user && (
+          <>
+            <p className="mb-2"><strong>User Email:</strong> {user?.email}</p>
+            <p className="mb-2"><strong>User ID:</strong> {user?.id}</p>
+            <p className="mb-2"><strong>Plan Type:</strong> {user?.planType}</p>
+            <p className="mb-2"><strong>Is Super Admin:</strong> {user?.isSuperAdmin ? 'Yes' : 'No'}</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function App() {
@@ -279,6 +289,9 @@ function App() {
               {/* Add this new route */}
               <Route path="complete-profile" element={<CompleteProfile />} />
               
+              {/* Debug route - moved into function component */}
+              <Route path="debug-auth" element={<AuthDebugPage />} />
+              
               {/* Pricing route - only accessible to authenticated users */}
               <Route path="pricing" element={
                 isAuthenticated ? <PricingPage /> : <Navigate to="/" replace />
@@ -337,9 +350,3 @@ declare global {
 }
 
 export default App;
-
-
-
-
-
-

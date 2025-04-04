@@ -1,0 +1,206 @@
+// Dette er en modifisert versjon av handleGenerate- og updateLastAssistantMessage-funksjonene
+// Kopier disse til Dashboard.tsx for å implementere en mer robust løsning med progressiv oppdatering
+
+// OPPDATERT handleGenerate funksjon for dashboard.tsx
+
+const handleGenerate = async () => {
+  if (!prompt.trim()) return;
+  
+  setFirstMessageSent(true);
+  setIsGenerating(true);
+  setError(null);
+  setPreviewImage(null); // Reset any previous preview
+  
+  // Add user message to chat
+  addChatMessage('user', prompt);
+  
+  // Add initial assistant message
+  addChatMessage('assistant', 'Analyzing your request...');
+  
+  // Reset formatting
+  setFormatting(null);
+  
+  // Log for debugging
+  console.log("Starting generation process with progressive updates");
+  
+  try {
+    // Refresh token before generation
+    const tokenResponse = await api.fetch('/refresh-token', {
+      method: 'POST',
+      credentials: 'include'
+    });
+
+    if (!tokenResponse.ok) {
+      throw new Error('Failed to refresh session');
+    }
+    
+    // STEG 1: Start generasjonsprosessen og få en session_id
+    const requestOptions: RequestInit = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        prompt,
+        format: 'xlsx',
+        enhancedMode,
+        editPrevious: isPro ? editPrevious : false
+      })
+    };
+    
+    console.log("Sending initial request to start generation");
+    const startResponse = await api.fetch('/api/start-generation', requestOptions);
+    const startData = await startResponse.json();
+    
+    if (startData.error) {
+      throw new Error(startData.error);
+    }
+    
+    const sessionId = startData.session_id;
+    setSessionId(sessionId);
+    
+    // Oppdater analysemelding med den innledende analysen
+    if (startData.requestAnalysis) {
+      console.log("Updating with initial analysis:", startData.requestAnalysis.substring(0, 50) + "...");
+      updateLastAssistantMessage(startData.requestAnalysis);
+    }
+    
+    // STEG 2: Poller for status og oppdateringer
+    let isComplete = false;
+    let retryCount = 0;
+    const maxRetries = 60; // 1 minutt med 1-sekunds polling
+    
+    while (!isComplete && retryCount < maxRetries) {
+      retryCount++;
+      
+      // Vent i 1 sekund mellom hver polling
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        const statusResponse = await api.fetch(`/api/generation-status/${sessionId}`);
+        const statusData = await statusResponse.json();
+        
+        console.log(`Polling status (${retryCount}):`, statusData.status);
+        
+        // Oppdater generationStatus for å gi brukeren feedback
+        setGenerationStatus(statusData.status);
+        
+        // Oppdater resultSummary når det er tilgjengelig
+        if (statusData.resultSummary && statusData.status === 'processing') {
+          console.log("Adding result summary:", statusData.resultSummary.substring(0, 50) + "...");
+          // Legg til resultatoppsummering som ny melding
+          addChatMessage('assistant', statusData.resultSummary);
+        }
+        
+        // Prosessen er ferdig
+        if (statusData.status === 'complete') {
+          isComplete = true;
+          
+          // Vis preview-bilde
+          if (statusData.previewImage) {
+            console.log("Setting preview image");
+            setPreviewImage(statusData.previewImage);
+          }
+          
+          // Lagre formateringsinformasjon
+          if (statusData.formatting) {
+            console.log("Setting formatting data");
+            setFormatting({
+              hasChart: statusData.formatting.hasChart || false,
+              downloadUrl: statusData.downloadUrl || '',
+              requestAnalysis: statusData.requestAnalysis,
+              resultSummary: statusData.resultSummary
+            });
+          } else {
+            // Minimal formatting hvis ikke tilgjengelig
+            setFormatting({
+              hasChart: false,
+              downloadUrl: statusData.downloadUrl || '',
+              requestAnalysis: statusData.requestAnalysis,
+              resultSummary: statusData.resultSummary
+            });
+          }
+          
+          setIsGenerating(false);
+          setSessionId(null);
+          
+          // Refresh user data
+          await refreshUserData();
+          
+          // Update hasPreviousMacro after a successful generation for Pro users
+          if (isPro) {
+            try {
+              const macroResponse = await api.fetch('/api/check-previous-macro');
+              if (macroResponse.ok) {
+                const macroData = await macroResponse.json();
+                setHasPreviousMacro(macroData.hasPreviousMacro);
+              }
+            } catch (error) {
+              console.error('Error checking previous macro after generation:', error);
+            }
+          }
+          
+          break;
+        }
+        
+        // Håndter feil
+        if (statusData.status === 'error') {
+          throw new Error(statusData.error || 'Generation failed');
+        }
+        
+      } catch (pollError) {
+        console.error("Error polling generation status:", pollError);
+        // Ikke avbryt polling ved en enkelt feil
+        continue;
+      }
+    }
+    
+    // Timeout hvis maksimalt antall forsøk er nådd
+    if (!isComplete) {
+      throw new Error('Generation timed out. Please try again later.');
+    }
+
+  } catch (error: any) {
+    console.error('Generation error:', error);
+    setError(error.message || 'Failed to generate document. Please try again.');
+    setIsGenerating(false);
+    setGenerationStatus('');
+    setSessionId(null);
+    
+    // Add error message to chat
+    addChatMessage('assistant', `I'm sorry, I encountered an error: ${error.message || 'Failed to generate document. Please try again.'}`);
+  }
+};
+
+// Oppdatert updateLastAssistantMessage for å fikse problemer med indeksering
+const updateLastAssistantMessage = (text: string) => {
+  console.log("updateLastAssistantMessage called with:", text.substring(0, 50) + "...");
+  
+  setChatHistory(prev => {
+    // Finn den FAKTISKE siste assistant-meldingen (dette er den sikreste metoden)
+    let assistantIndices = prev
+      .map((msg, index) => msg.type === 'assistant' ? index : -1)
+      .filter(index => index !== -1);
+    
+    // Hvis ingen assistentmeldinger, legg til en ny
+    if (assistantIndices.length === 0) {
+      console.log("No assistant message found, adding new one");
+      return [...prev, {
+        id: Math.random().toString(36).substr(2, 9),
+        type: 'assistant',
+        text,
+        timestamp: new Date()
+      }];
+    }
+    
+    // Finn den siste assistentmeldingen
+    const lastAssistantIndex = assistantIndices[assistantIndices.length - 1];
+    console.log(`Found last assistant message at index ${lastAssistantIndex} of ${prev.length}`);
+    
+    // Oppdater den siste assistentmeldingen
+    const newHistory = [...prev];
+    newHistory[lastAssistantIndex].text = text;
+    return newHistory;
+  });
+};
