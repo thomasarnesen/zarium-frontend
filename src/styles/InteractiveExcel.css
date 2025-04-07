@@ -1,0 +1,269 @@
+/* InteractiveExcel.css - legg denne filen i din styles-mappe */
+
+.interactive-excel-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+  
+  /* Excel grid styling */
+  .excel-grid {
+    display: grid;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-collapse: collapse;
+  }
+  
+  .grid-cell {
+    border: 1px solid #e5e7eb;
+    min-width: 80px;
+    padding: 0 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    background-color: rgba(255, 255, 255, 0.95);
+    transition: background-color 0.1s ease;
+  }
+  
+  .grid-cell:hover {
+    background-color: rgba(240, 253, 244, 0.95);
+  }
+  
+  .grid-header {
+    background-color: #f3f4f6;
+    font-weight: 500;
+    text-align: center;
+    position: sticky;
+    z-index: 10;
+  }
+  
+  .corner-header {
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 30;
+    background-color: #e5e7eb;
+  }
+  
+  .col-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #4b5563;
+  }
+  
+  .row-header {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background-color: #f3f4f6;
+    min-width: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #4b5563;
+  }
+  
+  .data-cell {
+    padding: 2px 4px;
+    min-height: 25px;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .active-cell {
+    outline: 2px solid #10b981;
+    outline-offset: -2px;
+    background-color: rgba(240, 253, 244, 0.95);
+    z-index: 15;
+  }
+  
+  .merged-cell {
+    z-index: 10;
+  }
+  
+  .merged-cell-hidden {
+    visibility: hidden;
+  }
+  
+  .cell-edit-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    padding: 2px 4px;
+    outline: none;
+    font-family: inherit;
+    font-size: inherit;
+    background-color: white;
+    z-index: 25;
+  }
+  
+  /* Toolbar och andra kontroller */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #fff;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .zoom-controls input[type="range"] {
+    cursor: pointer;
+  }
+  
+  /* Tab styling */
+  .tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: 2px;
+  }
+  
+  .tabs button {
+    white-space: nowrap;
+    padding: 4px 12px;
+    font-size: 12px;
+    border-bottom: none;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    transition: all 0.2s ease;
+  }
+  
+  .tabs button:hover {
+    background-color: #f3f4f6;
+  }
+  
+  /* Excel container */
+  .excel-container {
+    position: relative;
+    overflow: auto;
+    border: 1px solid #e5e7eb;
+  }
+  
+  .excel-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  .excel-grid-container {
+    position: relative;
+    z-index: 10;
+    min-width: 100%;
+    min-height: 100%;
+    padding: 16px;
+  }
+  
+  /* Loading and error states */
+  .loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    color: #10b981;
+  }
+  
+  .error-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    color: #ef4444;
+  }
+  
+  /* Custom styling for specific alignment */
+  .text-align-left {
+    text-align: left;
+  }
+  
+  .text-align-center {
+    text-align: center;
+  }
+  
+  .text-align-right {
+    text-align: right;
+  }
+  
+  /* Dark mode adjustments */
+  @media (prefers-color-scheme: dark) {
+    .interactive-excel-container {
+      background-color: #1f2937;
+    }
+    
+    .toolbar {
+      background-color: #1f2937;
+      border-color: #374151;
+    }
+    
+    .grid-cell {
+      border-color: #374151;
+      background-color: rgba(31, 41, 55, 0.7);
+      color: #e5e7eb;
+    }
+    
+    .grid-header {
+      background-color: #111827;
+      color: #d1d5db;
+    }
+    
+    .corner-header {
+      background-color: #111827;
+    }
+    
+    .col-header, .row-header {
+      color: #d1d5db;
+      background-color: #111827;
+    }
+    
+    .data-cell {
+      background-color: rgba(31, 41, 55, 0.8);
+    }
+    
+    .active-cell {
+      outline-color: #34d399;
+      background-color: rgba(12, 74, 110, 0.6);
+    }
+    
+    .cell-edit-input {
+      background-color: #1f2937;
+      color: #e5e7eb;
+    }
+    
+    .tabs button {
+      border-color: #374151;
+      color: #d1d5db;
+    }
+    
+    .tabs button:hover {
+      background-color: #2d3748;
+    }
+  }
+  

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState, useRef, MouseEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileSpreadsheet, Download, Sparkles, Upload, Lock, HelpCircle, ArrowRight, Palette, Check } from 'lucide-react';
+import { FileSpreadsheet, Download, Sparkles, Upload, Lock, HelpCircle, ArrowRight, Palette, Check, History } from 'lucide-react';
 import { SpreadsheetViewer } from '../components/SpreadsheetViewer';
+import { SessionSelector } from '../components/SessionSelector';
 import { useAuthStore } from '../store/authStore';
 import { config } from '../config';
 import { Switch } from '../components/ui/switch';
@@ -25,6 +26,10 @@ interface LocationState {
 interface FormattingInfo {
   hasChart: boolean;
   downloadUrl: string;
+  requestAnalysis?: string;
+  resultSummary?: string;
+  sessionId?: number;
+  sessionName?: string;
 }
 
 interface SelectedFileInfo {
@@ -33,8 +38,14 @@ interface SelectedFileInfo {
   name: string;
 }
 
-const TOKENS_PER_GENERATION = 1000;
-const TOKENS_PER_UPLOAD = 500;
+interface Session {
+  id: number;
+  name: string;
+  preview?: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
 
 // Add these new types and interfaces
 type MessageType = 'user' | 'assistant';
@@ -46,19 +57,28 @@ type ChatMessage = {
   isTyping?: boolean; // Flag to indicate if the message is still "typing"
   fullText?: string; // Store the full text while typing animation is in progress
   messageNumber?: number; // Added to track which assistant message number this is
+  macroVersion?: number; // Added to track which macro version this message corresponds to
 };
 
-// Update the SpinningZLogo component to follow text and continue animation when needed
+// Add type for macro history
+type MacroHistoryItem = {
+  index: number;
+  main_macro: string;
+  user_message: string; // Added to store the associated user message
+};
+
+const TOKENS_PER_GENERATION = 1000;
+const TOKENS_PER_UPLOAD = 500;
+
+// Simplified SpinningZLogo component without unnecessary conditions
 const SpinningZLogo = ({ 
   isTyping, 
   size = 16, 
-  inlineWithText = false,
-  continueAnimation = false
+  inlineWithText = false
 }: { 
   isTyping: boolean; 
   size?: number; 
   inlineWithText?: boolean;
-  continueAnimation?: boolean 
 }) => {
   return (
     <div 
@@ -72,7 +92,7 @@ const SpinningZLogo = ({
     >
       <div 
         className={`inline-flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold ${
-          isTyping || continueAnimation ? 'animate-spin-slow animate-pulse' : ''
+          isTyping ? 'animate-spin-slow animate-pulse' : ''
         }`}
         style={{ 
           fontSize: size * 0.8,
@@ -108,6 +128,16 @@ export default function Dashboard() {
   const [editPrevious, setEditPrevious] = useState(false);
   const [hasPreviousMacro, setHasPreviousMacro] = useState(false);
 
+  // State for Macro History feature
+  const [macroHistory, setMacroHistory] = useState<MacroHistoryItem[]>([]);
+  const [isReverting, setIsReverting] = useState(false);
+
+  // State for Session Management
+  const [showSessionSelector, setShowSessionSelector] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+
   const [prompt, setPrompt] = useState('');
   const [documentType, setDocumentType] = useState<DocumentType>('excel');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -140,6 +170,283 @@ export default function Dashboard() {
   // Keep track of when all typing has finished for logo animation
   const [allTypingComplete, setAllTypingComplete] = useState(true);
 
+  // Function to load sessions
+  const loadSessions = async () => {
+    if (!isPro) return;
+    
+    try {
+      setLoadingSessions(true);
+      const response = await api.fetch('/api/sessions');
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Available sessions:", data.sessions);
+        setSessions(data.sessions || []);
+        
+        if (data.activeSession) {
+          console.log(`Currently active session: ${data.activeSession}`);
+          setActiveSessionId(data.activeSession);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading sessions:", error);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  // Improved handler for session selection
+  const handleSessionSelect = async (session: Session) => {
+    try {
+      setIsGenerating(true);
+      setError(null);
+      
+      // Call the API to activate and load the session
+      const response = await api.fetch(`/api/sessions/${session.id}/activate`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to load session');
+      }
+      
+      const result = await response.json();
+      console.log("Session load result:", result);
+      
+      // Set active session
+      setActiveSessionId(session.id);
+      
+      // Handle the case where the session has a macro and VM processing succeeded
+      if (result.processingResult && result.processingResult.previewImage) {
+        setPreviewImage(result.processingResult.previewImage);
+        
+        if (result.processingResult.formatting) {
+          setFormatting(result.processingResult.formatting);
+        }
+        
+        // Create chat history for the loaded session
+        setChatHistory([
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            type: 'user',
+            text: result.userMessage || "Session request",
+            timestamp: new Date(session.created_at)
+          },
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            type: 'assistant',
+            text: `I've loaded your previous session: "${session.name}"`,
+            timestamp: new Date()
+          }
+        ]);
+      } 
+      // Handle the case where the session exists but has no macro yet
+      else if (result.message === "Session activated but no macro found") {
+        // Clear preview if any
+        setPreviewImage(null);
+        setFormatting(null);
+        
+        // Create minimal chat history
+        setChatHistory([
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            type: 'assistant',
+            text: `I've loaded your session "${session.name}". This session doesn't have any spreadsheet yet. Enter a prompt to create one.`,
+            timestamp: new Date()
+          }
+        ]);
+      }
+      // Handle the case where the session has a macro but VM processing failed
+      else if (result.macroCode && result.mainMacro) {
+        // Clear preview if any
+        setPreviewImage(null);
+        
+        // Basic formatting info
+        setFormatting({
+          hasChart: false,
+          downloadUrl: '',
+          resultSummary: `Loaded session "${session.name}"`
+        });
+        
+        // Create chat history
+        setChatHistory([
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            type: 'user',
+            text: result.userMessage || "Session request",
+            timestamp: new Date(session.created_at)
+          },
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            type: 'assistant',
+            text: `I've loaded your previous session: "${session.name}". There was an issue processing the preview, but your session data is available.`,
+            timestamp: new Date()
+          }
+        ]);
+      }
+      // Handle other cases
+      else {
+        // Create minimal chat history
+        setChatHistory([
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            type: 'assistant',
+            text: `I've loaded your session "${session.name}".`,
+            timestamp: new Date()
+          }
+        ]);
+      }
+      
+      // Close the session selector
+      setShowSessionSelector(false);
+      setFirstMessageSent(true);
+      
+    } catch (error: any) {
+      console.error('Error loading session:', error);
+      setError(error.message || 'Failed to load session');
+      
+      // Add error message to chat
+      addChatMessage('assistant', `I'm sorry, I couldn't load your session. ${error.message || 'An error occurred.'}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Function to load the macro history and update chat messages
+  const loadMacroHistory = async () => {
+    if (planType !== 'Pro') return;
+    
+    try {
+      const response = await api.fetch('/api/macro-history');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.history && Array.isArray(data.history)) {
+          setMacroHistory(data.history);
+          
+          // Update chat history to associate messages with macro versions
+          setChatHistory(prev => prev.map(msg => {
+            // Only process user messages
+            if (msg.type === 'user') {
+              // Find if this message has a corresponding macro
+              const matchingMacro = data.history.find((item: MacroHistoryItem) => 
+                item.index > 0 && item.user_message === msg.text
+              );
+              
+              if (matchingMacro) {
+                return { ...msg, macroVersion: matchingMacro.index };
+              }
+            }
+            return msg;
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading macro history:', error);
+    }
+  };
+
+  // Updated revertToMacro function that keeps older messages
+  const revertToMacro = async (index: number, messageId: string) => {
+    if (planType !== 'Pro' || isReverting) return;
+    
+    try {
+      setIsReverting(true);
+      setError(null);
+      
+      // Find the index of the message we're reverting to
+      const messageIndex = chatHistory.findIndex(msg => msg.id === messageId);
+      if (messageIndex === -1) {
+        throw new Error('Message not found');
+      }
+      
+      // Find the assistant's response to this message
+      let assistantResponseIndex = -1;
+      for (let i = messageIndex + 1; i < chatHistory.length; i++) {
+        if (chatHistory[i].type === 'assistant') {
+          assistantResponseIndex = i;
+          break;
+        }
+      }
+      
+      // Call API to revert to this macro
+      const response = await api.fetch(`/api/revert-macro/${index}`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to revert to previous spreadsheet');
+      }
+      
+      const result = await response.json();
+      
+      // Update the preview image and formatting
+      if (result.previewImage) {
+        setPreviewImage(result.previewImage);
+      }
+      
+      if (result.formatting) {
+        setFormatting(result.formatting);
+      }
+      
+      // Keep all messages up to and including the assistant's response,
+      // but remove newer messages
+      setChatHistory(prev => {
+        // How many messages to keep
+        const keepCount = assistantResponseIndex !== -1 ? 
+                         assistantResponseIndex + 1 : 
+                         messageIndex + 1;
+        
+        // Keep only the messages up to the assistant's response
+        return prev.slice(0, keepCount);
+      });
+      
+      // Refresh macro history to ensure UI is updated
+      await loadMacroHistory();
+      
+      // Check if we still have a previous macro
+      try {
+        const macroResponse = await api.fetch('/api/check-previous-macro');
+        if (macroResponse.ok) {
+          const macroData = await macroResponse.json();
+          setHasPreviousMacro(macroData.hasPreviousMacro);
+        }
+      } catch (error) {
+        console.error('Error checking previous macro after revert:', error);
+      }
+      
+    } catch (error: any) {
+      console.error('Error reverting to previous macro:', error);
+      setError(error.message || 'Failed to revert to previous spreadsheet');
+      
+      // Add error message to chat
+      addChatMessage('assistant', `I'm sorry, I couldn't revert to your previous spreadsheet: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsReverting(false);
+    }
+  };
+
+  // RevertButton component for inline use in chat messages
+  const RevertButton = ({ messageId, macroVersion }: { messageId: string, macroVersion: number }) => {
+    if (!isPro || !macroVersion || macroVersion < 1) return null;
+    
+    return (
+      <button
+        onClick={() => revertToMacro(macroVersion, messageId)}
+        disabled={isReverting || isGenerating}
+        className={`ml-2 flex items-center text-xs px-2 py-1 rounded-md ${
+          isReverting || isGenerating 
+            ? 'bg-gray-200 text-gray-500 cursor-not-allowed dark:bg-gray-700'
+            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/40'
+        }`}
+        title={`Revert to this version`}
+      >
+        <History className="h-3 w-3 mr-1" />
+        <span>Revert</span>
+      </button>
+    );
+  };
+
   // Add a function to check if any message is still typing
   const isAnyMessageTyping = () => {
     return chatHistory.some(msg => msg.isTyping);
@@ -150,6 +457,82 @@ export default function Dashboard() {
     // Set the tracking state based on whether any messages are typing
     setAllTypingComplete(!isAnyMessageTyping());
   }, [chatHistory]);
+
+  // Effect to load sessions when the component mounts
+  useEffect(() => {
+    if (isAuthenticated && isPro) {
+      loadSessions();
+      loadMacroHistory();
+    }
+  }, [isAuthenticated, isPro]);
+
+  // Effect to check for active session
+  useEffect(() => {
+    const checkActiveSession = async () => {
+      if (!isAuthenticated || !isPro) return;
+      
+      try {
+        const response = await api.fetch('/api/sessions');
+        if (response.ok) {
+          const data = await response.json();
+          
+          // If there's an active session, update the state
+          if (data.activeSession > 0) {
+            console.log(`Currently active session: ${data.activeSession}`);
+            setActiveSessionId(data.activeSession);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking active session:', error);
+      }
+    };
+    
+    checkActiveSession();
+  }, [isAuthenticated, isPro]);
+
+  // Effect to refresh the sessions after generation
+  useEffect(() => {
+    if (!isGenerating && previewImage && isPro) {
+      // Short delay to ensure backend has completed processing
+      const timer = setTimeout(() => {
+        loadSessions();
+        loadMacroHistory();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isGenerating, previewImage, isPro]);
+
+  // Log active session ID changes
+  useEffect(() => {
+    if (activeSessionId) {
+      console.log(`Active session ID: ${activeSessionId}`);
+    }
+  }, [activeSessionId]);
+
+  // Add effect to check for previous macro availability
+  useEffect(() => {
+    const checkPreviousMacro = async () => {
+      if (planType === 'Pro') {
+        try {
+          const response = await api.fetch('/api/check-previous-macro');
+          if (response.ok) {
+            const data = await response.json();
+            setHasPreviousMacro(data.hasPreviousMacro);
+            
+            // If no previous macro is available, disable the edit previous switch
+            if (!data.hasPreviousMacro) {
+              setEditPrevious(false);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking previous macro:', error);
+        }
+      }
+    };
+    
+    checkPreviousMacro();
+  }, [planType]);
 
   // Add this effect for custom animation - enhance the animation for spinning logo
   useEffect(() => {
@@ -216,30 +599,6 @@ export default function Dashboard() {
       clearInterval(timeInterval);
     };
   }, []);
-
-  // Check for previous macro availability
-  useEffect(() => {
-    const checkPreviousMacro = async () => {
-      if (planType === 'Pro') {
-        try {
-          const response = await api.fetch('/api/check-previous-macro');
-          if (response.ok) {
-            const data = await response.json();
-            setHasPreviousMacro(data.hasPreviousMacro);
-            
-            // If no previous macro is available, disable the edit previous switch
-            if (!data.hasPreviousMacro) {
-              setEditPrevious(false);
-            }
-          }
-        } catch (error) {
-          console.error('Error checking previous macro:', error);
-        }
-      }
-    };
-    
-    checkPreviousMacro();
-  }, [planType]);
 
   // Refs for the textarea and buttons
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -537,11 +896,6 @@ export default function Dashboard() {
         timeouts.push(timeout);
       });
     };
-
-    // Keep status updates disabled - we'll only show the actual analysis
-    // if (isGenerating && !sessionId) {
-    //   scheduleStatusUpdates();
-    // }
     
     if (sessionId && isGenerating) {
       // Existing polling code
@@ -761,6 +1115,11 @@ export default function Dashboard() {
 
   // Updated function to add a message to the chat history with typing effect
   const addChatMessage = (type: MessageType, text: string) => {
+    if (!text || text.trim() === '') {
+      console.warn("Attempted to add chat message with empty text");
+      return;
+    }
+    
     const formattedText = formatNumberedList(text);
     
     if (type === 'user') {
@@ -792,13 +1151,19 @@ export default function Dashboard() {
   
   // Updated function to update the last assistant message or add a new one
   const updateLastAssistantMessage = (text: string) => {
+    if (!text || text.trim() === '') {
+      console.warn("Attempted to update assistant message with empty text");
+      return;
+    }
+    
     const formattedText = formatNumberedList(text);
     
     setChatHistory(prev => {
       const lastAssistantIndex = [...prev].reverse().findIndex(msg => msg.type === 'assistant');
       
+      // If no assistant message found or it's not the last one, add new message with typing
       if (lastAssistantIndex === -1 || prev.length - 1 - lastAssistantIndex !== prev.length - 1) {
-        // No assistant message found or it's not the last one, add new message with typing
+        console.log("No existing assistant message found, adding new one:", formattedText.substring(0, 50) + "...");
         setAssistantMessageCount(prev => prev + 1);
         return [...prev, {
           id: Math.random().toString(36).substr(2, 9),
@@ -814,7 +1179,31 @@ export default function Dashboard() {
       // Get the current last message
       const currentLastMessage = prev[prev.length - 1 - lastAssistantIndex];
       
-      // Instead of replacing, append to the fullText and reset typing
+      // Check if this is a similar message or completely different
+      const isSimilarContent = 
+        currentLastMessage.text.includes("Understanding your request") || 
+        currentLastMessage.text.includes("I'm analyzing") ||
+        currentLastMessage.text.includes("I'll create") ||
+        currentLastMessage.text.includes("I'm processing");
+      
+      // If we're in the middle of typing the early messages and now getting the result summary,
+      // replace the message rather than appending
+      if (isSimilarContent) {
+        console.log("Replacing preliminary message with result summary");
+        const newHistory = [...prev];
+        const updatedMessage = {
+          ...currentLastMessage,
+          fullText: formattedText, // Replace with new content
+          isTyping: true, // Restart typing animation
+          text: '' // Reset text to show typing animation from start
+        };
+        
+        newHistory[prev.length - 1 - lastAssistantIndex] = updatedMessage;
+        return newHistory;
+      }
+      
+      // Otherwise, append to the fullText and reset typing
+      console.log("Appending to existing assistant message");
       const newHistory = [...prev];
       const updatedMessage = {
         ...currentLastMessage,
@@ -940,6 +1329,9 @@ export default function Dashboard() {
     
     setIsGenerating(true);
     setError(null);
+    
+    // Store the message ID for later association with the macro
+    const messageId = Math.random().toString(36).substr(2, 9);
     
     // Add user message to chat
     addChatMessage('user', prompt);
@@ -1093,34 +1485,76 @@ export default function Dashboard() {
   
       if (result.previewImage) {
         setPreviewImage(result.previewImage);
+        
+        // Associate this message with the generated macro
+        if (isPro) {
+          try {
+            await api.fetch('/api/associate-message-with-macro', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                messageText: prompt,
+              }),
+            });
+          } catch (error) {
+            console.error('Error associating message with macro:', error);
+          }
+        }
       }
       
-      // We're now using front-end generated messages instead
-      // of waiting for requestAnalysis from backend
+      // Check if the response contains session information
+      if (result.sessionId) {
+        console.log(`Generation saved to session ${result.sessionId}: ${result.sessionName || 'Unnamed'}`);
+        setActiveSessionId(result.sessionId);
+      }
       
+      // Make sure we update the chat with the summary from the backend
+      if (result.resultSummary) {
+        // Update the assistant's message with the result summary
+        updateLastAssistantMessage(result.resultSummary);
+        console.log("Updated chat with result summary:", result.resultSummary);
+      } else if (result.formatting && result.formatting.resultSummary) {
+        // Handle the case where resultSummary is nested in formatting
+        updateLastAssistantMessage(result.formatting.resultSummary);
+        console.log("Updated chat with formatting result summary:", result.formatting.resultSummary);
+      } else {
+        // Fallback message if no summary is provided
+        updateLastAssistantMessage("I've created your Excel spreadsheet based on your request. Check the preview on the right.");
+      }
+      
+      // Update formatting state with all the information
       if (result.formatting) {
         setFormatting(result.formatting);
-        
-        // Later, the result summary will be used to replace the analysis when it's complete
-        if (result.previewImage && result.formatting.resultSummary) {
-          updateLastAssistantMessage(result.formatting.resultSummary);
-        }
-      } else if (result.resultSummary) {
-        // Handle the case where resultSummary might be at the top level
-        updateLastAssistantMessage(result.resultSummary);
+      } else {
+        // Create formatting object if it's missing
+        setFormatting({
+          hasChart: false,
+          downloadUrl: result.downloadUrl || '',
+          requestAnalysis: result.requestAnalysis || 'Request analyzed successfully.',
+          resultSummary: result.resultSummary || 'Spreadsheet created successfully.'
+        });
       }
   
       // Refresh user data after successful generation
       await refreshUserData();
       
-      // Update hasPreviousMacro after a successful generation for Pro users
+      // Update UI with the latest session information
       if (isPro) {
+        // Reload sessions to update UI
+        loadSessions();
+        
+        // Update hasPreviousMacro after a successful generation for Pro users
         try {
           const macroResponse = await api.fetch('/api/check-previous-macro');
           if (macroResponse.ok) {
             const macroData = await macroResponse.json();
             setHasPreviousMacro(macroData.hasPreviousMacro);
           }
+          
+          // Also load the macro history
+          await loadMacroHistory();
         } catch (error) {
           console.error('Error checking previous macro after generation:', error);
         }
@@ -1162,7 +1596,7 @@ export default function Dashboard() {
           // Claude-like centered greeting and chat box before first message is sent
           <div className="flex flex-col items-center justify-start min-h-screen px-4 pt-16">
             {/* Z logo with greeting, larger text, positioned higher */}
-            <div className="text-center mb-32 flex items-center justify-center">
+            <div className="text-center mb-16 flex items-center justify-center">
               <div 
                 className="inline-flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold"
                 style={{ 
@@ -1180,6 +1614,28 @@ export default function Dashboard() {
                 {greeting}
               </h1>
             </div>
+            
+            {/* Session Selector for Pro users */}
+            {isPro && (
+              <div className="mb-8 w-full max-w-2xl">
+                <button
+                  onClick={() => setShowSessionSelector(!showSessionSelector)}
+                  className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-200"
+                >
+                  <History className="h-5 w-5" />
+                  <span>Previous Sessions {showSessionSelector ? '(Hide)' : '(Show)'}</span>
+                </button>
+                
+                {showSessionSelector && (
+                  <div className="mt-4">
+                    <SessionSelector 
+                      onSessionSelect={handleSessionSelect}
+                      className="border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 shadow-sm bg-white dark:bg-gray-800"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
             
             {/* Just the input box with integrated controls */}
             <div className="w-full max-w-2xl">
@@ -1357,22 +1813,30 @@ export default function Dashboard() {
                   <div key={message.id} className="mb-4">
                     {message.type === 'user' ? (
                       <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-                        <p className="text-gray-800 dark:text-gray-200 text-sm">
-                          <span className="font-semibold">You:</span> {message.text}
-                        </p>
+                        <div className="flex justify-between items-start">
+                          <p className="text-gray-800 dark:text-gray-200 text-sm flex-grow">
+                            <span className="font-semibold">You:</span> {message.text}
+                          </p>
+                          {/* Only show revert button for Pro users if this message has a corresponding macro version */}
+                          {isPro && message.macroVersion && message.macroVersion > 0 && (
+                            <RevertButton 
+                              messageId={message.id}
+                              macroVersion={message.macroVersion}
+                            />
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 mt-2">
                         <div className="relative">
                           <p className="text-emerald-800 dark:text-emerald-200 text-sm whitespace-pre-line">
                             <span className="font-semibold">Zarium:</span> {message.text}
-                            {/* Show the Z logo inline with text while typing or if it's the first assistant message and we haven't reached message 2 yet */}
-                            {(message.isTyping || (message.messageNumber === 1 && assistantMessageCount < 2)) && (
+                            {/* Only show spinning Z logo while the message is actively typing */}
+                            {message.isTyping && (
                               <SpinningZLogo 
-                                isTyping={message.isTyping ?? false} 
+                                isTyping={true} 
                                 size={32} 
                                 inlineWithText={true}
-                                continueAnimation={message.messageNumber === 1 && assistantMessageCount < 2}
                               />
                             )}
                           </p>
@@ -1383,7 +1847,6 @@ export default function Dashboard() {
                               <SpinningZLogo 
                                 isTyping={false} 
                                 size={14}
-                                continueAnimation={message.messageNumber === 1 && assistantMessageCount < 2}
                               />
                             </div>
                           )}

@@ -26,6 +26,7 @@ import WelcomePage from './pages/WelcomePage';
 import CompleteProfile from './pages/CompleteProfile';
 import toast from 'react-hot-toast';
 import AdminDashboard from './pages/AdminDashboard';
+import Contact from './components/Contact';
 
 /* 
   VIKTIG: Ikke skriv JSX-kode utenfor funksjonskomponenter her. 
@@ -284,6 +285,7 @@ function App() {
               <Route path="terms" element={<TermsOfService />} />
               <Route path="privacy" element={<PrivacyPolicy />} />
               <Route path="help" element={<HelpPage />} />
+              <Route path="contact" element={<Contact />} />
               <Route path="auth/callback" element={<AuthCallback />} />
               
               {/* Add this new route */}

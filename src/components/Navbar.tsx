@@ -1,19 +1,19 @@
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { Sun, Moon, FileSpreadsheet } from 'lucide-react';
+import { Sun, Moon, FileSpreadsheet, Building } from 'lucide-react';
 import UserMenu from './UserMenu';
 import { useState } from 'react';
 // @ts-ignore
 import { RecaptchaService } from '../utils/recaptchaService';
-import { toast } from 'react-hot-toast'; // Make sure you have this package installed
+import { toast } from 'react-hot-toast';
 
 export default function Navbar() {
   const { user } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   
-  // Updated to use more resilient reCAPTCHA implementation
+  // Updated to business login only, no signup
   const handleDirectAuth = async () => {
     try {
       setIsAuthLoading(true);
@@ -60,7 +60,7 @@ export default function Navbar() {
         response_mode: 'fragment',
         nonce: nonce,
         state: state,
-        prompt: 'login'
+        prompt: 'login'  // Important! Forces login, no signup option
       });
       
       // Redirect to Azure CIAM login page
@@ -74,7 +74,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 border-b border-emerald-100 dark:border-emerald-900 sticky top-0 z-50 backdrop-blur-sm shadow-md">
+    <nav className="bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 border-b border-emerald-100 dark:border-emerald-900 sticky top-0 z-50 backdrop-blur-sm">
       <div className="container mx-auto px-6">
         <div className="flex justify-between items-center h-20">
           <Link to="/" className="flex items-center">
@@ -83,6 +83,7 @@ export default function Navbar() {
                 <span className="relative flex items-baseline logo-text">
                   <span className="inline-block logo-letter">Z</span>
                   <span className="logo-word">arium</span>
+                  
                 </span>
               </div>
             </div>
@@ -96,19 +97,32 @@ export default function Navbar() {
                 >
                   Dashboard
                 </Link>
-                {/* Only show Pricing to authenticated users */}
+                {/* Support link for enterprise users */}
                 <Link
-                  to="/subscription"
+                  to="/support"
                   className="text-base text-emerald-800 dark:text-emerald-200 hover:text-emerald-900 dark:hover:text-emerald-100"
                 >
-                  Pricing
+                  Support
                 </Link>
                 <UserMenu />
               </>
             ) : (
               <>
-                {/* For non-authenticated users, just show "Get Started" button */}
-
+                {/* Contact link for enterprises */}
+                <Link
+                  to="/contact"
+                  className="text-base text-emerald-800 dark:text-emerald-200 hover:text-emerald-900 dark:hover:text-emerald-100"
+                >
+                  Contact Us
+                </Link>
+                {/* Login button for business users only */}
+                <button
+                  onClick={handleDirectAuth}
+                  disabled={isAuthLoading}
+                  className="text-base bg-emerald-800 dark:bg-emerald-700 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-900 dark:hover:bg-emerald-600 shadow-sm hover:shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isAuthLoading ? 'Verifying...' : 'Business Login'}
+                </button>
               </>
             )}
             {/* Theme Toggle */}

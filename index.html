@@ -1,140 +1,730 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zarium - Server Capacity Expansion</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Favicon and App Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="msapplication-TileImage" content="/mstile-144x144.png">
+    <meta name="msapplication-config" content="/browserconfig.xml">
+    
+    <!-- Improved styling for loading state -->
     <style>
-        :root {
-            --primary: #057857;
-            --primary-light: #0a8a65;
-            --secondary: #4a4a4a;
-            --light-bg: #f8fafb;
-            --border-radius: 12px;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4efe9 100%);
-            color: var(--secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .maintenance-container {
-            background-color: white;
-            border-radius: var(--border-radius);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            padding: 40px;
-            max-width: 600px;
-            width: 100%;
-        }
-        
-        .logo {
-            font-size: 42px;
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 20px;
-            letter-spacing: -1px;
-        }
-        
-        .logo span {
-            color: var(--secondary);
-            opacity: 0.7;
-        }
-        
-        h1 {
-            color: var(--primary);
-            margin-bottom: 24px;
-            font-size: 28px;
-        }
-        
-        p {
-            color: #666;
-            line-height: 1.7;
-            margin-bottom: 24px;
-            font-size: 16px;
-        }
-        
-        .highlight {
-            background-color: var(--light-bg);
-            border-radius: var(--border-radius);
-            padding: 20px;
-            margin: 30px 0;
-            border-left: 4px solid var(--primary);
-        }
-        
-        .highlight p {
-            margin-bottom: 0;
-            font-weight: 500;
-        }
-        
-        .divider {
-            height: 1px;
-            background-color: #eee;
-            margin: 30px 0;
-        }
-        
-        .footer {
-            margin-top: 20px;
-        }
-        
-        a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 500;
-        }
-        
-        a:hover {
-            text-decoration: underline;
-        }
-        
-        .status {
-            display: inline-block;
-            padding: 8px 18px;
-            background-color: #fff3cd;
-            color: #856404;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 30px;
-        }
-        
-        .server-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      }
+      .initial-loader {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background-color: #f8fafc;
+        flex-direction: column;
+        text-align: center;
+      }
+      .initial-loader-content {
+        padding: 20px;
+        max-width: 500px;
+      }
+      .initial-loader h1 {
+        font-size: 24px;
+        color: #059669;
+        margin-bottom: 16px;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        margin: 20px auto;
+        border: 4px solid rgba(5, 150, 105, 0.2);
+        border-radius: 50%;
+        border-top-color: #059669;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
-</head>
-<body>
-    <div class="maintenance-container">
-        <div class="logo">Zarium<span>.</span></div>
-        <div class="status">Server Capacity Expansion</div>
+    
+    <!-- Cache control for Safari/iOS -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <!-- Primary Meta Tags -->
+    <title>Zarium Business | AI Excel Generator | Enterprise Spreadsheet Solution</title>
+    <meta name="description" content="Transform business data into professional Excel spreadsheets with AI in seconds. The enterprise solution for your organization's spreadsheet automation needs." />
+    <meta name="keywords" content="Business AI Excel generator, enterprise spreadsheet solution, Excel automation, business analytics, Excel formulas, corporate reporting" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#057857" />
+    <meta name="msapplication-navbutton-color" content="#057857" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="#057857" />
+    
+    <!-- Canonical URL - support both www and non-www -->
+    <link rel="canonical" href="https://www.zarium.dev/" />
+   
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.zarium.dev/" />
+    <meta property="og:title" content="Zarium Business | AI Excel Generator | Enterprise Spreadsheet Solution" />
+    <meta property="og:description" content="Transform business data into professional Excel spreadsheets with AI in seconds. The enterprise solution for your organization's spreadsheet automation needs." />
+    <meta property="og:image" content="https://www.zarium.dev/og-image.png" />
+    <meta property="og:site_name" content="Zarium Business" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://www.zarium.dev/" />
+    <meta name="twitter:title" content="Zarium Business | AI Excel Generator | Enterprise Spreadsheet Solution" />
+    <meta name="twitter:description" content="Transform business data into professional Excel spreadsheets with AI in seconds. The enterprise solution for your organization's spreadsheet automation needs." />
+    <meta name="twitter:image" content="https://www.zarium.dev/twitter-image.png" />
+
+   
+    <!-- Preload Critical Resources -->
+    <link rel="preconnect" href="https://zarium-app-ddbnb4egcpf4e6b0.westeurope-01.azurewebsites.net" />
+    <link rel="preconnect" href="https://js.stripe.com" crossorigin />
+    
+    <!-- Stripe Integration -->
+    <script src="https://js.stripe.com/v3/" defer></script>
+    
+    <!-- Structured Data - JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Zarium Business",
+      "applicationCategory": "BusinessApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Enterprise AI Excel solution"
+      },
+      "operatingSystem": "Web",
+      "description": "AI-powered Excel generator for businesses that creates complete spreadsheets with 3D graphs in seconds or enhances your existing Excel files."
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Zarium Business",
+      "url": "https://www.zarium.dev/",
+      "logo": "https://www.zarium.dev/favicon-32x32.png"
+    }
+    </script>
+
+    <!-- Improved error detection script -->
+    <script>
+      // Initialize error tracking
+      window.__zarium_errors = [];
+      window.__zarium_lastErrorTime = 0;
+      
+      // Global error handler to catch JS errors
+      window.addEventListener('error', function(event) {
+        const now = Date.now();
+        window.__zarium_errors.push({
+          message: event.message,
+          time: now
+        });
+        window.__zarium_lastErrorTime = now;
         
-        <div class="server-icon">🖥️</div>
+        console.error('Global error:', event.message);
+      });
+      
+      // If the page is blank after 10 seconds, show an error message
+      window.addEventListener('DOMContentLoaded', function() {
+        var timeout = setTimeout(function() {
+          var root = document.getElementById('root');
+          if (root && (!root.children || root.children.length === 0 || 
+              root.innerHTML.includes('Loading application'))) {
+            console.error('Application load timeout triggered');
+            
+            // Check if we have recent errors
+            const hasRecentErrors = window.__zarium_errors && 
+              window.__zarium_errors.some(err => (Date.now() - err.time) < 10000);
+            
+            // Show an appropriate error message
+            if (hasRecentErrors) {
+              root.innerHTML = `
+                <div class="initial-loader">
+                  <div class="initial-loader-content">
+                    <h1>Error Loading Zarium Business</h1>
+                    <p>We encountered errors while loading the application.</p>
+                    <p>This could be due to browser compatibility issues or network problems.</p>
+                    <div style="margin-top: 20px;">
+                      <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;margin-right:10px;">
+                        Reload page
+                      </button>
+                      <button onclick="localStorage.clear(); sessionStorage.clear(); document.cookie.split(';').forEach(c => document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')); window.location.href='/';" style="padding:8px 16px;background-color:#f3f4f6;color:#1f2937;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">
+                        Clear data & start fresh
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            } else {
+              root.innerHTML = `
+                <div class="initial-loader">
+                  <div class="initial-loader-content">
+                    <h1>Loading Zarium Business is taking longer than expected</h1>
+                    <p>This might be due to network issues or high server load.</p>
+                    <div style="margin-top: 20px;">
+                      <button onclick="window.location.reload()" style="padding:8px 16px;background-color:#059669;color:white;border:none;border-radius:6px;cursor:pointer;">
+                        Reload page
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+          }
+        }, 10000);
         
-        <h1>Expanding Our Server Capacity</h1>
+        // If the app loads correctly, clear timeout
+        var observer = new MutationObserver(function(mutations) {
+          const root = document.getElementById('root');
+          if (root && root.children.length > 0 && 
+              !root.innerHTML.includes('Loading application') &&
+              !root.innerHTML.includes('initial-loader')) {
+            clearTimeout(timeout);
+            observer.disconnect();
+          }
+        });
         
-        <p>Due to high demand and increased traffic, we're currently expanding our server capacity to better serve our users. Our team is working to bring Zarium back online with improved performance and stability.</p>
+        observer.observe(document.getElementById('root'), { childList: true, subtree: true });
+      });
+    </script>
+    
+    <!-- Safari/iOS Authentication Fix - Final Version -->
+    <script>
+      // Safari/iOS detection and fix for authentication issues
+      document.addEventListener('DOMContentLoaded', function() {
+        // Detect Safari or iOS devices
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
+                        /iphone|ipad|ipod/i.test(navigator.userAgent);
         
-        <div class="highlight">
-            <p>Thank you for your interest in Zarium! The unexpected high volume of users has exceeded our current server capacity.</p>
+        if (isSafari) {
+          console.log("Safari/iOS browser detected - enabling compatibility mode");
+          
+          // Fix the token duplication issue
+          const originalFetch = window.fetch;
+          window.fetch = function(url, options = {}) {
+            // Default options
+            options = options || {};
+            
+            if (typeof url === 'string') {
+              // Special handling for authentication endpoints
+              if (url.includes('/api/') && !url.includes('/api/debug')) {
+                console.log("Processing request to:", url);
+                
+                // Get token from localStorage
+                let token = null;
+                try {
+                  const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                  token = authData.token;
+                } catch (e) {
+                  console.warn("Error accessing localStorage:", e);
+                }
+                
+                // Only proceed with token modifications if we have a token
+                if (token) {
+                  // Create URL object for manipulation
+                  const urlObj = new URL(url, window.location.origin);
+                  
+                  // Check if token is already in URL, only add if not present
+                  if (!urlObj.searchParams.has('token')) {
+                    urlObj.searchParams.append('token', token);
+                    console.log("Added token to URL params");
+                  }
+                  
+                  // Update URL with our modifications
+                  url = urlObj.toString();
+                  
+                  // Initialize headers if not already set
+                  options.headers = options.headers || {};
+                  
+                  // Add Authorization header if not already present
+                  if (!options.headers.Authorization) {
+                    options.headers.Authorization = `Bearer ${token}`;
+                    console.log("Added Authorization header");
+                  }
+                }
+                
+                // Always include credentials
+                options.credentials = 'include';
+                
+                // Special case for refresh-token on Safari
+                if (url.includes('/api/refresh-token') && options.method === 'POST') {
+                  // Use GET method instead of POST for Safari
+                  options.method = 'GET';
+                  console.log("Converting POST to GET for refresh-token on Safari");
+                }
+              }
+            }
+            
+            // Call original fetch with our modifications
+            return originalFetch.call(window, url, options)
+              .then(response => {
+                // If this was a token refresh, extract and store the new token
+                if (typeof url === 'string' && url.includes('/api/refresh-token') && response.ok) {
+                  response.clone().json().then(data => {
+                    if (data && data.token) {
+                      try {
+                        console.log("Storing new token from refresh response");
+                        const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                        authData.token = data.token;
+                        localStorage.setItem('authUser', JSON.stringify(authData));
+                        
+                        // Update auth info with other data too
+                        if (data.id) authData.id = data.id;
+                        if (data.email) authData.email = data.email;
+                        if (data.planType) authData.planType = data.planType;
+                        if (data.tokens) authData.tokens = data.tokens;
+                        if (data.displayName) authData.displayName = data.displayName;
+                        if (data.companyName) authData.companyName = data.companyName; // Added for B2B
+                        if (data.companyId) authData.companyId = data.companyId; // Added for B2B
+                        
+                        localStorage.setItem('authUser', JSON.stringify(authData));
+                      } catch (e) {
+                        console.error("Error storing refreshed token:", e);
+                      }
+                    }
+                  }).catch(e => console.error("Error parsing token refresh response:", e));
+                }
+                
+                return response;
+              });
+          };
+          
+          // Implement a function to immediately apply the stored token to all subsequent requests
+          window.applyStoredToken = function() {
+            let token = null;
+            try {
+              const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+              token = authData.token;
+              
+              if (token) {
+                console.log("Applied stored token to future requests");
+                // This function will be used after successful token refresh
+                return true;
+              }
+            } catch (e) {
+              console.error("Error in applyStoredToken:", e);
+            }
+            return false;
+          };
+          
+          // Force a token refresh on page load for Safari
+          setTimeout(function() {
+            // Get token from localStorage
+            let token = null;
+            try {
+              const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+              token = authData.token;
+              
+              if (token) {
+                console.log("Performing initial token refresh for Safari");
+                fetch('/api/refresh-token', {
+                  method: 'GET',
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  },
+                  credentials: 'include'
+                })
+                .then(response => response.json())
+                .then(data => {
+                  if (data && data.token) {
+                    console.log("Initial token refresh successful");
+                    const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                    authData.token = data.token;
+                    localStorage.setItem('authUser', JSON.stringify(authData));
+                    window.applyStoredToken();
+                  }
+                })
+                .catch(e => console.error("Initial token refresh failed:", e));
+              }
+            } catch (e) {
+              console.error("Error in initial token refresh:", e);
+            }
+          }, 1000);
+        }
+      });
+    </script>
+    
+    <!-- Robust reCAPTCHA v3 integration -->
+    <script>
+      // Safely initialize reCAPTCHA to prevent React initialization issues
+      window.recaptchaInitialized = false;
+      window.recaptchaQueue = [];
+      
+      // Safe loader for reCAPTCHA
+      function initRecaptcha() {
+        // Create script element
+        var script = document.createElement('script');
+        script.src = 'https://www.google.com/recaptcha/api.js?render=6LdsVgErAAAAACUjZb006U2ZHGDgaIbaAKAqTkKS';
+        script.async = true;
+        script.defer = true;
+        
+        // Add onload handler
+        script.onload = function() {
+          window.recaptchaInitialized = true;
+          
+          // Define the safe execute function
+          window.executeRecaptcha = function(action) {
+            return new Promise((resolve) => {
+              if (!window.grecaptcha) {
+                console.warn('reCAPTCHA not loaded yet');
+                resolve('recaptcha-unavailable');
+                return;
+              }
+              
+              try {
+                window.grecaptcha.ready(function() {
+                  window.grecaptcha
+                    .execute('6LdsVgErAAAAACUjZb006U2ZHGDgaIbaAKAqTkKS', { action: action })
+                    .then(resolve)
+                    .catch(function(error) {
+                      console.error('reCAPTCHA execution error:', error);
+                      resolve('recaptcha-error');
+                    });
+                });
+              } catch (error) {
+                console.error('reCAPTCHA ready error:', error);
+                resolve('recaptcha-error');
+              }
+            });
+          };
+          
+          // Process any queued executions
+          window.recaptchaQueue.forEach(function(item) {
+            window.executeRecaptcha(item.action).then(item.resolve);
+          });
+          window.recaptchaQueue = [];
+        };
+        
+        // Add error handler
+        script.onerror = function() {
+          console.error('Failed to load reCAPTCHA script');
+          window.recaptchaInitialized = true; // Mark as initialized to prevent further attempts
+          window.executeRecaptcha = function() {
+            return Promise.resolve('recaptcha-error');
+          };
+          
+          // Resolve any queued promises
+          window.recaptchaQueue.forEach(function(item) {
+            item.resolve('recaptcha-error');
+          });
+          window.recaptchaQueue = [];
+        };
+        
+        // Add to document
+        document.head.appendChild(script);
+      }
+      
+      // Delay loading reCAPTCHA until after the main app has started
+      window.addEventListener('load', function() {
+        // Use setTimeout to ensure React has initialized first
+        setTimeout(initRecaptcha, 1000);
+      });
+    </script>
+    
+    <!-- reCAPTCHA v2 integration -->
+    <script>
+      // Initialize reCAPTCHA v2
+      window.recaptchaV2Loaded = false;
+      
+      // Safe loader for reCAPTCHA v2
+      function initRecaptchaV2() {
+        // Create script element for reCAPTCHA v2
+        var scriptV2 = document.createElement('script');
+        scriptV2.src = 'https://www.google.com/recaptcha/api.js?onload=recaptchaV2Callback&render=explicit';
+        scriptV2.async = true;
+        scriptV2.defer = true;
+        
+        // Add to document
+        document.head.appendChild(scriptV2);
+      }
+      
+      // Callback function that will be called when reCAPTCHA v2 is loaded
+      window.recaptchaV2Callback = function() {
+        console.log("reCAPTCHA v2 is loaded and ready");
+        window.recaptchaV2Loaded = true;
+        
+        // Dispatch an event to notify React components
+        window.dispatchEvent(new Event('recaptchaV2Loaded'));
+      };
+      
+      // Delay loading reCAPTCHA v2 until after the main app has started
+      window.addEventListener('load', function() {
+        // Use setTimeout to ensure React has initialized first and not interfere with v3
+        setTimeout(initRecaptchaV2, 1500);
+      });
+    </script>
+    
+    <!-- Multi-domain Safari/iOS Authentication Fix -->
+    <script>
+      // Safari/iOS detection and multi-domain compatibility
+      document.addEventListener('DOMContentLoaded', function() {
+        // Domain compatibility - support both www and non-www
+        const currentHost = window.location.hostname;
+        const supportedDomains = ["www.zarium.dev", "zarium.dev"];
+        const isKnownDomain = supportedDomains.includes(currentHost);
+        
+        console.log("Current domain:", currentHost);
+        console.log("Using known domain:", isKnownDomain);
+        
+        // Add currentHost to list of supported domains if not already recognized
+        if (!isKnownDomain) {
+          supportedDomains.push(currentHost);
+          console.log("Added current domain to supported list:", currentHost);
+        }
+        
+        // Store domain info
+        localStorage.setItem('current_domain', currentHost);
+        localStorage.setItem('supported_domains', JSON.stringify(supportedDomains));
+        
+        // Detect Safari or iOS devices
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
+                        /iphone|ipad|ipod/i.test(navigator.userAgent);
+        
+        // Initialize compatibility mode if needed
+        if (isSafari) {
+          console.log("Safari/iOS browser detected - enabling compatibility mode");
+          // Set flag for Safari compatibility
+          localStorage.setItem('using_safari_auth', 'true');
+          
+          // Patch fetch API for Safari compatibility
+          const originalFetch = window.fetch;
+          window.fetch = function(url, options = {}) {
+            // Default options
+            options = options || {};
+            
+            // Convert URL string to URL object if it's a string
+            if (typeof url === 'string') {
+              // Handle auth endpoints specially
+              if ((url.includes('/api/refresh-token') || 
+                  url.includes('/api/verify-token') ||
+                  url.includes('/api/auth/')) && 
+                  (options.method === 'POST' || !options.method)) {
+                
+                console.log("Safari compatibility: Modifying auth request", url);
+                
+                // Get token from localStorage if available
+                let token = null;
+                try {
+                  const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                  token = authData.token;
+                  console.log("Found token in localStorage:", token ? "Yes" : "No");
+                } catch (e) {
+                  console.warn("Error accessing localStorage:", e);
+                }
+                
+                // Create URL object for manipulation
+                const urlObj = new URL(url, window.location.origin);
+                
+                // Add token as query parameter if available
+                if (token) {
+                  urlObj.searchParams.append('token', token);
+                  console.log("Added token to URL params");
+                }
+                
+                // Special handling for refresh-token endpoint on Safari
+                if (isSafari && url.includes('/api/refresh-token')) {
+                  // Use GET for refresh token on Safari
+                  options.method = 'GET';
+                  console.log("Forced GET method for Safari compatibility");
+                }
+                
+                // Update URL with our modifications
+                url = urlObj.toString();
+                
+                // Initialize headers if not already set
+                options.headers = options.headers || {};
+                
+                // Add Authorization header if token available
+                if (token && !options.headers.Authorization) {
+                  options.headers.Authorization = `Bearer ${token}`;
+                  console.log("Added Authorization header");
+                }
+                
+                // Always include credentials for auth endpoints
+                options.credentials = 'include';
+              }
+            }
+            
+            // Log the request for debugging
+            const reqMethod = options.method || 'GET';
+            console.log(`${reqMethod} request to: ${typeof url === 'string' ? url : url.toString()}`);
+            
+            // Call original fetch with modified parameters
+            return originalFetch.call(window, url, options).then(response => {
+              // Log response status for debugging
+              console.log(`Response status: ${response.status} for ${reqMethod} ${typeof url === 'string' ? url : url.toString()}`);
+              return response;
+            }).catch(error => {
+              console.error("Fetch error:", error);
+              throw error;
+            });
+          };
+          
+          // Log success message
+          console.log("Safari/iOS compatibility mode enabled successfully");
+          
+          // Add special token refresh function for Safari
+          window.refreshTokenSafari = async function() {
+            try {
+              // Get current token
+              let token = null;
+              try {
+                const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                token = authData.token;
+              } catch (e) {
+                console.error("Failed to retrieve token:", e);
+                return false;
+              }
+              
+              if (!token) {
+                console.error("No token available to refresh");
+                return false;
+              }
+              
+              // Build URL with token parameter for GET request
+              const refreshUrl = `${window.location.origin}/api/refresh-token?token=${encodeURIComponent(token)}`;
+              
+              console.log("Attempting Safari token refresh...");
+              const response = await fetch(refreshUrl, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/json'
+                },
+                credentials: 'include'
+              });
+              
+              if (!response.ok) {
+                console.error("Safari token refresh failed:", response.status);
+                return false;
+              }
+              
+              const data = await response.json();
+              
+              if (data.token) {
+                // Update token in localStorage
+                console.log("Received new token, updating storage");
+                const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+                authData.token = data.token;
+                localStorage.setItem('authUser', JSON.stringify(authData));
+                return true;
+              } else {
+                console.error("No token in refresh response");
+                return false;
+              }
+            } catch (error) {
+              console.error("Safari token refresh error:", error);
+              return false;
+            }
+          };
+        }
+        
+        // Add debug function for both Safari and domain issues
+        window.debugAuth = function() {
+          let token = "";
+          try {
+            const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
+            token = authData.token;
+          } catch (e) {
+            console.error("Error reading token:", e);
+          }
+          
+          const debugInfo = {
+            currentDomain: window.location.hostname,
+            supportedDomains: supportedDomains,
+            userAgent: navigator.userAgent,
+            isSafari: isSafari,
+            hasToken: !!token,
+            tokenPrefix: token ? token.substring(0, 10) + "..." : "None",
+            localStorage: Object.keys(localStorage),
+            cookies: document.cookie.split(';').map(c => c.trim())
+          };
+          
+          console.log("Auth Debug Info:", debugInfo);
+          alert("Auth debug info printed to console");
+          
+          return debugInfo;
+        };
+      });
+    </script>
+  </head>
+  <body> 
+    <div id="root">
+      <!-- Initial loading state shown while React loads -->
+      <div class="initial-loader">
+        <div class="initial-loader-content">
+          <h1>Zarium Business</h1>
+          <div class="spinner"></div>
+          <p>Loading enterprise application...</p>
         </div>
-        
-        <p>We're working quickly to scale our infrastructure to accommodate all users. This temporary maintenance will ensure a smoother, faster experience when you return.</p>
-        
-        <div class="divider"></div>
-        
-        <p><strong>Expected return:</strong> As soon as possible</p>
-        
-        <div class="footer">
-            <p>Have questions? <a href="mailto:support@zarium.dev" style="color: #057857; font-weight: medium;">Email support →</a></p>
-        </div>
+      </div>
     </div>
-</body>
+    <noscript>
+      <div style="padding: 20px; text-align: center;">
+        <h1>Zarium Business AI Excel Generator</h1>
+        <p>Zarium Business is an AI-powered tool that helps organizations generate professional Excel spreadsheets.</p>
+        <p>Please enable JavaScript to use Zarium Business AI.</p>
+      </div>
+    </noscript>
+    <!-- Add cache busting parameter -->
+    <script type="module" src="/src/main.tsx?v=20240407_1"></script>
+    
+    <script>
+      // Safety net for loading issues
+      window.addEventListener('load', function() {
+        var loadTimeout = setTimeout(function() {
+          var root = document.getElementById('root');
+          var loaderElement = document.querySelector('.initial-loader');
+          
+          // Check if app still shows loading screen after 15 seconds
+          if (root && loaderElement && root.contains(loaderElement)) {
+            loaderElement.innerHTML = `
+              <div style="max-width:500px;padding:20px;text-align:center;">
+                <h2 style="font-size:20px;color:#059669;margin-bottom:15px;">
+                  This is taking longer than expected
+                </h2>
+                <p style="margin-bottom:20px;color:#555;line-height:1.5;">
+                  We apologize for the delay. This may be due to a slow network connection.
+                </p>
+                <div>
+                  <button onclick="window.location.reload()" style="padding:10px 20px;background-color:#059669;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:10px;">
+                    Refresh Page
+                  </button>
+                  <button onclick="localStorage.clear();sessionStorage.clear();document.cookie.split(';').forEach(c=>document.cookie=c.replace(/^ +/,'').replace(/=.*/,'=;expires='+new Date().toUTCString()+';path=/'));window.location.href='/';" style="padding:10px 20px;background-color:#f3f4f6;color:#333;border:1px solid #ddd;border-radius:4px;cursor:pointer;">
+                    Start Fresh
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+        }, 15000); // 15 seconds
+
+        // Clean up if app loads correctly
+        var observer = new MutationObserver(function(mutations) {
+          if (!document.querySelector('.initial-loader')) {
+            clearTimeout(loadTimeout);
+            observer.disconnect();
+          }
+        });
+        
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    </script>
+  </body>
 </html>
