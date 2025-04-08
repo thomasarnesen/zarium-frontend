@@ -113,7 +113,7 @@ const StatusPostIt = () => {
   
   return (
     <div 
-      className="relative max-w-md mx-auto mb-8 transform transition-all duration-500 hover:scale-105"
+      className="absolute left-8 top-32 max-w-xs transform transition-all duration-500 hover:scale-105"
       style={{ transform: `rotate(${rotation}deg)` }}
     >
       <div className="bg-yellow-200 dark:bg-yellow-300 dark:text-gray-800 p-6 rounded-lg shadow-lg">
