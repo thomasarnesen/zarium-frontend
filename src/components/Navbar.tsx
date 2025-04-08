@@ -90,22 +90,24 @@ export default function Navbar() {
           </Link>
           <div className="flex items-center space-x-8">
             {user ? (
-              <>
+                <>
                 <Link
                   to="/dashboard"
                   className="text-base text-emerald-800 dark:text-emerald-200 hover:text-emerald-900 dark:hover:text-emerald-100"
                 >
                   Dashboard
                 </Link>
-                {/* Support link for enterprise users */}
-                <Link
-                  to="/support"
+                {/* External support link */}
+                <a
+                  href="https://mentalhelse.no/fa-hjelp/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-base text-emerald-800 dark:text-emerald-200 hover:text-emerald-900 dark:hover:text-emerald-100"
                 >
                   Support
-                </Link>
+                </a>
                 <UserMenu />
-              </>
+                </>
             ) : (
               <>
                 {/* Contact link for enterprises */}
