@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, MouseEvent } from 'react';
+import React, { useEffect, useState, useRef, MouseEvent, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FileSpreadsheet, Download, Sparkles, Upload, Lock, HelpCircle, ArrowRight, Palette, Check, History } from 'lucide-react';
 import { SpreadsheetViewer } from '../components/SpreadsheetViewer';
@@ -47,30 +47,27 @@ interface Session {
   is_active: boolean;
 }
 
-// Add these new types and interfaces
 type MessageType = 'user' | 'assistant';
 type ChatMessage = {
   id: string;
   type: MessageType;
   text: string;
   timestamp: Date;
-  isTyping?: boolean; // Flag to indicate if the message is still "typing"
-  fullText?: string; // Store the full text while typing animation is in progress
-  messageNumber?: number; // Added to track which assistant message number this is
-  macroVersion?: number; // Added to track which macro version this message corresponds to
+  isTyping?: boolean;
+  fullText?: string;
+  messageNumber?: number;
+  macroVersion?: number;
 };
 
-// Add type for macro history
 type MacroHistoryItem = {
   index: number;
   main_macro: string;
-  user_message: string; // Added to store the associated user message
+  user_message: string;
 };
 
 const TOKENS_PER_GENERATION = 1000;
 const TOKENS_PER_UPLOAD = 500;
 
-// Simplified SpinningZLogo component without unnecessary conditions
 const SpinningZLogo = ({ 
   isTyping, 
   size = 16, 
@@ -109,6 +106,28 @@ const SpinningZLogo = ({
     </div>
   );
 };
+const StatusPostIt = () => {
+  const statusMessage = "Filopplasting er for øyeblikket utilgjengelig ettersom denne funksjonen ikke er blitt tilpasset endringene i systemet enda :)";
+  
+  const rotation = useMemo(() => Math.random() * 10 - 5, []);
+  
+  return (
+    <div 
+      className="relative max-w-md mx-auto mb-8 transform transition-all duration-500 hover:scale-105"
+      style={{ transform: `rotate(${rotation}deg)` }}
+    >
+      <div className="bg-yellow-200 dark:bg-yellow-300 dark:text-gray-800 p-6 rounded-lg shadow-lg">
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-8 h-2 bg-blue-400 rounded-sm opacity-70" />
+        <p className="text-gray-800 font-handwriting text-lg leading-relaxed">
+          {statusMessage}
+        </p>
+        <div className="mt-4 flex justify-between items-center text-xs text-gray-600">
+          <span>Zarium Status</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function Dashboard() {
   const location = useLocation();
@@ -119,20 +138,17 @@ export default function Dashboard() {
   const isAuthenticated = !!user;
   const isBasicPlan = planType === 'Basic';  
   const isDemoPlan = planType === 'Demo';
-  const isPro = planType === 'Pro';  // Check if user is on Pro plan
+  const isPro = planType === 'Pro';
   const canUseEnhancedMode = !isBasicPlan && !isDemoPlan;
   const [greeting, setGreeting] = useState('');
   const [firstMessageSent, setFirstMessageSent] = useState(false);
   
-  // State for Edit Previous feature
   const [editPrevious, setEditPrevious] = useState(false);
   const [hasPreviousMacro, setHasPreviousMacro] = useState(false);
 
-  // State for Macro History feature
   const [macroHistory, setMacroHistory] = useState<MacroHistoryItem[]>([]);
   const [isReverting, setIsReverting] = useState(false);
 
-  // State for Session Management
   const [showSessionSelector, setShowSessionSelector] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -148,14 +164,11 @@ export default function Dashboard() {
   const [generationStatus, setGenerationStatus] = useState<string>('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   
-  // Chat history to store conversation
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-  const [typingSpeed, setTypingSpeed] = useState(130); // Characters per second, adjust as needed
+  const [typingSpeed, setTypingSpeed] = useState(130);
   
-  // Add state to track which assistant message we're on
   const [assistantMessageCount, setAssistantMessageCount] = useState(0);
 
-  // Bot detection states
   const [botDetected, setBotDetected] = useState(false);
   const [timeOnPage, setTimeOnPage] = useState(0);
   const [mouseMovements, setMouseMovements] = useState(0);
@@ -163,14 +176,11 @@ export default function Dashboard() {
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
   const [typingStats, setTypingStats] = useState({ charCount: 0, startTime: Date.now() });
 
-  // Add this state to track if user is manually scrolling the chat
   const [isManuallyScrolling, setIsManuallyScrolling] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Keep track of when all typing has finished for logo animation
   const [allTypingComplete, setAllTypingComplete] = useState(true);
 
-  // Function to load sessions
   const loadSessions = async () => {
     if (!isPro) return;
     
@@ -195,13 +205,11 @@ export default function Dashboard() {
     }
   };
 
-  // Improved handler for session selection
   const handleSessionSelect = async (session: Session) => {
     try {
       setIsGenerating(true);
       setError(null);
       
-      // Call the API to activate and load the session
       const response = await api.fetch(`/api/sessions/${session.id}/activate`, {
         method: 'POST'
       });
@@ -213,10 +221,8 @@ export default function Dashboard() {
       const result = await response.json();
       console.log("Session load result:", result);
       
-      // Set active session
       setActiveSessionId(session.id);
       
-      // Handle the case where the session has a macro and VM processing succeeded
       if (result.processingResult && result.processingResult.previewImage) {
         setPreviewImage(result.processingResult.previewImage);
         
@@ -224,7 +230,6 @@ export default function Dashboard() {
           setFormatting(result.processingResult.formatting);
         }
         
-        // Create chat history for the loaded session
         setChatHistory([
           {
             id: Math.random().toString(36).substr(2, 9),
@@ -240,13 +245,10 @@ export default function Dashboard() {
           }
         ]);
       } 
-      // Handle the case where the session exists but has no macro yet
       else if (result.message === "Session activated but no macro found") {
-        // Clear preview if any
         setPreviewImage(null);
         setFormatting(null);
         
-        // Create minimal chat history
         setChatHistory([
           {
             id: Math.random().toString(36).substr(2, 9),
@@ -256,19 +258,15 @@ export default function Dashboard() {
           }
         ]);
       }
-      // Handle the case where the session has a macro but VM processing failed
       else if (result.macroCode && result.mainMacro) {
-        // Clear preview if any
         setPreviewImage(null);
         
-        // Basic formatting info
         setFormatting({
           hasChart: false,
           downloadUrl: '',
           resultSummary: `Loaded session "${session.name}"`
         });
         
-        // Create chat history
         setChatHistory([
           {
             id: Math.random().toString(36).substr(2, 9),
@@ -284,9 +282,7 @@ export default function Dashboard() {
           }
         ]);
       }
-      // Handle other cases
       else {
-        // Create minimal chat history
         setChatHistory([
           {
             id: Math.random().toString(36).substr(2, 9),
@@ -297,7 +293,6 @@ export default function Dashboard() {
         ]);
       }
       
-      // Close the session selector
       setShowSessionSelector(false);
       setFirstMessageSent(true);
       
@@ -305,14 +300,12 @@ export default function Dashboard() {
       console.error('Error loading session:', error);
       setError(error.message || 'Failed to load session');
       
-      // Add error message to chat
       addChatMessage('assistant', `I'm sorry, I couldn't load your session. ${error.message || 'An error occurred.'}`);
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // Function to load the macro history and update chat messages
   const loadMacroHistory = async () => {
     if (planType !== 'Pro') return;
     
@@ -323,11 +316,8 @@ export default function Dashboard() {
         if (data.history && Array.isArray(data.history)) {
           setMacroHistory(data.history);
           
-          // Update chat history to associate messages with macro versions
           setChatHistory(prev => prev.map(msg => {
-            // Only process user messages
             if (msg.type === 'user') {
-              // Find if this message has a corresponding macro
               const matchingMacro = data.history.find((item: MacroHistoryItem) => 
                 item.index > 0 && item.user_message === msg.text
               );
@@ -345,7 +335,6 @@ export default function Dashboard() {
     }
   };
 
-  // Updated revertToMacro function that keeps older messages
   const revertToMacro = async (index: number, messageId: string) => {
     if (planType !== 'Pro' || isReverting) return;
     
@@ -353,13 +342,11 @@ export default function Dashboard() {
       setIsReverting(true);
       setError(null);
       
-      // Find the index of the message we're reverting to
       const messageIndex = chatHistory.findIndex(msg => msg.id === messageId);
       if (messageIndex === -1) {
         throw new Error('Message not found');
       }
       
-      // Find the assistant's response to this message
       let assistantResponseIndex = -1;
       for (let i = messageIndex + 1; i < chatHistory.length; i++) {
         if (chatHistory[i].type === 'assistant') {
@@ -368,7 +355,6 @@ export default function Dashboard() {
         }
       }
       
-      // Call API to revert to this macro
       const response = await api.fetch(`/api/revert-macro/${index}`, {
         method: 'POST'
       });
@@ -380,7 +366,6 @@ export default function Dashboard() {
       
       const result = await response.json();
       
-      // Update the preview image and formatting
       if (result.previewImage) {
         setPreviewImage(result.previewImage);
       }
@@ -389,22 +374,16 @@ export default function Dashboard() {
         setFormatting(result.formatting);
       }
       
-      // Keep all messages up to and including the assistant's response,
-      // but remove newer messages
       setChatHistory(prev => {
-        // How many messages to keep
         const keepCount = assistantResponseIndex !== -1 ? 
                          assistantResponseIndex + 1 : 
                          messageIndex + 1;
         
-        // Keep only the messages up to the assistant's response
         return prev.slice(0, keepCount);
       });
       
-      // Refresh macro history to ensure UI is updated
       await loadMacroHistory();
       
-      // Check if we still have a previous macro
       try {
         const macroResponse = await api.fetch('/api/check-previous-macro');
         if (macroResponse.ok) {
@@ -419,14 +398,12 @@ export default function Dashboard() {
       console.error('Error reverting to previous macro:', error);
       setError(error.message || 'Failed to revert to previous spreadsheet');
       
-      // Add error message to chat
       addChatMessage('assistant', `I'm sorry, I couldn't revert to your previous spreadsheet: ${error.message || 'Unknown error'}`);
     } finally {
       setIsReverting(false);
     }
   };
 
-  // RevertButton component for inline use in chat messages
   const RevertButton = ({ messageId, macroVersion }: { messageId: string, macroVersion: number }) => {
     if (!isPro || !macroVersion || macroVersion < 1) return null;
     
@@ -447,18 +424,14 @@ export default function Dashboard() {
     );
   };
 
-  // Add a function to check if any message is still typing
   const isAnyMessageTyping = () => {
     return chatHistory.some(msg => msg.isTyping);
   };
 
-  // Update the effect to track typing state for the spinning logo
   useEffect(() => {
-    // Set the tracking state based on whether any messages are typing
     setAllTypingComplete(!isAnyMessageTyping());
   }, [chatHistory]);
 
-  // Effect to load sessions when the component mounts
   useEffect(() => {
     if (isAuthenticated && isPro) {
       loadSessions();
@@ -466,7 +439,6 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, isPro]);
 
-  // Effect to check for active session
   useEffect(() => {
     const checkActiveSession = async () => {
       if (!isAuthenticated || !isPro) return;
@@ -476,7 +448,6 @@ export default function Dashboard() {
         if (response.ok) {
           const data = await response.json();
           
-          // If there's an active session, update the state
           if (data.activeSession > 0) {
             console.log(`Currently active session: ${data.activeSession}`);
             setActiveSessionId(data.activeSession);
@@ -490,10 +461,8 @@ export default function Dashboard() {
     checkActiveSession();
   }, [isAuthenticated, isPro]);
 
-  // Effect to refresh the sessions after generation
   useEffect(() => {
     if (!isGenerating && previewImage && isPro) {
-      // Short delay to ensure backend has completed processing
       const timer = setTimeout(() => {
         loadSessions();
         loadMacroHistory();
@@ -503,14 +472,12 @@ export default function Dashboard() {
     }
   }, [isGenerating, previewImage, isPro]);
 
-  // Log active session ID changes
   useEffect(() => {
     if (activeSessionId) {
       console.log(`Active session ID: ${activeSessionId}`);
     }
   }, [activeSessionId]);
 
-  // Add effect to check for previous macro availability
   useEffect(() => {
     const checkPreviousMacro = async () => {
       if (planType === 'Pro') {
@@ -520,7 +487,6 @@ export default function Dashboard() {
             const data = await response.json();
             setHasPreviousMacro(data.hasPreviousMacro);
             
-            // If no previous macro is available, disable the edit previous switch
             if (!data.hasPreviousMacro) {
               setEditPrevious(false);
             }
@@ -534,9 +500,7 @@ export default function Dashboard() {
     checkPreviousMacro();
   }, [planType]);
 
-  // Add this effect for custom animation - enhance the animation for spinning logo
   useEffect(() => {
-    // Add custom animation to the CSS
     const styleElement = document.createElement('style');
     styleElement.innerHTML = `
       @keyframes spin-slow {
@@ -554,13 +518,16 @@ export default function Dashboard() {
         animation: pulse 1.5s ease-in-out infinite;
       }
       
-      /* Add floating animation for the Z logo */
       @keyframes float {
         0%, 100% { transform: translateY(0px); }
         50% { transform: translateY(-5px); }
       }
       .float-animation {
         animation: float 3s ease-in-out infinite;
+      }
+      
+      .font-handwriting {
+        font-family: 'Comic Sans MS', 'Segoe Print', cursive;
       }
     `;
     document.head.appendChild(styleElement);
@@ -570,17 +537,14 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Track time on page and mouse movements for bot detection
   useEffect(() => {
     const startTime = Date.now();
     
-    // Track mouse movements
     const handleMouseMove = () => {
       setMouseMovements(prev => prev + 1);
       setLastActivityTime(Date.now());
     };
     
-    // Track keyboard activity
     const handleKeyDown = () => {
       setLastActivityTime(Date.now());
     };
@@ -588,7 +552,6 @@ export default function Dashboard() {
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('keydown', handleKeyDown);
     
-    // Update time on page every second
     const timeInterval = setInterval(() => {
       setTimeOnPage(Math.floor((Date.now() - startTime) / 1000));
     }, 1000);
@@ -600,36 +563,29 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Refs for the textarea and buttons
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const generateButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Reset firstMessageSent when page loads
   useEffect(() => {
     setFirstMessageSent(false);
     setChatHistory([]);
   }, []);
 
-  // Handler for honeypot field changes
   const handleHoneypotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setHoneypotField(e.target.value);
     
-    // If honeypot field is filled, mark as bot
     if (e.target.value) {
       setBotDetected(true);
       reportHoneypotTrigger('hidden_field');
     }
   };
 
-  // Handle honeypot link click
   const handleSecretLinkClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setBotDetected(true);
     reportHoneypotTrigger('hidden_link');
-    // Continue normally to avoid alerting bot
   };
 
-  // Function to report honeypot triggers
   const reportHoneypotTrigger = async (honeypotType: string) => {
     try {
       await fetch(`${api.apiUrl}/api/honeypot-trigger`, {
@@ -649,12 +605,10 @@ export default function Dashboard() {
         })
       });
     } catch (err) {
-      // Silent fail - don't alert the bot
       console.error("Error reporting honeypot trigger:", err);
     }
   };
 
-  // Function to report bot behavioral patterns
   const reportBotBehavior = async () => {
     try {
       await fetch(`${api.apiUrl}/api/behavior-analysis`, {
@@ -672,25 +626,21 @@ export default function Dashboard() {
         })
       });
     } catch (err) {
-      // Silent fail
       console.error("Error reporting bot:", err);
     }
   };
   
-  // Generate time-based greeting with more personal creative variations
   useEffect(() => {
     const generateGreeting = () => {
       const hour = new Date().getHours();
-      const day = new Date().getDay(); // 0 = Sunday, 6 = Saturday
+      const day = new Date().getDay();
       const date = new Date().getDate();
       const month = new Date().getMonth();
       
-      // Display name with underscores converted to spaces
       const displayName = user?.displayName 
         ? user.displayName.replace(/_/g, ' ') 
         : '';
       
-      // Base time greetings with variations - more personal
       const morningGreetings = [
         `Good morning, ${displayName}! Ready to create something amazing?`,
         `Rise and shine, ${displayName}! What are we building today?`,
@@ -726,7 +676,6 @@ export default function Dashboard() {
         `Stars and spreadsheets - quite the combination, ${displayName}! What's your goal tonight?`
       ];
       
-      // Special day greetings - more personal
       const fridayGreetings = [
         `Happy Friday, ${displayName}! Ready for the weekend after this?`,
         `TGIF, ${displayName}! One last spreadsheet before freedom?`,
@@ -746,12 +695,10 @@ export default function Dashboard() {
         `Relaxed weekend vibes, ${displayName}. Any fun projects or just catching up?`
       ];
       
-      // Special occasion greetings
       const newYearGreetings = [
         `Happy New Year, ${displayName}! What's your first spreadsheet of the year?`
       ];
       
-      // Default to time-based greetings
       let timeGreetings;
       if (hour >= 5 && hour < 12) {
         timeGreetings = morningGreetings;
@@ -763,64 +710,51 @@ export default function Dashboard() {
         timeGreetings = nightGreetings;
       }
       
-      // Select the base greeting pool
       let greetingPool = timeGreetings;
       
-      // Check for special days
-      if (day === 5) { // Friday
-        // 50% chance to use Friday greeting
+      if (day === 5) {
         if (Math.random() > 0.5) {
           greetingPool = fridayGreetings;
         }
-      } else if (day === 1) { // Monday
-        // 50% chance to use Monday greeting
+      } else if (day === 1) {
         if (Math.random() > 0.5) {
           greetingPool = mondayGreetings;
         }
-      } else if (day === 0 || day === 6) { // Weekend (Saturday or Sunday)
-        // 50% chance to use weekend greeting
+      } else if (day === 0 || day === 6) {
         if (Math.random() > 0.5) {
           greetingPool = weekendGreetings;
         }
       }
       
-      // New Year's Day
-      if (date === 1 && month === 0) { // January 1
+      if (date === 1 && month === 0) {
         greetingPool = newYearGreetings;
       }
       
-      // Pick a random greeting from the selected pool
       const randomIndex = Math.floor(Math.random() * greetingPool.length);
       setGreeting(greetingPool[randomIndex]);
     };
     
     generateGreeting();
     
-    // Update greeting every minute
     const interval = setInterval(generateGreeting, 60000);
     return () => clearInterval(interval);
   }, [user]);
 
-  // Add this effect to redirect to welcome page if no display name
   useEffect(() => {
     if (user && (!user.displayName || user.displayName === 'unknown')) {
       navigate('/welcome');
     } else if (user && user.displayName) {
-      // User has a display name, continue
     }
   }, [user, navigate]);
 
   useEffect(() => {
-    // Refresh user data on component mount
     refreshUserData();
   }, [refreshUserData]);
 
-  // Update spacing based on UI state
   useEffect(() => {
     if (previewImage || error) {
       setFirstMessageSent(true);
       
-      // Dispatch custom event to notify Layout component
       const event = new CustomEvent('firstMessageSentUpdated', { 
         detail: { firstMessageSent: true } 
       });
@@ -828,7 +762,6 @@ export default function Dashboard() {
     }
   }, [previewImage, error]);
 
-  // Add another effect to dispatch the event when firstMessageSent changes directly
   useEffect(() => {
     const event = new CustomEvent('firstMessageSentUpdated', { 
       detail: { firstMessageSent } 
@@ -847,7 +780,6 @@ export default function Dashboard() {
     let timeouts: NodeJS.Timeout[] = [];
     let isMounted = true;
     
-    // Define all the messages we want to show in sequence
     const messages = [
       'Processing',
       'Analyzing your requirements...',
@@ -858,7 +790,6 @@ export default function Dashboard() {
       'Finalizing'
     ];
     
-    // Also update assistant messages in chat
     const assistantMessages = [
       'I\'m processing your request...',
       'Analyzing what you need in this spreadsheet...',
@@ -869,36 +800,31 @@ export default function Dashboard() {
       'Finalizing your Excel spreadsheet...'
     ];
 
-    // Clear all timeouts on unmount or when dependencies change
     const clearAllTimeouts = () => {
       timeouts.forEach(timeout => clearTimeout(timeout));
       timeouts = [];
     };
     
-    // Create a fixed schedule for status updates to ensure all messages are seen
     const scheduleStatusUpdates = () => {
       if (!isGenerating || sessionId) return;
       
-      clearAllTimeouts(); // Clear any existing timeouts
+      clearAllTimeouts();
       
-      // Display each message for a specific duration
       messages.forEach((message, index) => {
         const timeout = setTimeout(() => {
           if (!isMounted) return;
           setGenerationStatus(message);
           
-          // Also update the assistant message in chat
           if (index < assistantMessages.length) {
             updateLastAssistantMessage(assistantMessages[index]);
           }
-        }, index * 6000); // Show each message for ~6 seconds
+        }, index * 6000);
         
         timeouts.push(timeout);
       });
     };
     
     if (sessionId && isGenerating) {
-      // Existing polling code
       pollInterval = setInterval(async () => {
         try {
           const response = await api.fetch(`/generation-status/${sessionId}`);
@@ -911,7 +837,6 @@ export default function Dashboard() {
             if (data.formatting) {
               setFormatting(data.formatting);
               
-              // Update the assistant message with the result summary
               if (data.formatting.resultSummary) {
                 updateLastAssistantMessage(data.formatting.resultSummary);
               } else {
@@ -920,7 +845,6 @@ export default function Dashboard() {
             }
           }
         } catch (error) {
-          // Handle error silently
         }
       }, 1000);
     }
@@ -933,7 +857,6 @@ export default function Dashboard() {
   }, [isGenerating, sessionId, token]);
 
   useEffect(() => {
-    // Short delay to ensure authentication status is updated
     const checkAuth = setTimeout(() => {
       if (!isAuthenticated) {
         navigate('/login');
@@ -943,10 +866,8 @@ export default function Dashboard() {
     return () => clearTimeout(checkAuth);
   }, [isAuthenticated, navigate]);
 
-  // Add an effect to automatically stop loading when the preview image arrives
   useEffect(() => {
     if (previewImage) {
-      // Stop the loading state and all status indicators when preview image is received
       setIsGenerating(false);
       setGenerationStatus('');
       setSessionId(null);
@@ -954,10 +875,8 @@ export default function Dashboard() {
     }
   }, [previewImage]);
   
-  // Modify the chat scrolling logic to be more specific
   useEffect(() => {
     if (chatHistory.length > 0 && !isManuallyScrolling) {
-      // Only scroll to bottom if we're not manually scrolling
       setTimeout(() => {
         const chatContainer = chatContainerRef.current;
         if (chatContainer) {
@@ -967,11 +886,9 @@ export default function Dashboard() {
     }
   }, [chatHistory, isManuallyScrolling]);
 
-  // Add handlers for chat container scrolling
   const handleChatScroll = () => {
     const chatContainer = chatContainerRef.current;
     if (chatContainer) {
-      // Check if we're close to bottom (within 100px)
       const isNearBottom = 
         chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 100;
       setIsManuallyScrolling(!isNearBottom);
@@ -1083,37 +1000,28 @@ export default function Dashboard() {
     }
   };
 
-  // Track typing for bot detection
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    // Track current prompt value
     setPrompt(e.target.value);
     
-    // Update typing stats
     if (e.target.value.length > typingStats.charCount) {
-      // Only track when typing, not deleting
       setTypingStats({
         charCount: e.target.value.length,
         startTime: typingStats.startTime
       });
     } else if (e.target.value.length === 0) {
-      // Reset typing stats when clearing the field
       setTypingStats({
         charCount: 0,
         startTime: Date.now()
       });
     }
     
-    // Reset the lastActivityTime
     setLastActivityTime(Date.now());
   };
 
-  // Format numbered lists by adding line breaks before numbers (1. 2. 3. etc.)
   const formatNumberedList = (text: string): string => {
-    // Add a new line before any numbered list items (1. 2. 3. etc.)
     return text.replace(/(\s)([1-9]|10)\.(\s)/g, '$1\n$2.$3');
   };
 
-  // Updated function to add a message to the chat history with typing effect
   const addChatMessage = (type: MessageType, text: string) => {
     if (!text || text.trim() === '') {
       console.warn("Attempted to add chat message with empty text");
@@ -1123,7 +1031,6 @@ export default function Dashboard() {
     const formattedText = formatNumberedList(text);
     
     if (type === 'user') {
-      // User messages appear instantly
       const newMessage: ChatMessage = {
         id: Math.random().toString(36).substr(2, 9),
         type,
@@ -1132,24 +1039,21 @@ export default function Dashboard() {
       };
       setChatHistory(prev => [...prev, newMessage]);
     } else {
-      // Track assistant message count
       setAssistantMessageCount(prev => prev + 1);
       
-      // Assistant messages have typing animation
       const newMessage: ChatMessage = {
         id: Math.random().toString(36).substr(2, 9),
         type,
-        text: '', // Start empty, will be filled by typing animation
-        fullText: formattedText, // Store the full text
+        text: '',
+        fullText: formattedText,
         isTyping: true,
         timestamp: new Date(),
-        messageNumber: assistantMessageCount + 1 // Store which assistant message this is
+        messageNumber: assistantMessageCount + 1
       };
       setChatHistory(prev => [...prev, newMessage]);
     }
   };
   
-  // Updated function to update the last assistant message or add a new one
   const updateLastAssistantMessage = (text: string) => {
     if (!text || text.trim() === '') {
       console.warn("Attempted to update assistant message with empty text");
@@ -1161,55 +1065,49 @@ export default function Dashboard() {
     setChatHistory(prev => {
       const lastAssistantIndex = [...prev].reverse().findIndex(msg => msg.type === 'assistant');
       
-      // If no assistant message found or it's not the last one, add new message with typing
       if (lastAssistantIndex === -1 || prev.length - 1 - lastAssistantIndex !== prev.length - 1) {
         console.log("No existing assistant message found, adding new one:", formattedText.substring(0, 50) + "...");
         setAssistantMessageCount(prev => prev + 1);
         return [...prev, {
           id: Math.random().toString(36).substr(2, 9),
           type: 'assistant',
-          text: '', // Start empty for typing effect
-          fullText: formattedText, // Store the full text
-          isTyping: true, // Restart typing animation
+          text: '',
+          fullText: formattedText,
+          isTyping: true,
           timestamp: new Date(),
           messageNumber: assistantMessageCount + 1
         }];
       }
       
-      // Get the current last message
       const currentLastMessage = prev[prev.length - 1 - lastAssistantIndex];
       
-      // Check if this is a similar message or completely different
       const isSimilarContent = 
         currentLastMessage.text.includes("Understanding your request") || 
         currentLastMessage.text.includes("I'm analyzing") ||
         currentLastMessage.text.includes("I'll create") ||
         currentLastMessage.text.includes("I'm processing");
       
-      // If we're in the middle of typing the early messages and now getting the result summary,
-      // replace the message rather than appending
       if (isSimilarContent) {
         console.log("Replacing preliminary message with result summary");
         const newHistory = [...prev];
         const updatedMessage = {
           ...currentLastMessage,
-          fullText: formattedText, // Replace with new content
-          isTyping: true, // Restart typing animation
-          text: '' // Reset text to show typing animation from start
+          fullText: formattedText,
+          isTyping: true,
+          text: ''
         };
         
         newHistory[prev.length - 1 - lastAssistantIndex] = updatedMessage;
         return newHistory;
       }
       
-      // Otherwise, append to the fullText and reset typing
       console.log("Appending to existing assistant message");
       const newHistory = [...prev];
       const updatedMessage = {
         ...currentLastMessage,
-        fullText: `${currentLastMessage.text}\n\n${formattedText}`, // Append with spacing
-        isTyping: true, // Restart typing animation
-        text: currentLastMessage.text // Keep current visible text
+        fullText: `${currentLastMessage.text}\n\n${formattedText}`,
+        isTyping: true,
+        text: currentLastMessage.text
       };
       
       newHistory[prev.length - 1 - lastAssistantIndex] = updatedMessage;
@@ -1217,21 +1115,16 @@ export default function Dashboard() {
     });
   };
 
-  // Add this effect to handle the typing animation - modified to track overall typing state
   useEffect(() => {
-    // Find messages that are currently typing
     const typingMessages = chatHistory.filter(msg => msg.isTyping && msg.fullText);
     
     if (typingMessages.length === 0) {
-      // If no messages are typing, ensure our tracking state is updated
       setAllTypingComplete(true);
       return;
     } else {
-      // If any messages are typing, update our tracking state
       setAllTypingComplete(false);
     }
     
-    // For each typing message, create an interval to update it
     const intervals = typingMessages.map(message => {
       return setInterval(() => {
         setChatHistory(prev => {
@@ -1240,13 +1133,11 @@ export default function Dashboard() {
               const currentLength = msg.text.length;
               const targetLength = msg.fullText.length;
               
-              // If we've typed the full message, stop typing
               if (currentLength >= targetLength) {
                 return { ...msg, isTyping: false, text: msg.fullText };
               }
               
-              // Otherwise, show more text
-              const charsToAdd = Math.min(5, targetLength - currentLength); // Add up to 5 chars at a time
+              const charsToAdd = Math.min(5, targetLength - currentLength);
               const newText = msg.fullText.substring(0, currentLength + charsToAdd);
               
               return { ...msg, text: newText };
@@ -1254,7 +1145,6 @@ export default function Dashboard() {
             return msg;
           });
           
-          // After updating all messages, check if any are still typing
           const stillTyping = updatedMessages.some(msg => msg.isTyping);
           if (!stillTyping) {
             setAllTypingComplete(true);
@@ -1262,17 +1152,15 @@ export default function Dashboard() {
           
           return updatedMessages;
         });
-      }, 1000 / (typingSpeed / 5)); // Adjust timing based on typing speed and chars per update
+      }, 1000 / (typingSpeed / 5));
     });
     
-    // Clean up intervals
     return () => {
       intervals.forEach(interval => clearInterval(interval));
     };
   }, [chatHistory, typingSpeed]);
 
   const [modelMode, setModelMode] = useState<ModelMode>('Normal');
-  // Add state to control popover open/close
   const [stylePopoverOpen, setStylePopoverOpen] = useState(false);
 
   const StyleSelector = () => {
@@ -1294,11 +1182,8 @@ export default function Dashboard() {
               <button
                 key={mode}
                 onClick={(e) => {
-                  // Prevent the default behavior which closes the popover
                   e.preventDefault();
-                  // Set the selected mode but don't close popover
                   setModelMode(mode as ModelMode);
-                  // Important: Don't set stylePopoverOpen to false here
                 }}
                 className={`w-full text-left flex items-center gap-2 px-2 py-1 rounded text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20 ${
                   modelMode === mode ? 'text-emerald-700 dark:text-emerald-300 font-medium' : 'text-gray-700 dark:text-gray-300'
@@ -1321,7 +1206,6 @@ export default function Dashboard() {
     
     setFirstMessageSent(true);
     
-    // Dispatch custom event when first message is sent
     const event = new CustomEvent('firstMessageSentUpdated', { 
       detail: { firstMessageSent: true } 
     });
@@ -1330,24 +1214,18 @@ export default function Dashboard() {
     setIsGenerating(true);
     setError(null);
     
-    // Store the message ID for later association with the macro
     const messageId = Math.random().toString(36).substr(2, 9);
     
-    // Add user message to chat
     addChatMessage('user', prompt);
     
-    // Initial "thinking" message 
     addChatMessage('assistant', 'Understanding your request...');
     
-    // Since the backend doesn't send request analysis, let's manually update the message
-    // Simulate multiple smart-looking messages
     const smartMessages = [
       "I'm analyzing your request for a multiplication table...",
       "I'll create a well-formatted Excel spreadsheet with multiplication tables...",
       "Your spreadsheet will include complete multiplication tables with proper formatting..."
     ];
     
-    // Pick a message based on prompt keywords
     let bestMessage = "I'll create a spreadsheet based on your request.";
     if (prompt.toLowerCase().includes("multiplication") || prompt.toLowerCase().includes("gange")) {
       bestMessage = "I'll create a multiplication table with proper formatting and headers.";
@@ -1361,12 +1239,10 @@ export default function Dashboard() {
       bestMessage = "I'll create a schedule spreadsheet with time slots, activities, and proper formatting.";
     }
     
-    // Update the message after a short delay - this now appends instead of replacing
     setTimeout(() => {
       updateLastAssistantMessage(bestMessage);
     }, 1000);
     
-    // Initialize formatting with a default requestAnalysis
     setFormatting(prev => ({
       ...(prev || {}),
       hasChart: false,
@@ -1374,23 +1250,19 @@ export default function Dashboard() {
       requestAnalysis: 'Analyzing your request...'
     }));
     
-    // Check for bot behavior - generating too quickly or suspiciously
     if (timeOnPage < 5 || mouseMovements < 3) {
       setBotDetected(true);
       reportBotBehavior();
     }
     
-    // Calculate typing speed (chars per second)
     const typingSpeed = typingStats.charCount / Math.max(1, (Date.now() - typingStats.startTime) / 1000);
     
-    // Extremely fast typing is suspicious
     if (typingSpeed > 10 && typingStats.charCount > 130) {
       setBotDetected(true);
       reportBotBehavior();
     }
   
     try {
-      // Refresh token before generation
       const tokenResponse = await api.fetch('/refresh-token', {
         method: 'POST',
         credentials: 'include'
@@ -1400,7 +1272,6 @@ export default function Dashboard() {
         throw new Error('Failed to refresh session');
       }
   
-      // Use the standard endpoints, but we'll analyze the prompt separately
       const endpoint = selectedFiles.length > 0 ? '/api/generate-api-with-file-and-assistant' : '/api/generate-api-with-assistant';
       
       const requestOptions: RequestInit = {
@@ -1417,9 +1288,8 @@ export default function Dashboard() {
         formData.append('format', 'xlsx');
         formData.append('fileCount', selectedFiles.length.toString());
         formData.append('enhancedMode', enhancedMode.toString());
-        formData.append('modelMode', modelMode); // Add model mode
+        formData.append('modelMode', modelMode);
         
-        // Include editPrevious flag for Pro users
         if (isPro) {
           formData.append('editPrevious', editPrevious.toString());
         }
@@ -1430,12 +1300,11 @@ export default function Dashboard() {
           'Content-Type': 'application/json',
         };
         
-        // Include editPrevious in JSON request for Pro users
         const requestBody: any = {
           prompt,
           format: 'xlsx',
           enhancedMode,
-          modelMode // Add model mode
+          modelMode
         };
         
         if (isPro) {
@@ -1445,7 +1314,6 @@ export default function Dashboard() {
         requestOptions.body = JSON.stringify(requestBody);
       }
   
-      // If bot detected, report to separate endpoint
       if (botDetected) {
         try {
           fetch(`${api.apiUrl}/api/report-bot`, {
@@ -1468,7 +1336,6 @@ export default function Dashboard() {
             })
           });
         } catch (err) {
-          // Silent fail - don't alert the bot
           console.error("Error reporting bot:", err);
         }
       }
@@ -1476,7 +1343,6 @@ export default function Dashboard() {
       const response = await api.fetch(endpoint, requestOptions);
       const result = await response.json();
       
-      // Simple log for debugging only
       console.log("API response received");
       
       if (result.error) {
@@ -1486,7 +1352,6 @@ export default function Dashboard() {
       if (result.previewImage) {
         setPreviewImage(result.previewImage);
         
-        // Associate this message with the generated macro
         if (isPro) {
           try {
             await api.fetch('/api/associate-message-with-macro', {
@@ -1504,31 +1369,24 @@ export default function Dashboard() {
         }
       }
       
-      // Check if the response contains session information
       if (result.sessionId) {
         console.log(`Generation saved to session ${result.sessionId}: ${result.sessionName || 'Unnamed'}`);
         setActiveSessionId(result.sessionId);
       }
       
-      // Make sure we update the chat with the summary from the backend
       if (result.resultSummary) {
-        // Update the assistant's message with the result summary
         updateLastAssistantMessage(result.resultSummary);
         console.log("Updated chat with result summary:", result.resultSummary);
       } else if (result.formatting && result.formatting.resultSummary) {
-        // Handle the case where resultSummary is nested in formatting
         updateLastAssistantMessage(result.formatting.resultSummary);
         console.log("Updated chat with formatting result summary:", result.formatting.resultSummary);
       } else {
-        // Fallback message if no summary is provided
         updateLastAssistantMessage("I've created your Excel spreadsheet based on your request. Check the preview on the right.");
       }
       
-      // Update formatting state with all the information
       if (result.formatting) {
         setFormatting(result.formatting);
       } else {
-        // Create formatting object if it's missing
         setFormatting({
           hasChart: false,
           downloadUrl: result.downloadUrl || '',
@@ -1537,15 +1395,11 @@ export default function Dashboard() {
         });
       }
   
-      // Refresh user data after successful generation
       await refreshUserData();
       
-      // Update UI with the latest session information
       if (isPro) {
-        // Reload sessions to update UI
         loadSessions();
         
-        // Update hasPreviousMacro after a successful generation for Pro users
         try {
           const macroResponse = await api.fetch('/api/check-previous-macro');
           if (macroResponse.ok) {
@@ -1553,7 +1407,6 @@ export default function Dashboard() {
             setHasPreviousMacro(macroData.hasPreviousMacro);
           }
           
-          // Also load the macro history
           await loadMacroHistory();
         } catch (error) {
           console.error('Error checking previous macro after generation:', error);
@@ -1567,14 +1420,12 @@ export default function Dashboard() {
       setGenerationStatus('');
       setSessionId(null);
       
-      // Add error message to chat
       addChatMessage('assistant', `I'm sorry, I encountered an error: ${error.message || 'Failed to generate document. Please try again.'}`);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
-      {/* Honeypot Link - Hidden from normal users */}
       <a 
         href="/internal-access" 
         onClick={handleSecretLinkClick}
@@ -1593,9 +1444,7 @@ export default function Dashboard() {
 
       <div className={`transition-all duration-500 ${firstMessageSent ? 'pt-2' : 'pt-8'}`}>
         {!firstMessageSent ? (
-          // Claude-like centered greeting and chat box before first message is sent
           <div className="flex flex-col items-center justify-start min-h-screen px-4 pt-16">
-            {/* Z logo with greeting, larger text, positioned higher */}
             <div className="text-center mb-16 flex items-center justify-center">
               <div 
                 className="inline-flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold"
@@ -1615,7 +1464,8 @@ export default function Dashboard() {
               </h1>
             </div>
             
-            {/* Session Selector for Pro users */}
+            <StatusPostIt />
+            
             {isPro && (
               <div className="mb-8 w-full max-w-2xl">
                 <button
@@ -1637,11 +1487,8 @@ export default function Dashboard() {
               </div>
             )}
             
-            {/* Just the input box with integrated controls */}
             <div className="w-full max-w-2xl">
-              {/* Integrated input area with controls */}
               <div className="relative w-full bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800 rounded-lg shadow-sm overflow-hidden">
-                {/* Hidden honeypot field */}
                 <div 
                   style={{
                     position: 'absolute',
@@ -1664,7 +1511,6 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="flex flex-col">
-                  {/* Textarea with padding for controls */}
                   <textarea
                     value={prompt}
                     onChange={handlePromptChange}
@@ -1678,7 +1524,6 @@ export default function Dashboard() {
                     ref={promptTextareaRef}
                   />
                   
-                  {/* Controls inside the same container */}
                   <div className="flex items-center justify-between px-4 pb-3">
                     <div className="flex items-center gap-3">
                       {user?.planType !== 'Demo' && user?.planType !== 'Basic' ? (
@@ -1704,7 +1549,6 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {/* Enhanced Mode Switch */}
                       <div className="flex items-center gap-1">
                         {canUseEnhancedMode ? (
                           <Switch
@@ -1729,10 +1573,8 @@ export default function Dashboard() {
                         </span>
                       </div>
 
-                      {/* Add style selector here */}
                       <StyleSelector />
 
-                      {/* Add Edit Previous switch only for Pro users */}
                       {isPro && (
                         <div className="flex items-center gap-1">
                           <Switch
@@ -1765,7 +1607,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Selected files display */}
               {selectedFiles.length > 0 && (
                 <div className="mt-3 space-y-1">
                   {selectedFiles.map((fileInfo) => (
@@ -1789,26 +1630,21 @@ export default function Dashboard() {
                 </div>
               )}
               
-              {/* Tokens display */}
               <div className="text-center text-emerald-700 dark:text-emerald-300 text-xs mt-2">
                 Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
               </div>
             </div>
           </div>
         ) : (
-          // Full interface after first message is sent - Modified layout with fixed spreadsheet viewer
           <div className="flex h-screen w-full">
-            {/* Chat and Request Log Area on the left - Scrollable */}
             <div className="w-2/5 lg:w-1/3 h-screen overflow-y-auto pb-40" ref={chatContainerRef} onScroll={handleChatScroll}>
               <div className="p-4">
-                {/* Single persistent spinning logo that only appears while typing is happening */}
                 {!allTypingComplete && (
                   <div className="sticky top-0 z-10 flex justify-center py-2">
                     <SpinningZLogo isTyping={true} size={24} />
                   </div>
                 )}
                 
-                {/* Modified chat history content with Z logo that follows text */}
                 {chatHistory.map((message, index) => (
                   <div key={message.id} className="mb-4">
                     {message.type === 'user' ? (
@@ -1817,7 +1653,6 @@ export default function Dashboard() {
                           <p className="text-gray-800 dark:text-gray-200 text-sm flex-grow">
                             <span className="font-semibold">You:</span> {message.text}
                           </p>
-                          {/* Only show revert button for Pro users if this message has a corresponding macro version */}
                           {isPro && message.macroVersion && message.macroVersion > 0 && (
                             <RevertButton 
                               messageId={message.id}
@@ -1831,7 +1666,6 @@ export default function Dashboard() {
                         <div className="relative">
                           <p className="text-emerald-800 dark:text-emerald-200 text-sm whitespace-pre-line">
                             <span className="font-semibold">Zarium:</span> {message.text}
-                            {/* Only show spinning Z logo while the message is actively typing */}
                             {message.isTyping && (
                               <SpinningZLogo 
                                 isTyping={true} 
@@ -1841,7 +1675,6 @@ export default function Dashboard() {
                             )}
                           </p>
                           
-                          {/* Only show the Z logo after the message when typing is complete */}
                           {!message.isTyping && message.text && index === chatHistory.length - 1 && (
                             <div className="flex justify-end mt-2">
                               <SpinningZLogo 
@@ -1856,7 +1689,6 @@ export default function Dashboard() {
                   </div>
                 ))}
                 
-                {/* Empty state message */}
                 {chatHistory.length === 0 && (
                   <div className="flex items-center justify-center h-full">
                     <p className="text-gray-400 text-center">
@@ -1868,16 +1700,13 @@ export default function Dashboard() {
               </div>
             </div>
             
-            {/* Spreadsheet Viewer on the right - Fixed position */}
             <div className="w-3/5 lg:w-2/3 fixed right-0 top-0 h-screen overflow-hidden">
-              {/* Error display */}
               {error && (
                 <div className="m-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-lg text-center">
                   {error}
                 </div>
               )}
 
-              {/* Main spreadsheet container - takes all available height */}
               <div className="h-[calc(100vh-20px)] m-4 flex">
                 <SpreadsheetViewer 
                   previewImage={previewImage} 
@@ -1893,10 +1722,8 @@ export default function Dashboard() {
               </div>
             </div>
             
-            {/* Input area fixed at the bottom of the page for the sidebar */}
             <div className="fixed bottom-0 left-0 w-[calc(2/5*100%-16px)] lg:w-[calc(1/3*100%-16px)] p-4 z-50 bg-gradient-to-t from-emerald-50 to-transparent dark:from-gray-900 dark:to-transparent pt-8">
               <div className="relative w-full">
-                {/* Hidden honeypot field */}
                 <div 
                   style={{
                     position: 'absolute',
@@ -1956,7 +1783,6 @@ export default function Dashboard() {
                       </div>
                     )}
 
-                    {/* Enhanced Mode Switch */}
                     <div className="flex items-center gap-1">
                       {canUseEnhancedMode ? (
                         <Switch
@@ -1981,10 +1807,8 @@ export default function Dashboard() {
                       </span>
                     </div>
 
-                    {/* Add style selector here */}
                     <StyleSelector />
 
-                    {/* Add Edit Previous switch only for Pro users */}
                     {isPro && (
                       <div className="flex items-center gap-1">
                         <Switch
@@ -2016,7 +1840,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Selected files display */}
               {selectedFiles.length > 0 && (
                 <div className="mt-3 space-y-1">
                   {selectedFiles.map((fileInfo) => (
@@ -2040,7 +1863,6 @@ export default function Dashboard() {
                 </div>
               )}
               
-              {/* Tokens display */}
               <div className="text-center text-emerald-700 dark:text-emerald-300 text-xs mt-2">
                 Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
               </div>
