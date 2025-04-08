@@ -109,7 +109,34 @@ const SpinningZLogo = ({
 const StatusPostIt = () => {
   const statusMessage = "Filopplasting er for øyeblikket utilgjengelig ettersom denne funksjonen ikke er blitt tilpasset endringene i systemet enda :)";
   
-  const rotation = useMemo(() => Math.random() * 10 - 5, []);
+  const [rotation, setRotation] = useState(Math.random() * 10 - 5);
+  
+  useEffect(() => {
+    let direction = 1;
+    let lastTime = performance.now();
+    let animationId: number;
+    
+    const animate = (currentTime: number) => {
+      const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
+      lastTime = currentTime;
+      
+      setRotation(prev => {
+        const newRotation = prev + direction * 2 * deltaTime;
+        
+        // Change direction when reaching rotation limits
+        if (newRotation > 5) direction = -1;
+        if (newRotation < -5) direction = 1;
+        
+        return prev + direction * 2 * deltaTime;
+      });
+      
+      animationId = requestAnimationFrame(animate);
+    };
+    
+    animationId = requestAnimationFrame(animate);
+    
+    return () => cancelAnimationFrame(animationId);
+  }, []);
   
   return (
     <div 
