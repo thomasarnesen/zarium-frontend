@@ -106,56 +106,69 @@ const SpinningZLogo = ({
     </div>
   );
 };
+
 const StatusPostIt = () => {
-  const statusMessage = "Filopplasting er for øyeblikket utilgjengelig ettersom denne funksjonen ikke er blitt tilpasset endringene i systemet enda :)";
-  
-  const [rotation, setRotation] = useState(Math.random() * 15 - 7.5);
-  
-  useEffect(() => {
-    let direction = 1;
-    let lastTime = performance.now();
-    let animationId: number;
-    
-    const animate = (currentTime: number) => {
-      const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
-      lastTime = currentTime;
-      
-      setRotation(prev => {
-        const newRotation = prev + direction * 3.5 * deltaTime;
-        
-        // Change direction when reaching rotation limits
-        if (newRotation > 7.5) direction = -1;
-        if (newRotation < -7.5) direction = 1;
-        
-        return prev + direction * 3.5 * deltaTime;
-      });
-      
-      animationId = requestAnimationFrame(animate);
-    };
-    
-    animationId = requestAnimationFrame(animate);
-    
-    return () => cancelAnimationFrame(animationId);
-  }, []);
-  
+  const currentDate = "Wednesday, April 9";
+  const statusUpdates = [
+    "Improved previous sessions display: now automatically shows zoomed images beneath chat box without requiring manual 'show' action",
+    "Added visual loading indicator when selecting from previous sessions to improve user experience",
+    "Fixed critical bug where entering a new prompt would incorrectly replace the previous session instead of creating a new one",
+    "Implemented real-time generation status indicators with animated loading symbols during spreadsheet creation",
+    "Added compliance disclaimer: \"Zarium can make mistakes. Please double-check responses\" in alignment with AI usage requirements",
+  ];
+
   return (
     <div 
-      className="absolute left-8 top-32 max-w-xs transform transition-all duration-500 hover:scale-105"
-      style={{ transform: `rotate(${rotation}deg)` }}
+      className="absolute left-8 top-32 max-w-xs transform transition-all duration-500 hover:scale-105 float-animation"
     >
       <div className="bg-yellow-200 dark:bg-yellow-300 dark:text-gray-800 p-6 rounded-lg shadow-lg">
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-8 h-2 bg-blue-400 rounded-sm opacity-70" />
-        <p className="text-gray-800 font-handwriting text-lg leading-relaxed">
-          {statusMessage}
-        </p>
+        <h3 className="text-gray-800 font-handwriting text-xl mb-2 pb-1 border-b border-gray-400/30">Status Update: {currentDate}</h3>
+        <ul className="text-gray-800 font-handwriting text-base leading-relaxed space-y-2 ml-1">
+          {statusUpdates.map((update, index) => (
+            <li key={index} className="flex items-start">
+              <span className="inline-block mr-2 mt-1">•</span>
+              <span>{update}</span>
+            </li>
+          ))}
+        </ul>
         <div className="mt-4 flex justify-between items-center text-xs text-gray-600">
           <span>Zarium Status</span>
+          <span>Latest Updates</span>
         </div>
       </div>
     </div>
   );
 };
+const StatusPostIt2 = () => {
+  const currentDate = "Thursday, April 10";
+  const statusUpdates2 = [
+    "Fixed support for .xlsx files in the upload feature",
+  ];
 
+  return (
+    <div 
+      className="absolute right-8 top-32 max-w-xs transform transition-all duration-500 hover:scale-105 float-animation"
+    >
+      <div className="bg-yellow-200 dark:bg-yellow-300 dark:text-gray-800 p-6 rounded-lg shadow-lg">
+        <div className="absolute -top-3 right-1/2 transform -translate-x-1/2 w-8 h-2 bg-blue-400 rounded-sm opacity-70" />
+        <h3 className="text-gray-800 font-handwriting text-xl mb-2 pb-1 border-b border-gray-400/30">Status Update: {currentDate}</h3>
+        <ul className="text-gray-800 font-handwriting text-base leading-relaxed space-y-2 ml-1">
+          {statusUpdates2.map((update, index) => (
+            <li key={index} className="flex items-start">
+              <span className="inline-block mr-2 mt-1">•</span>
+              <span>{update}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 flex justify-between items-center text-xs text-gray-600">
+          <span>Zarium Status</span>
+          <span>Latest Updates</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 export default function Dashboard() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -176,8 +189,8 @@ export default function Dashboard() {
   const [macroHistory, setMacroHistory] = useState<MacroHistoryItem[]>([]);
   const [isReverting, setIsReverting] = useState(false);
 
-  const [showSessionSelector, setShowSessionSelector] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
+  const [loadingSessionId, setLoadingSessionId] = useState<number | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
 
@@ -207,6 +220,9 @@ export default function Dashboard() {
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [allTypingComplete, setAllTypingComplete] = useState(true);
+  const [generationPhase, setGenerationPhase] = useState<string>('');
+  const [ellipsisCount, setEllipsisCount] = useState<number>(1);
+  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
 
   const loadSessions = async () => {
     if (!isPro) return;
@@ -234,6 +250,7 @@ export default function Dashboard() {
 
   const handleSessionSelect = async (session: Session) => {
     try {
+      setLoadingSessionId(session.id);
       setIsGenerating(true);
       setError(null);
       
@@ -248,6 +265,7 @@ export default function Dashboard() {
       const result = await response.json();
       console.log("Session load result:", result);
       
+      // Set the active session ID when a session is selected
       setActiveSessionId(session.id);
       
       if (result.processingResult && result.processingResult.previewImage) {
@@ -320,7 +338,6 @@ export default function Dashboard() {
         ]);
       }
       
-      setShowSessionSelector(false);
       setFirstMessageSent(true);
       
     } catch (error: any) {
@@ -330,6 +347,7 @@ export default function Dashboard() {
       addChatMessage('assistant', `I'm sorry, I couldn't load your session. ${error.message || 'An error occurred.'}`);
     } finally {
       setIsGenerating(false);
+      setLoadingSessionId(null);
     }
   };
 
@@ -455,9 +473,91 @@ export default function Dashboard() {
     return chatHistory.some(msg => msg.isTyping);
   };
 
+  // Function to get the oldest session ID (the one shown in bottom right)
+  const getOldestSessionId = () => {
+    if (!sessions || sessions.length === 0) return null;
+    
+    // Sort sessions by creation date (oldest first)
+    const sortedSessions = [...sessions].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    
+    // Return the ID of the oldest session
+    return sortedSessions[0]?.id || null;
+  };
+
   useEffect(() => {
     setAllTypingComplete(!isAnyMessageTyping());
   }, [chatHistory]);
+
+  useEffect(() => {
+    // Function to animate the ellipsis dots
+    const animateEllipsis = () => {
+      if (!isTransitioning) {
+        setEllipsisCount(prev => (prev % 3) + 1);
+      }
+    };
+    
+    // Set up ellipsis animation interval when generating
+    let ellipsisInterval: NodeJS.Timeout;
+    if (isGenerating) {
+      ellipsisInterval = setInterval(animateEllipsis, isTransitioning ? 800 : 500); // Slower during transitions
+    }
+    
+    return () => {
+      if (ellipsisInterval) clearInterval(ellipsisInterval);
+    };
+  }, [isGenerating, isTransitioning]);
+
+  // Manage the generation phase transitions
+  useEffect(() => {
+    if (!isGenerating) {
+      setGenerationPhase('');
+      setIsTransitioning(false);
+      return;
+    }
+    
+    // Reset to initial phase when generation starts
+    setGenerationPhase('analyzing');
+    
+    // Schedule the phase transitions
+    const timers: NodeJS.Timeout[] = [];
+    
+    // Helper function to handle transitions
+    const transitionTo = (phase: string, delay: number) => {
+      timers.push(setTimeout(() => {
+        // Begin transition - pause ellipsis and slow down spinner
+        setIsTransitioning(true);
+        
+        // After a brief pause, change the phase
+        timers.push(setTimeout(() => {
+          setGenerationPhase(phase);
+          
+          // After another brief pause, resume normal animation
+          timers.push(setTimeout(() => {
+            setIsTransitioning(false);
+          }, 700));
+        }, 400));
+      }, delay));
+    };
+    
+    // After 5 seconds, transition to "thinking"
+    transitionTo('thinking', 5000);
+    
+    // After 9 seconds (5 + 4), transition to "generating"
+    transitionTo('generating', 9000);
+    
+    // After 19 seconds (5 + 4 + 10), transition back to "thinking"
+    transitionTo('thinking', 19000);
+    
+    // After 23 seconds (5 + 4 + 10 + 4), transition back to "generating" for the remainder
+    transitionTo('generating', 23000);
+    
+    return () => {
+      // Clean up all timers when component unmounts or generation stops
+      timers.forEach(timer => clearTimeout(timer));
+    };
+  }, [isGenerating]);
 
   useEffect(() => {
     if (isAuthenticated && isPro) {
@@ -555,6 +655,16 @@ export default function Dashboard() {
       
       .font-handwriting {
         font-family: 'Comic Sans MS', 'Segoe Print', cursive;
+      }
+      
+      @keyframes fadeText {
+        0% { opacity: 1; }
+        40% { opacity: 0.4; }
+        60% { opacity: 0.4; }
+        100% { opacity: 1; }
+      }
+      .text-fade {
+        animation: fadeText 1.1s ease-in-out;
       }
     `;
     document.head.appendChild(styleElement);
@@ -895,9 +1005,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (previewImage) {
-      setIsGenerating(false);
-      setGenerationStatus('');
-      setSessionId(null);
+      setTimeout(() => {
+        setIsGenerating(false);
+        setGenerationStatus('');
+        setSessionId(null);
+      }, 500); // Add a slight delay before changing status
       setFirstMessageSent(true);
     }
   }, [previewImage]);
@@ -1228,8 +1340,61 @@ export default function Dashboard() {
     );
   };
 
+  // SessionGallery component to display session previews
+  const SessionGallery = () => {
+    if (!isPro || sessions.length === 0) return null;
+    
+    return (
+      <div className="w-full mt-6">
+        <h3 className="text-emerald-700 dark:text-emerald-300 text-sm mb-3 flex items-center">
+          <History className="h-4 w-4 mr-2" />
+          <span>Previous Sessions</span>
+        </h3>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {sessions.map(session => (
+            <div 
+              key={session.id}
+              onClick={() => handleSessionSelect(session)}
+              className="cursor-pointer bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="aspect-video bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
+                {loadingSessionId === session.id ? (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <SpinningZLogo isTyping={true} size={32} />
+                  </div>
+                ) : (
+                  session.preview ? (
+                    <img 
+                      src={session.preview} 
+                      alt={session.name}
+                      className="w-[400%] h-[400%] object-cover object-left-top"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center">
+                      <FileSpreadsheet className="h-10 w-10 text-gray-400" />
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
+    
+    // Get the oldest session ID if this is the first message
+    const wasFirstMessage = !firstMessageSent;
+    let oldestSessionId = null;
+    
+    if (wasFirstMessage && isPro && sessions.length > 0) {
+      oldestSessionId = getOldestSessionId();
+      console.log("Found oldest session ID:", oldestSessionId);
+    }
     
     setFirstMessageSent(true);
     
@@ -1244,6 +1409,9 @@ export default function Dashboard() {
     const messageId = Math.random().toString(36).substr(2, 9);
     
     addChatMessage('user', prompt);
+    
+    // Clear the input after sending
+    setPrompt('');
     
     addChatMessage('assistant', 'Understanding your request...');
     
@@ -1317,6 +1485,12 @@ export default function Dashboard() {
         formData.append('enhancedMode', enhancedMode.toString());
         formData.append('modelMode', modelMode);
         
+        // When sending first message, pass the oldest session ID to replace
+        if (wasFirstMessage && oldestSessionId) {
+          formData.append('targetSessionId', oldestSessionId.toString());
+          formData.append('replaceOldestSession', 'true');
+        }
+        
         if (isPro) {
           formData.append('editPrevious', editPrevious.toString());
         }
@@ -1331,7 +1505,12 @@ export default function Dashboard() {
           prompt,
           format: 'xlsx',
           enhancedMode,
-          modelMode
+          modelMode,
+          // When sending initial message, target the oldest session for replacement
+          ...(wasFirstMessage && oldestSessionId ? { 
+            targetSessionId: oldestSessionId,
+            replaceOldestSession: true
+          } : {})
         };
         
         if (isPro) {
@@ -1492,27 +1671,7 @@ export default function Dashboard() {
             </div>
             
             <StatusPostIt />
-            
-            {isPro && (
-              <div className="mb-8 w-full max-w-2xl">
-                <button
-                  onClick={() => setShowSessionSelector(!showSessionSelector)}
-                  className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-200"
-                >
-                  <History className="h-5 w-5" />
-                  <span>Previous Sessions {showSessionSelector ? '(Hide)' : '(Show)'}</span>
-                </button>
-                
-                {showSessionSelector && (
-                  <div className="mt-4">
-                    <SessionSelector 
-                      onSessionSelect={handleSessionSelect}
-                      className="border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 shadow-sm bg-white dark:bg-gray-800"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+            <StatusPostIt2 />
             
             <div className="w-full max-w-2xl">
               <div className="relative w-full bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800 rounded-lg shadow-sm overflow-hidden">
@@ -1536,6 +1695,8 @@ export default function Dashboard() {
                     autoComplete="off"
                   />
                 </div>
+                
+
                 
                 <div className="flex flex-col">
                   <textarea
@@ -1660,6 +1821,9 @@ export default function Dashboard() {
               <div className="text-center text-emerald-700 dark:text-emerald-300 text-xs mt-2">
                 Available Tokens: <span className="font-semibold">{tokens.toLocaleString()}</span>
               </div>
+              
+              {/* Display SessionGallery here for initial screen */}
+              {isPro && <SessionGallery />}
             </div>
           </div>
         ) : (
@@ -1750,6 +1914,34 @@ export default function Dashboard() {
             </div>
             
             <div className="fixed bottom-0 left-0 w-[calc(2/5*100%-16px)] lg:w-[calc(1/3*100%-16px)] p-4 z-50 bg-gradient-to-t from-emerald-50 to-transparent dark:from-gray-900 dark:to-transparent pt-8">
+              <div className="flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-300 mb-2">
+                <div className="flex items-center">
+                  <div className={`${isGenerating ? "animate-spin-slow" : ""} ${
+                    isTransitioning ? "opacity-70 transition-all duration-700" : "animate-pulse"
+                  }`}>
+                    <SpinningZLogo isTyping={isGenerating} size={16} />
+                  </div>
+                  <span className={`ml-2 transition-all duration-300 ${
+                    isTransitioning ? "text-fade" : "opacity-100"
+                  }`}>
+                    {isGenerating && (
+                      <>
+                        {generationPhase === 'analyzing' && 'Analyzing'}
+                        {generationPhase === 'thinking' && 'Thinking'}
+                        {generationPhase === 'generating' && 'Generating'}
+                        {isTransitioning ? '...' : '.'.repeat(ellipsisCount)}
+                      </>
+                    )}
+                  </span>
+                </div>
+                
+                {!isGenerating && (
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                    Zarium can make mistakes. Please double-check responses.
+                  </span>
+                )}
+              </div>
+              
               <div className="relative w-full">
                 <div 
                   style={{
@@ -1771,6 +1963,12 @@ export default function Dashboard() {
                     autoComplete="off"
                   />
                 </div>
+                
+                {isGenerating && !previewImage && (
+                  <div className="absolute -top-10 left-1/2 transform -translate-x-1/2">
+                    <SpinningZLogo isTyping={true} size={28} />
+                  </div>
+                )}
                 
                 <textarea
                   value={prompt}
