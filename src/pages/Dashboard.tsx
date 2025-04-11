@@ -785,7 +785,6 @@ export default function Dashboard() {
         `Ready for a productive day, ${displayName}?`,
         `Coffee and Zarium to start your day, ${displayName}?`,
         `Top of the morning to you, ${displayName}! What's first on your agenda?`,
-        `Morning glory, ${displayName}! What Excel challenge can I help with?`
       ];
       
       const afternoonGreetings = [
@@ -799,7 +798,7 @@ export default function Dashboard() {
       
       const eveningGreetings = [
         `Good evening, ${displayName}! Wrapping up your day with some spreadsheet work?`,
-        `Evening, ${displayName}! How was your day? Ready for some Excel magic?`,
+        `Evening, ${displayName}! How was your day? Ready for some magic?`,
         `Winding down? Or just getting started, ${displayName}?`,
         `Evening productivity boost for you, ${displayName}! What's on your mind?`,
         `Still working? Your dedication is impressive, ${displayName}!`
